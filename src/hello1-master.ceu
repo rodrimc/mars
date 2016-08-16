@@ -1,0 +1,78 @@
+#include "multidevice.ceu"
+
+#define SESSION 0
+
+event (void) joined;
+
+var bool ok = true;
+var int id = -1;
+
+var char [] tmp = [[ tostring (@JOIN) ]];
+var char [] msg = [] .. "return {code=" .. tmp;
+
+var Client c = Client.build (LOCALHOST, 8888);
+await c.ok;
+
+tmp = [] .. "";
+tmp = [[ tostring (@SESSION) ]];
+msg = [] .. msg .. ",session=" .. tmp .. "}\n";
+
+_printf ("msg: %s\n", &&msg[0]);
+
+/* send JOIN message */
+var u64 t1 = _now();
+do UV_Stream_Write.build (&_UV_STREAM_ALIAS(c.tcp), &msg);
+
+par/or do 
+  loop do
+    var byte [BUFF_SIZE] buff;
+    var int code;
+
+    /* await message */
+    var u64 t2 = _now ();
+    do UV_Stream_ReadLine.build (&_UV_STREAM_ALIAS(c.tcp), &buff);
+    var u64 t3 = _now ();
+    _printf ("[player] read: %s", &&buff[0]);
+
+    _printf ("[player] timediff: %llu\n", t3 - t1);
+  
+    /* parse message */
+    [[ TABLE =  load (@buff)()]]
+    code = [[ TABLE.code ]];
+    if code == JOIN then
+      var int reply;
+      reply = [[ TABLE.reply ]];
+    
+      if reply != OK then
+        _printf ("[player] I've received an error\n");
+        break;
+      end
+      id = [[ TABLE.id ]];
+      _printf ("[player] My id: %d\n", id);
+      emit joined;
+    else
+      _printf ("[player] Unknown code\n");
+    end
+  end
+with
+  await joined;
+  var int width = 1080;
+  var int height = 720;
+
+  var Scene s with
+    this.size = Size (width, height);
+    this.auto_advance = true;
+  end;
+
+  var Media video = Media.VIDEO ("../../resources/animGar.mp4", 
+                                  Region (0, 0, width, height), 1.0, 1.0, 0);
+
+  watching s.key_event do
+    var Player p = Player.play (video, &s);
+    var u64 starttime = p.get_start_time ();
+    /* _printf ("[player] startime: %u\n", starttime); */
+    await FOREVER;
+  end
+end
+
+escape 0;

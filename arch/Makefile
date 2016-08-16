@@ -1,0 +1,1 @@
+C_FLAGS = -DCEU_DEBUG -Wall 

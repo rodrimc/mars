@@ -1,0 +1,7 @@
+#include "multidevice.ceu"
+
+_printf ("[server] Starting server...\n");
+do Server.build (LOCALHOST, PORT, BACKLOG);
+
+escape 0;
+

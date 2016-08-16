@@ -1,0 +1,199 @@
+#ifndef _CEU_MULTIDEVICE
+#define _CEU_MULTIDEVICE
+
+#include "uv.ceu"
+#include "media.ceu"
+#include "synchronizer.ceu"
+
+#define LOCALHOST "0.0.0.0"
+#define PORT 8888
+#define BACKLOG 128
+#define BUFF_SIZE 256
+
+/* MESSAGE CODES */
+#define JOIN 1 
+
+/* REPLY CODES */
+#define OK 0
+#define ERROR -1
+
+native/pre do
+  ##include <time.h>
+
+  long long unsigned int now (void)
+  {
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (long long unsigned int)ts.tv_sec * 1000000000L + ts.tv_nsec;
+  }
+
+end
+
+var int i = 0;
+
+class Connection with
+  var _uv_tcp_t& server;
+  pool Synchronizer[] &syncs;
+do
+  // CLIENT
+  var _uv_tcp_t&? client_;
+  finalize
+    client_ = &_malloc(sizeof(_uv_tcp_t));
+  with
+      // free after uv_close
+  end
+  var _uv_tcp_t& client = &client_!;
+  _ceu_uv_tcp_init (&&client)
+    finalize with
+      _ceu_uv_close ((_uv_handle_t&&)&&client);
+    end;
+
+  // ACCEPT
+  var int ret = _uv_accept ((_uv_stream_t&&)&&server,(_uv_stream_t&&)&&client);
+  _assert (ret == 0);
+
+  par/or do
+    var _uv_stream_t&& s;
+    var int err;
+    (s,err) = await UV_ERROR until (s==(_uv_stream_t&&)&&client);
+  with
+    loop do
+      var char[] string;
+      var int code;
+      do UV_Stream_ReadLine.build(&_UV_STREAM_ALIAS(client), &string);
+      _printf ("%s\n", &&string[0]);
+      [[ TABLE =  load (@string)()]]
+      code = [[ TABLE.code ]];
+
+      if code == JOIN then
+        var int session = [[ TABLE.session ]];
+        var Synchronizer &&?s;
+        var int id = 0;
+        var char [] tmp;
+
+        loop ptr in syncs do
+          if ptr:session == session then
+            _printf ("[connection] found synchronizer\n");
+            s = ptr;
+            break;
+          end
+        end
+
+        if not s? then
+          s = spawn Synchronizer in syncs with
+            this.session = session;
+          end;
+        end
+
+        id = s!:add_device ();
+
+        tmp = [[ tostring (@JOIN) ]];
+        string = [] .. "return {code=" .. tmp;
+
+        tmp = [] .. "";
+        tmp = [[ tostring (@OK) ]];
+        string = [] .. string .. ",reply=" .. tmp;
+
+        tmp = [] .. "";
+        tmp = [[ tostring (@id) ]];
+        string = [] .. string .. ",id=" .. tmp .. "}\n";
+      else
+        _printf ("[connection] Unknown code\n");
+      end
+
+      do UV_Stream_Write.build(&_UV_STREAM_ALIAS(client), &string);
+    end
+  end
+end
+
+class Server with
+  var _char&& ip;
+  var int port;
+  var int backlog;
+  function (@hold _char&& ip, int port, int backlog) => Server build;
+do
+  function (@hold _char&& ip, int port, int backlog) => Server build do
+    this.ip     := ip;
+    this.port    = port;
+    this.backlog = backlog;
+  end
+
+  pool Synchronizer[] syncs;
+
+  var _uv_tcp_t&? server_;
+  finalize
+    server_ = &_malloc(sizeof(_uv_tcp_t));
+  with
+      // free after uv_close
+  end
+  var _uv_tcp_t& server = &server_!;
+  _ceu_uv_tcp_init(&&server)
+    finalize with
+      _ceu_uv_close((_uv_handle_t&&)&&server);
+    end;
+
+  var _sockaddr_in addr = _sockaddr_in();
+  _uv_ip4_addr(this.ip, this.port, &&addr);
+  _uv_tcp_bind(&&server, (_sockaddr&&)&&addr, 0);
+  do
+    var int ret = _ceu_uv_listen((_uv_stream_t&&)&&server, this.backlog);
+    _assert(ret == 0);
+  end
+  _printf ("[server] Server started\n");
+  _printf ("[server] Listening on port %d\n", this.port);
+
+  every (s,status) in UV_LISTEN do
+    if s == (_uv_stream_t&&) &&server then
+      _assert(status >= 0);
+      _printf ("[server] New connection.\n");
+      spawn Connection with
+        this.server = &server;
+        this.syncs = &syncs;
+      end;
+    end
+  end
+end
+
+class Client with
+    var _char&& ip;
+    var int port;
+    event int ok;
+
+output:
+    var _uv_tcp_t& tcp;
+
+    function (@hold _char&& ip, int port)=>Client build;
+do
+    function (@hold _char&& ip, int port)=>Client build do
+        this.ip  := ip;
+        this.port = port;
+    end
+
+    var _uv_tcp_t client = _uv_tcp_t();
+    _ceu_uv_tcp_init(&&client)
+        finalize with
+            _uv_close((_uv_handle_t&&)&&client, null);
+        end;
+    this.tcp = &client;
+
+    var _uv_connect_t&? connect;
+    finalize
+        connect = &_malloc(sizeof(_uv_connect_t));
+    with
+        // free on uv callback
+    end
+
+    var _sockaddr_in dest = _sockaddr_in();
+    _uv_ip4_addr(this.ip, this.port, &&dest);
+    _ceu_uv_tcp_connect(&&connect!, &&client, (_sockaddr&&)&&dest);
+
+    var _uv_connect_t&& c;
+    var int status;
+    (c,status) = await UV_CONNECT until c==&&connect!;
+
+    emit this.ok => status;
+    await FOREVER;
+end
+
+#endif
+
