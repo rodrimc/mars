@@ -23,17 +23,15 @@ native/pre do
   long long unsigned int now (void)
   {
     struct timespec ts;
-    clock_gettime(CLOCK_MONOTONIC, &ts);
+    clock_gettime(CLOCK_REALTIME, &ts);
     return (long long unsigned int)ts.tv_sec * 1000000000L + ts.tv_nsec;
   }
 
 end
 
-var int i = 0;
-
 class Connection with
   var _uv_tcp_t& server;
-  pool Synchronizer[] &syncs;
+  var u64 &start_time;
 do
   // CLIENT
   var _uv_tcp_t&? client_;
@@ -52,6 +50,8 @@ do
   var int ret = _uv_accept ((_uv_stream_t&&)&&server,(_uv_stream_t&&)&&client);
   _assert (ret == 0);
 
+  var uint session = 0;
+
   par/or do
     var _uv_stream_t&& s;
     var int err;
@@ -66,26 +66,10 @@ do
       code = [[ TABLE.code ]];
 
       if code == JOIN then
-        var int session = [[ TABLE.session ]];
-        var Synchronizer &&?s;
         var int id = 0;
         var char [] tmp;
 
-        loop ptr in syncs do
-          if ptr:session == session then
-            _printf ("[connection] found synchronizer\n");
-            s = ptr;
-            break;
-          end
-        end
-
-        if not s? then
-          s = spawn Synchronizer in syncs with
-            this.session = session;
-          end;
-        end
-
-        id = s!:add_device ();
+        session = [[ TABLE.session ]];
 
         tmp = [[ tostring (@JOIN) ]];
         string = [] .. "return {code=" .. tmp;
@@ -96,10 +80,37 @@ do
 
         tmp = [] .. "";
         tmp = [[ tostring (@id) ]];
-        string = [] .. string .. ",id=" .. tmp .. "}\n";
+        string = [] .. string .. ",id=" .. tmp;
+
+        [[ print ("LUA: " .. TABLE.timestamp) 
+           print ("LUA: " .. type(TABLE.timestamp)) ]]
+        
+        var u64 ts = [[ TABLE.timestamp ]];
+        _printf ("%llu\n", ts);
+        var u64 toseek = 0;
+        var u64 delay_estimation = _now() - ts;
+        if start_time == 0 then
+          start_time = ts + delay_estimation;
+          /* considering that:
+          /* i) start_time == time the device receives this reply */ 
+          /* ii) device starts as soon as it receives this reply */
+        else
+          toseek = _now() - start_time + delay_estimation;
+        end
+        /* _printf ("%llu ", _now ()); */
+        /* _printf ("%llu ", ts); */
+        /* _printf ("%llu\n", delay_estimation); */
+
+        tmp = [] .. "";
+        tmp = [[ tostring (@toseek) ]];
+
+        string = [] .. string .. ",seek=" .. tmp; 
+        string = [] .. string .. "}\n";
       else
         _printf ("[connection] Unknown code\n");
       end
+
+      _printf ("[server] reply: %s", &&string[0]);
 
       do UV_Stream_Write.build(&_UV_STREAM_ALIAS(client), &string);
     end
@@ -117,8 +128,6 @@ do
     this.port    = port;
     this.backlog = backlog;
   end
-
-  pool Synchronizer[] syncs;
 
   var _uv_tcp_t&? server_;
   finalize
@@ -142,13 +151,15 @@ do
   _printf ("[server] Server started\n");
   _printf ("[server] Listening on port %d\n", this.port);
 
+  var u64 start_time = 0;
   every (s,status) in UV_LISTEN do
     if s == (_uv_stream_t&&) &&server then
       _assert(status >= 0);
       _printf ("[server] New connection.\n");
       spawn Connection with
         this.server = &server;
-        this.syncs = &syncs;
+        this.start_time = &start_time;
+        /* this.syncs = &syncs; */
       end;
     end
   end

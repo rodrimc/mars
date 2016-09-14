@@ -15,12 +15,17 @@ await c.ok;
 
 tmp = [] .. "";
 tmp = [[ tostring (@SESSION) ]];
-msg = [] .. msg .. ",session=" .. tmp .. "}\n";
-
-_printf ("msg: %s\n", &&msg[0]);
+msg = [] .. msg .. ",session=" .. tmp;
 
 /* send JOIN message */
-var u64 t1 = _now();
+var u64 msg_ts = _now();
+tmp = [] .. "";
+tmp = [[ tostring (@msg_ts) ]];
+msg = [] .. msg .. ",timestamp=" .. tmp .. "}\n";
+
+_printf ("[player] timestamp: %llu\n", msg_ts);
+_printf ("sending: %s\n", &&msg[0]);
+
 do UV_Stream_Write.build (&_UV_STREAM_ALIAS(c.tcp), &msg);
 
 par/or do 
@@ -34,7 +39,7 @@ par/or do
     var u64 t3 = _now ();
     _printf ("[player] read: %s", &&buff[0]);
 
-    _printf ("[player] timediff: %llu\n", t3 - t1);
+    _printf ("[player] timediff: %llu\n", t3 - msg_ts);
   
     /* parse message */
     [[ TABLE =  load (@buff)()]]
