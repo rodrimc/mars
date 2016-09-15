@@ -3,6 +3,8 @@
 #define SESSION 0
 
 event (void) joined;
+event (void) started;
+event (u64) do_seek;
 
 var bool ok = true;
 var int id = -1;
@@ -36,13 +38,15 @@ par/or do
     /* await message */
     var u64 t2 = _now ();
     do UV_Stream_ReadLine.build (&_UV_STREAM_ALIAS(c.tcp), &buff);
-    var u64 t3 = _now ();
+    var u64 t = _now ();
     _printf ("[player] read: %s", &&buff[0]);
-
-    _printf ("[player] timediff: %llu\n", t3 - msg_ts);
   
     /* parse message */
     [[ TABLE =  load (@buff)()]]
+    tmp = [] .. "";
+    tmp = [[ tostring(TABLE.timestamp) ]];
+    var u64 delay_estimation = t - _strtoull (&&tmp[0], null, 10);
+
     code = [[ TABLE.code ]];
     if code == JOIN then
       var int reply;
@@ -55,14 +59,23 @@ par/or do
       id = [[ TABLE.id ]];
       _printf ("[player] My id: %d\n", id);
       emit joined;
+
+      tmp = [] .. "";
+      tmp = [[ tostring(TABLE.seek) ]];
+      
+      await started;
+      nothing;
+      var u64 seek = _strtoull (&&tmp[0], null, 10);
+      _printf ("[player] seek: %llu\n", seek);
+      emit do_seek => seek + delay_estimation;
     else
       _printf ("[player] Unknown code\n");
     end
   end
 with
   await joined;
-  var int width = 1080;
-  var int height = 720;
+  var int width = 640;
+  var int height = 480;
 
   var Scene s with
     this.size = Size (width, height);
@@ -74,9 +87,20 @@ with
 
   watching s.key_event do
     var Player p = Player.play (video, &s);
-    var u64 starttime = p.get_start_time ();
-    /* _printf ("[player] startime: %u\n", starttime); */
-    await FOREVER;
+
+    var u64 pending_seek = 0;
+    par/and do
+      await p.start;
+      emit started;
+    with
+      pending_seek = await do_seek;
+    end
+    p.seek (pending_seek, false); 
+
+    every ts in do_seek do
+      _printf ("seek: %llu\n", ts);
+      p.seek (ts, false); 
+    end
   end
 end
 

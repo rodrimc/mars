@@ -29,6 +29,8 @@ native/pre do
 
 end
 
+native @nohold _strtoull ();
+
 class Connection with
   var _uv_tcp_t& server;
   var u64 &start_time;
@@ -58,61 +60,80 @@ do
     (s,err) = await UV_ERROR until (s==(_uv_stream_t&&)&&client);
   with
     loop do
-      var char[] string;
+      var char[] msg;
       var int code;
-      do UV_Stream_ReadLine.build(&_UV_STREAM_ALIAS(client), &string);
-      _printf ("%s\n", &&string[0]);
-      [[ TABLE =  load (@string)()]]
+
+      do UV_Stream_ReadLine.build(&_UV_STREAM_ALIAS(client), &msg);
+      var u64 msg_received_time = _now();
+      _printf ("%s\n", &&msg[0]);
+      [[ TABLE =  load (@msg)()]]
+
+      /*
+        The following line isn't working because Céu is returning an int32
+        istead of an uint64.
+        var u64 ts = [[ TABLE.timestamp ]];
+
+        temporary workaround: convert to msg and then to uint64
+        */
+      var char [] tmp = [] .. "";
+      tmp = [[ tostring(TABLE.timestamp) ]];
+
+      var u64 delay_estimation = msg_received_time - 
+                                        _strtoull (&&tmp[0], null, 10);
+      _printf ("current delay estimation: %llu\n", delay_estimation);
+
       code = [[ TABLE.code ]];
 
       if code == JOIN then
         var int id = 0;
-        var char [] tmp;
 
         session = [[ TABLE.session ]];
 
+        /* code */
+        tmp = [] .. "";
         tmp = [[ tostring (@JOIN) ]];
-        string = [] .. "return {code=" .. tmp;
+        msg = [] .. "return {code=" .. tmp;
 
+        /* reply */
         tmp = [] .. "";
         tmp = [[ tostring (@OK) ]];
-        string = [] .. string .. ",reply=" .. tmp;
+        msg = [] .. msg .. ",reply=" .. tmp;
 
+        /* id */
         tmp = [] .. "";
         tmp = [[ tostring (@id) ]];
-        string = [] .. string .. ",id=" .. tmp;
+        msg = [] .. msg .. ",id=" .. tmp;
 
-        [[ print ("LUA: " .. TABLE.timestamp) 
-           print ("LUA: " .. type(TABLE.timestamp)) ]]
-        
-        var u64 ts = [[ TABLE.timestamp ]];
-        _printf ("%llu\n", ts);
+        /* timestamp */
+        var u64 msg_ts = _now();
+        tmp = [] .. "";
+        tmp = [[ tostring (@msg_ts) ]];
+        msg = [] .. msg .. ",timestamp=" .. tmp;
+
+        /* seek */
         var u64 toseek = 0;
-        var u64 delay_estimation = _now() - ts;
         if start_time == 0 then
-          start_time = ts + delay_estimation;
+          start_time = msg_ts + delay_estimation;
           /* considering that:
           /* i) start_time == time the device receives this reply */ 
           /* ii) device starts as soon as it receives this reply */
         else
-          toseek = _now() - start_time + delay_estimation;
+          toseek = msg_ts - start_time + delay_estimation;
         end
-        /* _printf ("%llu ", _now ()); */
-        /* _printf ("%llu ", ts); */
-        /* _printf ("%llu\n", delay_estimation); */
 
         tmp = [] .. "";
         tmp = [[ tostring (@toseek) ]];
+        msg = [] .. msg .. ",seek=" .. tmp; 
 
-        string = [] .. string .. ",seek=" .. tmp; 
-        string = [] .. string .. "}\n";
+        /* end */
+        msg = [] .. msg .. "}\n";
       else
         _printf ("[connection] Unknown code\n");
       end
 
-      _printf ("[server] reply: %s", &&string[0]);
+      _printf ("[server] reply: %s", &&msg[0]);
 
-      do UV_Stream_Write.build(&_UV_STREAM_ALIAS(client), &string);
+      do UV_Stream_Write.build(&_UV_STREAM_ALIAS(client), &msg);
     end
   end
 end
