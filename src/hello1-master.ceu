@@ -66,7 +66,6 @@ par/or do
 
       await started;
       var u64 start = _strtoull (&&tmp[0], null, 10);
-      _printf ("[player (%d)] msg_received_time: %llu\n", id, msg_received_time);
       _printf ("[player (%d)] start: %llu\n", id, start);
 
       var u64 now = _now();
@@ -129,7 +128,7 @@ with
   var Player p = Player.play (video, &s);
 
   watching s do
-    par/or do
+    par do
       var u64 offset = 0;
       var bool relative = true;
       par/and do
@@ -138,9 +137,14 @@ with
       with
         (offset, relative) = await do_seek;
       end
-      _printf ("[player (%d)] seek: %llu\n", id, offset);
-      p.request_seek (offset, relative);
-      await FOREVER;
+
+      loop do
+        p.request_seek (offset, relative);
+        _printf ("[player (%d)] awaiting seek to finish\n", id);
+        await p.seek;
+        _printf ("[player (%d)] seek finished\n", id);
+        (offset, relative) = await do_seek;
+      end
     with
       var bool paused = false;
       loop do
@@ -197,7 +201,7 @@ with
         var u64 time = await do_pause;
         emit do_seek => (time, false);
         await p.seek;
-        _printf ("[player (%d)] freezing scene\n");
+        _printf ("[player (%d)] freezing scene\n", id);
         s.freeze ();
       end
     with
