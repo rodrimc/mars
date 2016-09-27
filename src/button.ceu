@@ -1,0 +1,34 @@
+#include "multidevice.ceu"
+
+var Scene s with
+  this.size = Size (720, 480);
+end;
+
+var Media video = Media.VIDEO ("../../resources/ChairDivXL.avi",
+                Region (0, 0, s.size!.width, s.size!.height), 1.0, 1.0, 0);
+var Media text = Media.TEXT ("", "sans 40", 0xffffffff,
+                         Region(0, 350, s.size!.width, 100), 2.0);
+var Player&&? p = spawn Player.play (text, &s);
+
+var MediaClient client = MediaClient.build (LOCALHOST, 8888);
+await client.joined;
+
+par/or do
+  do Player.play (video, &s);
+with
+  every s.mouse_click_event do
+    emit client.send_click;
+  end
+with
+  every i in client.clicked do
+    var char [] str = [[ tostring (@i) ]]; 
+    p!:set_property_char ("text", &&str[0]); 
+    _printf ("%d clicked\n", i);
+  end
+with
+  var int press;
+  var _charptr key;
+  (key, press) = await s.key_event until (_strcmp(key, "q") == 0);
+end
+
+escape 0;
