@@ -15,6 +15,7 @@
 #define UPDATE_START_TIME 2
 #define PAUSE 3
 #define RESUME 4
+#define CLICK 5
 
 /* REPLY CODES */
 #define OK 0
@@ -37,6 +38,7 @@ native @nohold _strtoull ();
 class Dummy with
   event (int, u64) notify_pause;
   event (int) notify_resume;
+  event (int) notify_click;
 do
   await FOREVER;
 end
@@ -166,6 +168,9 @@ do
       else/if code == RESUME then
         emit dummy.notify_resume => (id);
         send_reply = false;
+      else/if code == CLICK then
+        emit dummy.notify_click => (id);
+        send_reply = false;
       else
         _printf ("[connection] Unknown code\n");
       end
@@ -213,15 +218,23 @@ do
     end
   with
     loop do
-      var int i;
-      i = await dummy.notify_resume;
+      var int i = -1;
+      var int code = -1;
+      par/or do
+        i = await dummy.notify_resume;
+        _printf ("%d: dummy(%d).notify_resume\n", id, i);
+        code = RESUME;
+      with
+        i = await dummy.notify_click;
+        _printf ("%d: dummy(%d).notify_click\n", id, i);
+        code = CLICK;
+      end
 
-      _printf ("%d: dummy(%d).notify_resume\n", id, i);
       var char [] tmp = [] .. "";
       var char [] msg = [] .. "";
 
       /* code */
-      tmp = [[ tostring (@RESUME) ]];
+      tmp = [[ tostring (@code) ]];
       msg = [] .. "return {code=" .. tmp;
 
       /* from */
@@ -339,5 +352,98 @@ do
     await FOREVER;
 end
 
-#endif
+class MediaClient with
+  var _char&& ip;
+  var int port;
+  var int session;
 
+  event (void) joined;
+  event (void) send_click;
+  event (int) clicked;
+
+  function (@hold _char&& ip, int port)=>MediaClient build;
+output: 
+  var int id;
+do
+  function (@hold _char&& ip, int port)=>MediaClient build do
+      this.ip  := ip;
+      this.port = port;
+      this.session = 0;
+  end
+
+  id = -1;
+
+  var Client c = Client.build (LOCALHOST, 8888);
+  await c.ok; 
+  var char [] tmp = [[ tostring (@JOIN) ]];
+  var char [] msg = [] .. "return {code=" .. tmp;
+
+  tmp = [] .. "";
+  tmp = [[ tostring (@session) ]];
+  msg = [] .. msg .. ",session=" .. tmp;
+
+  var u64 msg_ts = _now();
+  tmp = [] .. "";
+  tmp = [[ tostring (@msg_ts) ]];
+  msg = [] .. msg .. ",timestamp=" .. tmp .. "}\n";
+
+  /* send JOIN message */
+  do UV_Stream_Write.build (&_UV_STREAM_ALIAS(c.tcp), &msg);
+  par do
+    loop do
+      var byte [BUFF_SIZE] buff;
+      var int code;
+
+      /* await message */
+      do UV_Stream_ReadLine.build (&_UV_STREAM_ALIAS(c.tcp), &buff);
+      _printf ("[MediaClient (%d)] read: %s", id, &&buff[0]);
+
+      /* parse message */
+      [[ TABLE =  load (@buff)()]]
+      code = [[ TABLE.code ]];
+
+      if code == JOIN then
+        var int reply;
+        reply = [[ TABLE.reply ]];
+
+        if reply != OK then
+          _printf ("[MediaClient (%d)] I've received an error\n", id);
+          break;
+        end
+        id = [[ TABLE.id ]];
+        _printf ("[MediaClient (%d)] My id: %d\n", id, id);
+        emit joined;
+      else/if code == CLICK then
+        var int from = [[ TABLE.from ]];
+        _printf ("[MediaClient (%d)] %d has clicked\n", id, from);
+        emit clicked => from; 
+      end
+    end
+  with
+    loop do
+      await send_click;
+      
+      tmp = [] .. "";
+      tmp = [[ tostring (@CLICK) ]];
+      var char [] msg = [] .. "return {code=" .. tmp;
+
+      tmp = [] .. "";
+      tmp = [[ tostring (@session) ]];
+      msg = [] .. msg .. ",session=" .. tmp;
+
+      tmp = [] .. "";
+      tmp = [[ tostring (@id) ]];
+      msg = [] .. msg .. ",id=" .. tmp;
+
+      var u64 msg_ts = _now();
+      tmp = [] .. "";
+      tmp = [[ tostring (@msg_ts) ]];
+      msg = [] .. msg .. ",timestamp=" .. tmp .. "}\n";
+
+      /* send CLICK message */
+      do UV_Stream_Write.build (&_UV_STREAM_ALIAS(c.tcp), &msg);
+    end
+  end
+end
+
+#endif
