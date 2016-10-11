@@ -1,5 +1,6 @@
 #include "multidevice.ceu"
 
+#include "media.ceu"
 #define SESSION 0
 
 event (void) joined;
@@ -27,8 +28,8 @@ tmp = [] .. "";
 tmp = [[ tostring (@msg_ts) ]];
 msg = [] .. msg .. ",timestamp=" .. tmp .. "}\n";
 
-_printf ("[player (%d)] timestamp: %llu\n", id, msg_ts);
-_printf ("[player (%d)]sending: %s\n", id, &&msg[0]);
+/* _printf ("[player (%d)] timestamp: %llu\n", id, msg_ts); */
+_printf ("[player (%d)] sending: %s\n", id, &&msg[0]);
 
 do UV_Stream_Write.build (&_UV_STREAM_ALIAS(c.tcp), &msg);
 
@@ -65,6 +66,7 @@ par/or do
       tmp = [[ tostring(TABLE.start) ]];
 
       await started;
+      await 1ms;
       var u64 start = _strtoull (&&tmp[0], null, 10);
       _printf ("[player (%d)] start: %llu\n", id, start);
 
@@ -88,8 +90,6 @@ par/or do
       else
         emit do_seek => (now - start, true);
       end
-    else/if code == UPDATE_START_TIME then
-      _printf ("[player (%d)] start time has been updated\n", id);
     else/if code == PAUSE then
       _printf ("[player (%d)] pause\n", id);
       var int from = [[ TABLE.from ]];
@@ -99,16 +99,12 @@ par/or do
 
       var u64 pause_offset = _strtoull (&&tmp[0], null, 10);
 
-      if (from != id) then
-        emit do_pause => pause_offset;
-      end
+      emit do_pause => pause_offset;
     else/if code == RESUME then
       _printf ("[player (%d)] resume\n", id);
       var int from = [[ TABLE.from ]];
 
-      if (from != id) then
-        emit do_resume;
-      end
+      emit do_resume;
     else
       _printf ("[player (%d)] unknown code\n", id);
     end
@@ -120,7 +116,7 @@ with
 
   var Scene s with
     this.size = Size (width, height);
-    this.auto_advance = true;
+    this.interval = 30 * NS;
   end;
 
   var Media video = Media.VIDEO ("../../resources/animGar.mp4",
@@ -128,22 +124,23 @@ with
   var Player p = Player.play (video, &s);
 
   watching s do
+    var bool player_started = false;
     par do
+      await p.start;
+      emit started;
+      player_started = true;
+    with
       var u64 offset = 0;
       var bool relative = true;
-      par/and do
-        await p.start;
-        emit started;
-      with
-        (offset, relative) = await do_seek;
-      end
-
+      
       loop do
-        p.request_seek (offset, relative);
-        _printf ("[player (%d)] awaiting seek to finish\n", id);
-        await p.seek;
-        _printf ("[player (%d)] seek finished\n", id);
         (offset, relative) = await do_seek;
+        if (player_started) then
+          p.request_seek (offset, relative);
+          _printf ("[player (%d)] awaiting seek to finish\n", id);
+          await p.seek;
+          _printf ("[player (%d)] seek finished\n", id);
+        end
       end
     with
       var bool paused = false;
@@ -155,44 +152,34 @@ with
           if (_strcmp (str, "q") == 0) then
             emit s.quit;
           else/if (_strcmp(str, "space") == 0) then
-            if not paused then
-              s.freeze ();
+            msg = [] .. "";
+            msg = [] .. "return {code=";
 
+            tmp = [] .. "";
+            if not paused then
               var u64 running_time = p.get_running_time();
-              tmp = [] .. "";
-              msg = [] .. "";
 
               tmp = [[ tostring (@PAUSE) ]];
-              msg = [] .. "return {code=" .. tmp;
+              msg = [] .. msg .. tmp;
+
 
               tmp = [] .. "";
               tmp = [[ tostring (@running_time) ]];
 
               msg = [] .. msg .. ",pause=" .. tmp;
-
-              var u64 now = _now();
-              tmp = [] .. "";
-              tmp = [[ tostring (@now) ]];
-              msg = [] .. msg .. ",timestamp=" .. tmp;
-              msg = [] .. msg .. "}\n";
             else
-              tmp = [] .. "";
-              msg = [] .. "";
-
               tmp = [[ tostring (@RESUME) ]];
-              msg = [] .. "return {code=" .. tmp;
-
-              var u64 now = _now();
-              tmp = [] .. "";
-              tmp = [[ tostring (@now) ]];
-              msg = [] .. msg .. ",timestamp=" .. tmp;
-              msg = [] .. msg .. "}\n";
+              msg = [] .. msg .. tmp;
             end
+
+            var u64 now = _now();
+            tmp = [] .. "";
+            tmp = [[ tostring (@now) ]];
+            msg = [] .. msg .. ",timestamp=" .. tmp;
+            msg = [] .. msg .. "}\n";
 
             paused = not paused;
             do UV_Stream_Write.build (&_UV_STREAM_ALIAS(c.tcp), &msg);
-          else
-            _printf ("[player (%d)] key: %s\n", id, str);
           end
         end
       end
@@ -202,6 +189,8 @@ with
         emit do_seek => (time, false);
         await p.seek;
         _printf ("[player (%d)] freezing scene\n", id);
+        await s.tick;
+        await s.tick;
         s.freeze ();
       end
     with

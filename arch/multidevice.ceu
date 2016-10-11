@@ -2,7 +2,6 @@
 #define _CEU_MULTIDEVICE
 
 #include "uv.ceu"
-#include "media.ceu"
 #include "synchronizer.ceu"
 
 #define LOCALHOST "0.0.0.0"
@@ -373,7 +372,7 @@ do
 
   id = -1;
 
-  var Client c = Client.build (LOCALHOST, 8888);
+  var Client c = Client.build (LOCALHOST, port);
   await c.ok; 
   var char [] tmp = [[ tostring (@JOIN) ]];
   var char [] msg = [] .. "return {code=" .. tmp;
