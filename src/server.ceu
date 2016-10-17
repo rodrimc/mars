@@ -1,7 +1,8 @@
 #include "multidevice.ceu"
 
 _printf ("[server] Starting server...\n");
-do Server.build (LOCALHOST, PORT, BACKLOG);
+/* do Server.build (LOCALHOST, PORT, BACKLOG); */
+await UV_TCP_Server (LOCALHOST, PORT, BACKLOG);
 
 escape 0;
 

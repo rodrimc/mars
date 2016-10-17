@@ -1,23 +1,20 @@
-###############################################################################
-# EDIT
-###############################################################################
+CEU_DIR    = /home/rcms/workspace/ceu
+CEU_MEDIA_DIR = /home/rcms/workspace/ceu-media
+CEU_UV_DIR = /home/rcms/workspace/ceu-libuv
 
-CEU_DIR ?= /home/rodrigocosta/workspace/ceu
+CFLAGS = `pkg-config play lua5.3 libuv --libs --cflags` -l pthread
 
-###############################################################################
-# DO NOT EDIT
-###############################################################################
+SRC_NAME= $(notdir $(SRC))
+BIN = $(SRC_NAME:%.ceu=%)
 
-CUR_DIR ?= .
-ARCH_DIR ?= $(CUR_DIR)/arch
-include $(CEU_DIR)/Makefile
-
-ifneq ($(MAKECMDGOALS),link)
-ifeq ("$(wildcard $(CUR_DIR)/arch/up)","")
-$(error run "make link")
-endif
-endif
-
-link:
-	rm -f arch/up
-	ln -s `readlink -f $(CEU_DIR)/arch` $(CUR_DIR)/arch/up
+all:
+	ceu --pre --pre-args="-I$(CEU_DIR)/include -I$(CEU_MEDIA_DIR)/include -I$(CEU_UV_DIR)/include -I./include" \
+	          --pre-input=$(SRC)                                  \
+	    --ceu --ceu-err-unused=pass --ceu-err-uninitialized=pass            \
+	    --env --env-types=$(CEU_DIR)/env/types.h                         \
+	          --env-threads=$(CEU_DIR)/env/threads.h                     \
+	          --env-main=$(CEU_DIR)/env/main.c                           \
+	          --env-output=/tmp/x.c                                         \
+	    --cc --cc-args="$(CFLAGS)" \
+	         --cc-output=/tmp/$(BIN)
+	/tmp/$(BIN)

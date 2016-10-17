@@ -1,6 +1,6 @@
 #include "multidevice.ceu"
 
-#include "media.ceu"
+#include "media/media.ceu"
 #define SESSION 0
 
 event (void) joined;
@@ -9,195 +9,172 @@ event (u64, bool) do_seek;
 event (u64) do_pause;
 event (void) do_resume;
 
-var bool ok = true;
-var int id = -1;
+var& _uv_tcp_t tcp;
+event& void connected;
+watching UV_TCP_Connect (LOCALHOST, 8888) => (tcp, connected)
+do
+  await connected;
 
-var char [] tmp = [[ tostring (@JOIN) ]];
-var char [] msg = [] .. "return {code=" .. tmp;
+  var bool ok = true;
+  var int id = -1;
 
-var Client c = Client.build (LOCALHOST, 8888);
-await c.ok;
+  vector[] byte msg = [] .. "return {code=" .. [[ tostring (@JOIN) ]];
+  msg = msg .. ",session=" .. [[ tostring (@SESSION) ]];
 
-tmp = [] .. "";
-tmp = [[ tostring (@SESSION) ]];
-msg = [] .. msg .. ",session=" .. tmp;
+  /* send JOIN message */
+  var u64 msg_ts = _now();
+  msg = msg .. ",timestamp=" .. [[ tostring (@msg_ts) ]] .. "}\n";
 
-/* send JOIN message */
-var u64 msg_ts = _now();
-tmp = [] .. "";
-tmp = [[ tostring (@msg_ts) ]];
-msg = [] .. msg .. ",timestamp=" .. tmp .. "}\n";
+  _printf ("[player (%d)] sending: %s\n", id, &&msg[0]);
 
-/* _printf ("[player (%d)] timestamp: %llu\n", id, msg_ts); */
-_printf ("[player (%d)] sending: %s\n", id, &&msg[0]);
+  await UV_TCP_Write(&tcp, &msg);
 
-do UV_Stream_Write.build (&_UV_STREAM_ALIAS(c.tcp), &msg);
+  par/or do
+    loop do
+      vector [BUFF_SIZE] byte buff;
+      var int code_ = _;
 
-par/or do
-  loop do
-    var byte [BUFF_SIZE] buff;
-    var int code;
+      /* await message */
+      await UV_TCP_ReadLine(&tcp, &buff);
 
-    /* await message */
-    do UV_Stream_ReadLine.build (&_UV_STREAM_ALIAS(c.tcp), &buff);
-    var u64 msg_received_time = _now ();
-    _printf ("[player (%d)] read: %s", id, &&buff[0]);
+      var u64 msg_received_time = _now ();
+      _printf ("[player (%d)] read: %s", id, &&buff[0]);
 
-    /* parse message */
-    [[ TABLE =  load (@buff)()]]
-    tmp = [] .. "";
-    tmp = [[ tostring(TABLE.timestamp) ]];
-    var u64 delay_estimation =  msg_received_time - _strtoull (&&tmp[0], null, 10);
+      /* parse message */
+      [[ TABLE =  load (@buff)()]]
 
-    code = [[ TABLE.code ]];
-    if code == JOIN then
-      var int reply;
-      reply = [[ TABLE.reply ]];
+      var u64 ts = [[ tostring(TABLE.timestamp) ]];
+      var u64 delay_estimation =  msg_received_time - ts;
 
-      if reply != OK then
-        _printf ("[player (%d)] I've received an error\n", id);
-        break;
-      end
-      id = [[ TABLE.id ]];
-      _printf ("[player (%d)] My id: %d\n", id, id);
-      emit joined;
+      code_ = [[ TABLE.code ]];
+      if code_ == JOIN then
+        var int reply;
+        reply = [[ TABLE.reply ]];
 
-      tmp = [] .. "";
-      tmp = [[ tostring(TABLE.start) ]];
-
-      await started;
-      await 1ms;
-      var u64 start = _strtoull (&&tmp[0], null, 10);
-      _printf ("[player (%d)] start: %llu\n", id, start);
-
-      var u64 now = _now();
-      if (start == 0) then
-        start = now;
-        tmp = [] .. "";
-        msg = [] .. "";
-
-        tmp = [[ tostring (@UPDATE_START_TIME) ]];
-        msg = [] .. "return {code=" .. tmp;
-
-        tmp = [] .. "";
-        tmp = [[ tostring (@start) ]];
-
-        msg = [] .. msg .. ",start=" .. tmp;
-        msg = [] .. msg .. ",timestamp=" .. tmp;
-        msg = [] .. msg .. "}\n";
-
-        do UV_Stream_Write.build (&_UV_STREAM_ALIAS(c.tcp), &msg);
-      else
-        emit do_seek => (now - start, true);
-      end
-    else/if code == PAUSE then
-      _printf ("[player (%d)] pause\n", id);
-      var int from = [[ TABLE.from ]];
-
-      tmp = [] .. "";
-      tmp = [[ tostring (TABLE.pause_time) ]];
-
-      var u64 pause_offset = _strtoull (&&tmp[0], null, 10);
-
-      emit do_pause => pause_offset;
-    else/if code == RESUME then
-      _printf ("[player (%d)] resume\n", id);
-      var int from = [[ TABLE.from ]];
-
-      emit do_resume;
-    else
-      _printf ("[player (%d)] unknown code\n", id);
-    end
-  end
-with
-  await joined;
-  var int width = 640;
-  var int height = 480;
-
-  var Scene s with
-    this.size = Size (width, height);
-    this.interval = 30 * NS;
-  end;
-
-  var Media video = Media.VIDEO ("../../resources/animGar.mp4",
-                                  Region (0, 0, width, height), 1.0, 1.0, 0);
-  var Player p = Player.play (video, &s);
-
-  watching s do
-    var bool player_started = false;
-    par do
-      await p.start;
-      emit started;
-      player_started = true;
-    with
-      var u64 offset = 0;
-      var bool relative = true;
-      
-      loop do
-        (offset, relative) = await do_seek;
-        if (player_started) then
-          p.request_seek (offset, relative);
-          _printf ("[player (%d)] awaiting seek to finish\n", id);
-          await p.seek;
-          _printf ("[player (%d)] seek finished\n", id);
+        if reply != OK then
+          _printf ("[player (%d)] I've received an error\n", id);
+          break;
         end
+        id = [[ TABLE.id ]];
+        _printf ("[player (%d)] My id: %d\n", id, id);
+        emit joined;
+
+        await started;
+        await 1ms;
+
+        var u64 start = [[ tostring(TABLE.start) ]];
+        _printf ("[player (%d)] start: %llu\n", id, start);
+
+        var u64 now = _now();
+        if (start == 0) then
+          start = now;
+
+          msg = [] .. "return {code=" .. [[ tostring (@UPDATE_START_TIME) ]];
+          msg = msg .. ",start=" .. [[ tostring (@start) ]];
+          msg = msg .. ",timestamp=" .. [[ tostring (@start) ]];
+          msg = msg .. "}\n";
+
+          await UV_TCP_Write(&tcp, &msg);
+        else
+          emit do_seek (now - start, true);
+        end
+      else/if code_ == PAUSE then
+        _printf ("[player (%d)] pause\n", id);
+        var int from = [[ TABLE.from ]];
+
+        var u64 pause_offset =  [[ tostring (TABLE.pause_time) ]];
+
+        emit do_pause (pause_offset);
+      else/if code_ == RESUME then
+        _printf ("[player (%d)] resume\n", id);
+        var int from = [[ TABLE.from ]];
+
+        emit do_resume;
+      else/if code_ == UPDATE_START_TIME then
+        /* ignore */
+      else
+        _printf ("[player (%d)] unknown code\n", id);
       end
-    with
-      var bool paused = false;
-      loop do
-        var int press;
-        var char&& str;
-        (str, press) = await s.key_event;
-        if press == 1 then
-          if (_strcmp (str, "q") == 0) then
-            emit s.quit;
-          else/if (_strcmp(str, "space") == 0) then
-            msg = [] .. "";
-            msg = [] .. "return {code=";
+    end
+  with
+    await joined;
+    var int width = 640;
+    var int height = 480;
 
-            tmp = [] .. "";
-            if not paused then
-              var u64 running_time = p.get_running_time();
+    var Media.Video video = val Media.Video (
+                              [] .. "resources/animGar.mp4",
+                              Region (0, 0, 1, width, height), 
+                              1.0, 
+                              1.0);
 
-              tmp = [[ tostring (@PAUSE) ]];
-              msg = [] .. msg .. tmp;
+    var& IScene scene;
+    var& IPlay  play;
 
-
-              tmp = [] .. "";
-              tmp = [[ tostring (@running_time) ]];
-
-              msg = [] .. msg .. ",pause=" .. tmp;
-            else
-              tmp = [[ tostring (@RESUME) ]];
-              msg = [] .. msg .. tmp;
-            end
-
-            var u64 now = _now();
-            tmp = [] .. "";
-            tmp = [[ tostring (@now) ]];
-            msg = [] .. msg .. ",timestamp=" .. tmp;
-            msg = [] .. msg .. "}\n";
-
-            paused = not paused;
-            do UV_Stream_Write.build (&_UV_STREAM_ALIAS(c.tcp), &msg);
+    watching Scene (Size (width, height)) => (scene),
+             Play (&scene, &video) => (play)
+    do
+      var bool player_started = false;
+      par do
+        await play.ok;
+        emit started;
+        player_started = true;
+      with
+        loop do
+          var u64 offset;
+          var bool relative;
+          (offset, relative) = await do_seek;
+          if (player_started) then
+            call Play_Seek (&play, offset, relative); 
+            _printf ("[player (%d)] awaiting seek to finish\n", id);
+            await play.sought;
+            _printf ("[player (%d)] seek finished\n", id);
           end
         end
-      end
-    with
-      loop do
-        var u64 time = await do_pause;
-        emit do_seek => (time, false);
-        await p.seek;
-        _printf ("[player (%d)] freezing scene\n", id);
-        await s.tick;
-        await s.tick;
-        s.freeze ();
-      end
-    with
-      loop do
-        await do_resume;
-        _printf ("[player (%d)] resuming scene\n");
-        s.resume ();
+      with
+        var bool paused = false;
+        loop do
+          var bool press;
+          var _char_ptr_ext str;
+          (str, press) = await scene.key;
+          if press then
+            if (_strcmp (str, "q") == 0) then
+              break;
+            else/if (_strcmp(str, "space") == 0) then
+              msg = [] .. "return {code=";
+              if not paused then
+                var u64 running_time = call Play_Get_Running_Time (&play);
+
+                msg = msg .. [[ tostring (@PAUSE) ]];
+                msg = msg .. ",pause=" .. [[ tostring (@running_time) ]];
+              else
+                msg = msg .. [[ tostring (@RESUME) ]];
+              end
+
+              var u64 now = _now();
+              msg = msg .. ",timestamp=" .. [[ tostring (@now) ]];
+              msg = msg .. "}\n";
+
+              paused = not paused;
+              await UV_TCP_Write(&tcp, &msg);
+            end
+          end
+        end
+      with
+        loop do
+          var u64 time = await do_pause;
+          emit do_seek (time, false);
+          await play.sought;
+          _printf ("[player (%d)] freezing scene\n", id);
+          await scene.tick;
+          await scene.tick;
+          call Scene_Pause (&scene);
+        end
+      with
+        loop do
+          await do_resume;
+          _printf ("[player (%d)] resuming scene\n");
+          call Scene_Resume (&scene);
+        end
       end
     end
   end
