@@ -54,6 +54,79 @@ vector[] Pair pairs;
 var Dummy dummy = val Dummy (_,_,_,_);
 var int id_ref = 0;
 
+
+
+code/tight
+Join (var& int id, var& uint session, var& u64 start_time, vector&[] byte msg)
+                                                                      => void
+do
+  var bool flag = false;
+
+  loop i in [0 -> $outer.pairs[ do
+    if outer.pairs[i].session == session then
+      flag = true;
+      start_time = outer.pairs[i].start_time;
+    end
+  end
+
+  if not flag then
+    var Pair p = val Pair (&session, &start_time);
+    outer.pairs = outer.pairs .. [p];
+  end
+
+  /* code */
+  msg = [] .. "return {code=" .. [[ tostring (@JOIN) ]];
+
+  /* reply */
+  msg = msg .. ",reply=" .. [[ tostring (@OK) ]];
+
+  /* id */
+  msg = msg .. ",id=" .. [[ tostring (@id) ]];
+
+  /* start time */
+  var u64 tmp2 = start_time;
+  msg = msg .. ",start=" .. [[ tostring (@tmp2) ]];
+
+  /* timestamp */
+  var u64 msg_ts = _now();
+  msg = msg .. ",timestamp=" .. [[ tostring (@msg_ts) ]];
+
+  /* end */
+  msg = msg .. "}\n";
+end
+
+code/tight
+Update_Start_Time (var& int id, var& uint session, var& u64 start_time, 
+      vector&[] byte msg) => void
+do
+  start_time = [[ tostring(TABLE.start) ]];
+  _printf ("[server (%d)] new start time: %lu\n", id, start_time);
+
+  emit outer.dummy.update_start_time (session, start_time);
+
+  /* code */
+  msg = [] .. "return {code=" .. [[ tostring (@UPDATE_START_TIME) ]];
+
+  /* reply */
+  msg = msg .. ",reply=" .. [[ tostring (@OK) ]];
+
+  /* timestamp */
+  var u64 msg_ts = _now();
+  msg = msg .. ",timestamp=" .. [[ tostring (@msg_ts) ]];
+
+  /* end */
+  msg = msg .. "}\n";
+end
+
+code/tight
+Pause (var& int id, var& uint session) => void
+do
+  var u64 pause_time = [[ tostring(TABLE.pause) ]];
+  _printf ("[server (%d)] pause time: %lu\n", id, pause_time);
+
+  emit outer.dummy.notify_pause (id, pause_time);
+end
+
 code/await UV_TCP_Server_Handler (var& _uv_tcp_t client) => int
 do
   var uint session = 0;
@@ -80,74 +153,22 @@ do
 
       var bool send_reply = true;
       if code_ == JOIN then
-        session = [[ TABLE.session ]];
-
-        var bool flag = false;
-
-        loop i in [0 -> $outer.pairs[ do
-          if outer.pairs[i].session == session then
-            flag = true;
-            start_time = outer.pairs[i].start_time;
-          end
-        end
-
-        if not flag then
-          var Pair p = val Pair (&session, &start_time);
-          outer.pairs = outer.pairs .. [p];
-        end
-
-        /* code */
-        msg = [] .. "return {code=" .. [[ tostring (@JOIN) ]];
-
-        /* reply */
-        msg = msg .. ",reply=" .. [[ tostring (@OK) ]];
-
-        /* id */
-        msg = msg .. ",id=" .. [[ tostring (@id) ]];
-
-        /* start time */
-        var u64 tmp2 = start_time;
-        msg = msg .. ",start=" .. [[ tostring (@tmp2) ]];
-
-        /* timestamp */
-        var u64 msg_ts = _now();
-        msg = msg .. ",timestamp=" .. [[ tostring (@msg_ts) ]];
-
-        /* end */
-        msg = msg .. "}\n";
+        call Join (&id, &session, &start_time, &msg);
 
       else/if code_ == UPDATE_START_TIME then
-
-        start_time = [[ tostring(TABLE.start) ]];
-        _printf ("[server (%d)] new start time: %llu\n", id, start_time);
-
-        emit outer.dummy.update_start_time (session, start_time);
-
-        /* code */
-        msg = [] .. "return {code=" .. [[ tostring (@UPDATE_START_TIME) ]];
-
-        /* reply */
-        msg = msg .. ",reply=" .. [[ tostring (@OK) ]];
-
-        /* timestamp */
-        var u64 msg_ts = _now();
-        msg = msg .. ",timestamp=" .. [[ tostring (@msg_ts) ]];
-
-        /* end */
-        msg = msg .. "}\n";
+        call Update_Start_Time (&id, &session, &start_time, &msg);
 
       else/if code_ == PAUSE then
+        call Pause (&id, &session);
 
-        var u64 pause_time = [[ tostring(TABLE.pause) ]];
-        _printf ("[server (%d)] pause time: %llu\n", id, pause_time);
-
-        emit outer.dummy.notify_pause (id, pause_time);
         send_reply = false;
       else/if code_ == RESUME then
         emit outer.dummy.notify_resume (id);
+
         send_reply = false;
       else/if code_ == CLICK then
         emit outer.dummy.notify_click (id);
+
         send_reply = false;
       else
         _printf ("[connection] Unknown code\n");
