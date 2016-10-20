@@ -58,10 +58,11 @@ var int id_ref = 0;
 
 code/tight
 Join (var& int id, var& uint session, var& u64 start_time, vector&[] byte msg)
-                                                                      => void
+                                                                      -> void
 do
   var bool flag = false;
 
+  var int i;
   loop i in [0 -> $outer.pairs[ do
     if outer.pairs[i].session == session then
       flag = true;
@@ -97,7 +98,7 @@ end
 
 code/tight
 Update_Start_Time (var& int id, var& uint session, var& u64 start_time, 
-      vector&[] byte msg) => void
+      vector&[] byte msg) -> void
 do
   start_time = [[ tostring(TABLE.start) ]];
   _printf ("[server (%d)] new start time: %lu\n", id, start_time);
@@ -119,7 +120,7 @@ do
 end
 
 code/tight
-Pause (var& int id, var& uint session) => void
+Pause (var& int id, var& uint session) -> void
 do
   var u64 pause_time = [[ tostring(TABLE.pause) ]];
   _printf ("[server (%d)] pause time: %lu\n", id, pause_time);
@@ -127,7 +128,7 @@ do
   emit outer.dummy.notify_pause (id, pause_time);
 end
 
-code/await UV_TCP_Server_Handler (var& _uv_tcp_t client) => int
+code/await UV_TCP_Server_Handler (var& _uv_tcp_t client) -> int
 do
   var uint session = 0;
   var int id = outer.id_ref;
@@ -261,8 +262,8 @@ data IMediaClient with
 end
 
 code/await MediaClient (var _char&& ip, var int port, var int session)
-                          => (var& IMediaClient client, var& int id)
-                            => void
+                          -> (var& IMediaClient client, var& int id)
+                            -> void
 do
   var int id_ref_ = -1;
   id = &id_ref_; 
@@ -270,7 +271,7 @@ do
   event& void connected;
   var& _uv_tcp_t tcp_;
 
-  watching UV_TCP_Connect(ip, port) => (tcp_, connected)
+  watching UV_TCP_Connect(ip, port) -> (tcp_, connected)
   do
     var IMediaClient ref_ = val IMediaClient (&tcp_, _, _, _); 
     client = &ref_; 

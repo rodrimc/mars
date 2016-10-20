@@ -11,7 +11,7 @@ event (void) do_resume;
 
 var& _uv_tcp_t tcp;
 event& void connected;
-watching UV_TCP_Connect (LOCALHOST, 8888) => (tcp, connected)
+watching UV_TCP_Connect (LOCALHOST, 8888) -> (tcp, connected)
 do
   await connected;
 
@@ -110,8 +110,8 @@ do
     var& IScene scene;
     var& IPlay  play;
 
-    watching Scene (Size (width, height)) => (scene),
-             Play (&scene, &video) => (play)
+    watching Scene (Size (width, height)) -> (scene),
+             Play (&scene, &video) -> (play)
     do
       var bool player_started = false;
       par do

@@ -15,12 +15,12 @@ var Media.Text text = val Media.Text (
                 0xffffffff);
 
 var& IScene scene;
-watching Scene(size) => (scene) do
+watching Scene(size) -> (scene) do
   var& IPlay p;
   var& IMediaClient client; 
   var& int myid;
-  watching Play(&scene, &text) => (p),
-           MediaClient (LOCALHOST, 8888, 0) => (client, myid)
+  watching Play(&scene, &text) -> (p),
+           MediaClient (LOCALHOST, 8888, 0) -> (client, myid)
   do
     await client.joined;
 
