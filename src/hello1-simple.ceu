@@ -15,7 +15,7 @@ vector[] byte msg = [] .. "return {code=" .. [[ tostring (@JOIN) ]];
 
 var& _uv_tcp_t tcp;
 event& void connected;
-watching UV_TCP_Connect (LOCALHOST, 8888) -> (tcp, connected)
+watching UV_TCP_Connect (LOCALHOST, 8888) -> (&tcp, &connected)
 do
   await connected;
 
@@ -83,8 +83,8 @@ do
     var& IScene scene;
     var& IPlay p;
 
-    watching Scene (Size(width, height)) -> (scene),
-             Play (&scene, &video) -> (p)
+    watching Scene (Size(width, height)) -> (&scene),
+             Play (&scene, &video) -> (&p)
     do
       call Scene_Set_Tick_Interval (&scene, 30 * NS);
       par do

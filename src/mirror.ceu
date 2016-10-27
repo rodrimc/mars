@@ -1,0 +1,75 @@
+#include "multidevice2.ceu"
+#include "media/media.ceu"
+
+var& IPeer peer;
+watching Peer (LOCALHOST, 8888) -> (&peer)
+do
+  await peer.connected;
+
+  event (void) ok;
+
+  par do
+    loop do 
+      var _char_ptr msg = await peer.message;
+      _printf ("[client] received: %s\n", &&msg[0]);
+
+      var int type = _;
+
+      [[ TABLE =  load (@msg)()]]
+      type = [[ TABLE.type ]];
+
+      if type == JOIN then
+        id = [[ TABLE.id ]];
+        var int peers = [[ TABLE.peers ]];
+
+        _printf("[client] my id: %d\n", id); 
+        _printf("[client] peers: %d\n", peers); 
+
+        if peers > 1 then
+          emit ok;
+        end;
+
+      else/if type == NEW_PEER then
+        var int peer = [[ TABLE.peer ]];
+        _printf("[client %d] new peer: %d\n", id, peer); 
+
+        emit ok;
+      end
+    end
+  with
+    await ok;
+    do
+      var int width = 640;
+      var int height = 480;
+      var& IScene scene;
+      var Media.Video video = val Media.Video (
+                                          [] .. "resources/bunny.ogg",
+                                          Region (0, 0, width, height, 1),
+                                          1.0,
+                                          1.0
+                                         );
+      var& IPlay play;
+      watching Scene (Size (width, height)) -> (&scene),
+               Play (&scene, &video) -> (&play)
+      do
+        var Media.Image button = val Media.Image (
+                                          [] .. "resources/on.png",
+                                          Region (10, 10, 80, 80, 2),
+                                          1.0
+                                          );
+        await 2s;
+        par/or do
+          var& IPlay img_play;
+          await Play (&scene, &button) -> (&img_play);
+        with
+          await 500ms;
+        end
+
+        await 10s;
+      end
+    end
+    await FOREVER;
+  end
+end
+
+escape 0;

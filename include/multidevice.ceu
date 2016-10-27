@@ -62,7 +62,7 @@ Join (var& int id, var& uint session, var& u64 start_time, vector&[] byte msg)
 do
   var bool flag = false;
 
-  var int i;
+  var usize i;
   loop i in [0 -> $outer.pairs[ do
     if outer.pairs[i].session == session then
       flag = true;
@@ -271,7 +271,7 @@ do
   event& void connected;
   var& _uv_tcp_t tcp_;
 
-  watching UV_TCP_Connect(ip, port) -> (tcp_, connected)
+  watching UV_TCP_Connect(ip, port) -> (&tcp_, &connected)
   do
     var IMediaClient ref_ = val IMediaClient (&tcp_, _, _, _); 
     client = &ref_; 
