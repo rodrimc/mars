@@ -1,0 +1,11 @@
+
+event (bool) e;
+
+par/or do 
+  await 10s;
+with
+  await 5s;
+  #include PROG
+end
+
+escape 0;

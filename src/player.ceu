@@ -1,0 +1,20 @@
+#include "media/media.ceu"
+
+var& IScene scene; 
+var& IPlay play;
+
+var int width = 640;
+var int height = 480; 
+
+var Media.Video video = val Media.Video (
+                [] .. "resources/bunny.ogg",
+                Region (0, 0, width, height, 1),
+                1.0,
+                1.0);
+
+watching Scene (Size (width, height)) -> (&scene)
+do
+  await Play (&scene, &video) -> (&play);
+end
+
+escape 0;
