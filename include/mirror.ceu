@@ -1,10 +1,33 @@
 
-event (bool) e;
+event (void) ok;
 
-par/or do 
-  await 10s;
+par/or do
+  #include "multidevice2.ceu"
+  var& IPeer peer;
+  watching Peer (LOCALHOST, 8888, 0) -> (&peer)
+  do
+    await peer.joined;
+    par do
+      every peer.incoming_message do
+        _printf ("message: %s\n", &&peer.message[0]);
+
+        [[ TABLE = load (@peer.message)() ]]
+        var int type = [[ TABLE.type ]];
+
+        if type == NEW_PEER then
+          var int peers_count = [[ TABLE.peers ]];
+          _printf ("peers: %d\n", peers_count);
+          if peers_count >= 2 then
+            emit ok;
+          end
+        end
+      end
+    with
+      await FOREVER;
+    end
+  end
 with
-  await 5s;
+  await ok;
   #include PROG
 end
 
