@@ -28,7 +28,7 @@ par/or do
           end
         else/if type == KEY then
           vector[] byte key = [] .. [[ TABLE.key ]];
-          _printf ("[Peer (%d)] key: %s\n", &&key[0]);
+          _printf ("[Peer (%d)] key: %s\n", peer.id, &&key[0]);
         end
       end
     with

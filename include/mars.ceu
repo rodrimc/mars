@@ -34,7 +34,12 @@ native
    function serialize (o)
      local result = '{'
      for k,v in pairs(o) do
-       result = result ..  k .. '=' .. v .. ','
+       result = result ..  k .. '='
+       if type (v) == 'string' then
+         result = result .. "'" .. v .. "',"
+       else
+         result = result .. v .. ','
+       end
      end
      result = result .. '}'
      return result
@@ -201,7 +206,6 @@ do
               ref_.message = ref_.message .. [ref_.rbuffer[i]];
             else
               var int type = _;
-              _printf ("received: %s\n", &&message[0]);
 
               /* parse message */
               [[ TABLE =  load (@message)()]]
