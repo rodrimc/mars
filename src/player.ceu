@@ -1,10 +1,10 @@
 #include "media/media.ceu"
 
-var& IScene scene; 
+var& IScene scene;
 var& IPlay play;
 
 var int width = 640;
-var int height = 480; 
+var int height = 480;
 
 var Media.Video video = val Media.Video (
                 [] .. "resources/bunny.ogg",
@@ -12,9 +12,16 @@ var Media.Video video = val Media.Video (
                 1.0,
                 1.0);
 
-watching Scene (Size (width, height)) -> (&scene)
+watching Scene (Size (width, height)) -> (&scene),
+         Play (&scene, &video) -> (&play)
 do
-  await Play (&scene, &video) -> (&play);
+  var _char_ptr_ext key;
+  var bool press;
+  every (key, press) in scene.key do
+    if press then
+      emit send_key (key);
+    end
+  end
 end
 
 escape 0;

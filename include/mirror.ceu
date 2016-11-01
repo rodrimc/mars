@@ -1,12 +1,18 @@
+#include "media/raw.ceu"
 
+event (_char_ptr_ext) send_key;
 event (void) ok;
+
+#define KEY 0
 
 par/or do
   #include "mars.ceu"
+
   var& IPeer peer;
   watching Peer (LOCALHOST, 8888, 0) -> (&peer)
   do
     await peer.joined;
+    emit ok;
     par do
       every peer.incoming_message do
         _printf ("message: %s\n", &&peer.message[0]);
@@ -15,15 +21,28 @@ par/or do
         var int type = [[ TABLE.type ]];
 
         if type == NEW_PEER then
-          var int peers_count = [[ TABLE.peers ]];
-          _printf ("peers: %d\n", peers_count);
-          if peers_count >= 2 then
+          var int peers = [[ TABLE.peers ]];
+          _printf ("peers: %d\n", peers);
+          if peers >= 2 then
             emit ok;
           end
+        else/if type == KEY then
+          vector[] byte key = [] .. [[ TABLE.key ]];
+          _printf ("[Peer (%d)] key: %s\n", &&key[0]);
         end
       end
     with
-      await FOREVER;
+      loop do
+        var _char_ptr_ext key = await send_key;
+        peer.wbuffer = [] .. "{";
+        peer.wbuffer = peer.wbuffer .. "id=" .. [[ tostring(@peer.id) ]];
+        peer.wbuffer = peer.wbuffer .. ",type=" .. [[ tostring(@KEY) ]];
+        peer.wbuffer = peer.wbuffer .. ",key=\'" .. [ key[0] ] .. "'";
+        peer.wbuffer = peer.wbuffer .. "}";
+
+        emit peer.send;
+        await peer.sent;
+      end
     end
   end
 with
