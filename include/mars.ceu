@@ -30,9 +30,20 @@ end
 native
   _now,
 ;
+[[
+   function serialize (o)
+     local result = '{'
+     for k,v in pairs(o) do
+       result = result ..  k .. '=' .. v .. ','
+     end
+     result = result .. '}'
+     return result
+   end
+]]
 
-event (int) send_bradcast_join;
-event (uint) send_bradcast;
+event (int) send_broadcast_join;
+event (int) send_broadcast_message;
+vector []byte cur_payload;
 
 var int id_ref = 1;
 var uint peers_count = 0;
@@ -57,11 +68,13 @@ do
   vector[] byte buffer = [] .. "";
 
   buffer = [] .. "return {from=" .. [[ tostring (@from) ]];
+  buffer = buffer .. ",type=" .. [[ tostring (@REGULAR_SEND) ]];
   buffer = buffer .. ",payload=" .. payload;
   var u64 ts = _now ();
   buffer = buffer .. ",timestamp=" .. [[ tostring (@ts) ]];
   buffer = buffer .. "}\n";
 
+  _printf ("[server] sent: %s", &&buffer[0]);
   await UV_TCP_Write (&client, &buffer);
 end
 
@@ -98,20 +111,25 @@ do
         await UV_TCP_Write (&client, &buffer);
         _printf ("[server] sent: %s\n", &&buffer[0]);
 
-        emit outer.send_bradcast_join (id);
+        emit outer.send_broadcast_join (id);
 
       else/if type == REGULAR_SEND then
         var int from = [[ TABLE.from ]];
-        vector[] byte payload = [] .. [[ TABLE.payload ]];
-        spawn Send_Broadcast_Message (&client, from, &payload);
+        vector[] byte payload = [] .. [[ serialize(TABLE.payload) ]];
+
+        outer.cur_payload = [] .. payload;
+        emit outer.send_broadcast_message (from);
       end
     end
   with
     var int new_id;
-    every new_id in outer.send_bradcast_join do
-      if true then
-        spawn Send_Broadcast_Join (&client, new_id);
-      end
+    every new_id in outer.send_broadcast_join do
+      spawn Send_Broadcast_Join (&client, new_id);
+    end
+  with
+    var int from;
+    every from in outer.send_broadcast_message do
+      spawn Send_Broadcast_Message (&client, from, &outer.cur_payload);
     end
   end
 
@@ -123,7 +141,8 @@ end
 data IPeer with
   var& _uv_tcp_t tcp;
   var uint id;
-  vector&[] byte buffer;
+  vector&[] byte rbuffer;
+  vector&[] byte wbuffer;
   vector&[] byte message;
   event (void) joined;
   event (void) incoming_message;
@@ -140,38 +159,49 @@ do
 
   watching UV_TCP_Connect(ip, port) -> (&tcp_, &connected)
   do
-    vector []byte buffer;
+    vector []byte rbuffer;
+    vector []byte wbuffer;
     vector []byte message;
-    var IPeer ref_ = val IPeer (&tcp_, 0, &buffer, &message, _, _, _, _);
+    var IPeer ref_ = val IPeer (&tcp_, 0, &rbuffer, &wbuffer, &message, _, _, _, _);
     peer = &ref_;
 
     await connected;
 
     par do
-      buffer = [] .. "return {";
-      buffer = buffer .. "type=" .. [[ tostring (@JOIN) ]];
-      buffer = buffer .. "}\n";
+      wbuffer = [] .. "return {";
+      wbuffer = wbuffer .. "type=" .. [[ tostring (@JOIN) ]];
+      wbuffer = wbuffer .. "}\n";
 
       /* send JOIN message */
-      await UV_TCP_Write(&ref_.tcp, &buffer);
+      await UV_TCP_Write(&ref_.tcp, &wbuffer);
     with
       loop do
         await ref_.send;
-        await UV_TCP_Write(&ref_.tcp, &buffer);
+        vector[] byte payload = [] .. ref_.wbuffer;
+        ref_.wbuffer = [] .. "return{payload=" .. payload;
+        ref_.wbuffer = ref_.wbuffer .. ",from=" .. [[ tostring (@ref_.id) ]];
+        ref_.wbuffer = ref_.wbuffer .. ",type=" .. [[ tostring (@REGULAR_SEND) ]];
+        var u64 ts = _now();
+        ref_.wbuffer = ref_.wbuffer .. ",timestamp=" .. [[ tostring(@ts) ]];
+        ref_.wbuffer = ref_.wbuffer .. "}\n";
+
+        _printf ("[Peer (%d)] sending: %s\n", ref_.id, &&ref_.wbuffer[0]);
+        await UV_TCP_Write(&ref_.tcp, &ref_.wbuffer);
         emit ref_.sent;
       end
     with
       /* await message */
       loop do
         event& usize ok;
-        watching UV_Stream_Read(&ref_.tcp, &ref_.buffer) -> (&ok) do
+        watching UV_Stream_Read(&ref_.tcp, &ref_.rbuffer) -> (&ok) do
           await ok;
           var usize i;
-          loop i in [0 -> $ref_.buffer[ do
-            if ref_.buffer[i] != { '\n' } then
-              ref_.message = ref_.message .. [ref_.buffer[i]];
+          loop i in [0 -> $ref_.rbuffer[ do
+            if ref_.rbuffer[i] != { '\n' } then
+              ref_.message = ref_.message .. [ref_.rbuffer[i]];
             else
               var int type = _;
+              _printf ("received: %s\n", &&message[0]);
 
               /* parse message */
               [[ TABLE =  load (@message)()]]
@@ -182,6 +212,13 @@ do
                 ref_.id = [[ TABLE.id ]];
                 _printf ("[Peer (%d)] My id: %d\n", ref_.id, ref_.id);
                 emit ref_.joined;
+
+              else/if type == REGULAR_SEND then 
+                ref_.message = [] .. "return " .. [[ serialize (TABLE.payload) ]]; 
+                _printf ("[Peer (%d)] Incoming message: %s\n", ref_.id,
+                                                  &&ref_.message[0]);
+                emit ref_.incoming_message;
+
               else
                 _printf ("[Peer (%d)] Incoming message: %s\n", ref_.id,
                                                   &&ref_.message[0]);
