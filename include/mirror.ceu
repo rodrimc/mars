@@ -2,7 +2,7 @@
 event (void) ok;
 
 par/or do
-  #include "multidevice2.ceu"
+  #include "mars.ceu"
   var& IPeer peer;
   watching Peer (LOCALHOST, 8888, 0) -> (&peer)
   do
