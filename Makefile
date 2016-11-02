@@ -5,8 +5,10 @@ CEU_UV_DIR = /home/rodrigocosta/workspace/ceu-libuv
 all: PROG = $(error set PROG variable to point to a CÉU program)
 all: PROG_SED = $(PROG://=\/)
 
-CFLAGS =
-override CFLAGS := `pkg-config play lua5.3 libuv --libs --cflags` -l pthread $(CFLAGS)
+all: MODULES = play lua5.3 libuv
+server: MODULES = lua5.3 libuv
+
+server all: override CFLAGS := `pkg-config $(MODULES) --libs --cflags` -lpthread $(CFLAGS)
 
 SRC_NAME= $(notdir $(SRC))
 BIN = $(SRC_NAME:%.ceu=%)
