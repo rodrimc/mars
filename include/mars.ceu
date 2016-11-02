@@ -30,10 +30,23 @@ native/pre do
     clock_gettime(CLOCK_REALTIME, &ts);
     return (long long unsigned int)ts.tv_sec * 1000000000L + ts.tv_nsec;
   }
+
+##ifdef DEBUG
+ ##undef DEBUG
+ ##define DEBUG 1
+##else
+ ##define DEBUG 0
+##endif
+
+#define debug(fmt, ...) \
+  do { if (DEBUG) fprintf(stderr, "%s:%d: " fmt, __FILE__, \
+      __LINE__, __VA_ARGS__); } while (0)
+
 end
 
-native
+native/nohold
   _now,
+  _debug,
 ;
 [[
    function serialize (o)
@@ -85,7 +98,7 @@ do
   buffer = buffer .. ",timestamp=" .. [[ tostring (@ts) ]];
   buffer = buffer .. "}\n";
 
-  _printf ("[server] sent: %s", &&buffer[0]);
+  _debug ("[server] sent: %s", &&buffer[0]);
   await UV_TCP_Write (&client, &buffer);
 end
 
@@ -105,7 +118,7 @@ do
     loop do
       vector[] byte buffer;
       await UV_TCP_ReadLine(&client, &buffer);
-      _printf ("[server] received: %s\n", &&buffer[0]);
+      _debug ("[server] received: %s\n", &&buffer[0]);
 
       var int type = _;
 
@@ -120,7 +133,7 @@ do
         buffer = buffer .. "}\n";
 
         await UV_TCP_Write (&client, &buffer);
-        _printf ("[server] sent: %s\n", &&buffer[0]);
+        _debug ("[server] sent: %s\n", &&buffer[0]);
 
         emit outer.send_broadcast_join (id);
 
@@ -200,7 +213,7 @@ do
         ref_.wbuffer = ref_.wbuffer .. ",timestamp=" .. [[ tostring(@ts) ]];
         ref_.wbuffer = ref_.wbuffer .. "}\n";
 
-        _printf ("[Peer (%d)] sending: %s\n", ref_.id, &&ref_.wbuffer[0]);
+        _debug ("[Peer (%d)] sending: %s\n", ref_.id, &&ref_.wbuffer[0]);
         await UV_TCP_Write(&ref_.tcp, &ref_.wbuffer);
         emit ref_.sent;
       end
@@ -215,7 +228,7 @@ do
             if ref_.rbuffer[i] != { '\n' } then
               ref_.message = ref_.message .. [ref_.rbuffer[i]];
             else
-              _printf ("[Peer (%u)]Incoming Message: %s\n", ref_.id,
+              _debug ("[Peer (%u)]Incoming Message: %s\n", ref_.id,
                   &&ref_.message[0]);
 
               var int type = _;
@@ -240,7 +253,7 @@ do
                 emit ref_.incoming_message;
 
               else
-                _printf ("[Peer (%d) Unknow message type.\n", ref_.id);
+                _debug ("[Peer (%d) Unknow message type.\n", ref_.id);
               end
 
               ref_.message = [] .. "";
