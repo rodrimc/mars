@@ -11,24 +11,29 @@ par/or do
   var& IPeer peer;
   watching Peer (LOCALHOST, 8888, 0) -> (&peer)
   do
-    await peer.joined;
-    emit ok;
     par do
+      var uint id;
+      var usize peers;
+      (id, peers) = await peer.joined;
+      emit ok;
+    with
+      loop do
+        var uint new_peer;
+        var usize peers;
+        (new_peer, peers) = await peer.new_peer;
+        _printf ("[APP(%u)] New peer: %u (total: %lu)\n", peer.id,
+            new_peer, peers);
+      end
+    with
       every peer.incoming_message do
-        _printf ("message: %s\n", &&peer.message[0]);
+        _printf ("[APP(%u)] Message: %s\n", peer.id, &&peer.message[0]);
 
         [[ TABLE = load (@peer.message)() ]]
         var int type = [[ TABLE.type ]];
 
-        if type == NEW_PEER then
-          var int peers = [[ TABLE.peers ]];
-          _printf ("peers: %d\n", peers);
-          if peers >= 2 then
-            emit ok;
-          end
-        else/if type == KEY then
+        if type == KEY then
           vector[] byte key = [] .. [[ TABLE.key ]];
-          _printf ("[Peer (%d)] key: %s\n", peer.id, &&key[0]);
+          _printf ("[APP(%u)] key: %s\n", peer.id, &&key[0]);
         end
       end
     with

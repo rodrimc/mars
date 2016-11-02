@@ -8,12 +8,17 @@
 #define PORT 8888
 #define BACKLOG 128
 
-/* MESSAGE CODES */
-#define JOIN             0
-#define NEW_PEER         1
-#define REGULAR_SEND     2
-#define CONCURRENT_SEND  3
-#define ORDERED_SEND     4
+/**** MESSAGE CODES ****/
+/* peers -> server */
+#define P_JOIN                10
+#define P_REGULAR_SEND        11
+#define P_CONCURRENT_SEND     12
+#define P_ORDERED_SEND        13
+
+/* server -> peers */
+#define S_JOINED              20
+#define S_NEW_PEER            21
+#define S_BROADCAST           22
 /* more? */
 
 native/pre do
@@ -46,18 +51,19 @@ native
    end
 ]]
 
-event (int) send_broadcast_join;
-event (int) send_broadcast_message;
+/*** SERVER SIDE ***/
+event (uint) send_broadcast_join;
+event (uint) send_broadcast_message;
 vector []byte cur_payload;
 
-var int id_ref = 1;
-var uint peers_count = 0;
+var uint id_ref = 1;
+var usize peers_count = 0;
 
-code/await Send_Broadcast_Join (var& _uv_tcp_t client, var int id) -> void
+code/await Send_Broadcast_Join (var& _uv_tcp_t client, var uint id) -> void
 do
   vector[] byte buffer = [] .. "";
 
-  buffer = [] .. "return {type=" .. [[ tostring(@NEW_PEER) ]];
+  buffer = [] .. "return {type=" .. [[ tostring(@S_NEW_PEER) ]];
   buffer = buffer .. ",new_peer=" .. [[ tostring (@id) ]];
   buffer = buffer .. ",peers=" .. [[ tostring (@outer.peers_count) ]];
   var u64 ts = _now ();
@@ -73,7 +79,7 @@ do
   vector[] byte buffer = [] .. "";
 
   buffer = [] .. "return {from=" .. [[ tostring (@from) ]];
-  buffer = buffer .. ",type=" .. [[ tostring (@REGULAR_SEND) ]];
+  buffer = buffer .. ",type=" .. [[ tostring (@S_BROADCAST) ]];
   buffer = buffer .. ",payload=" .. payload;
   var u64 ts = _now ();
   buffer = buffer .. ",timestamp=" .. [[ tostring (@ts) ]];
@@ -86,7 +92,7 @@ end
 code/await UV_TCP_Server_Handler (var& _uv_tcp_t client) -> int
 do
   var uint session = _;
-  var int id = outer.id_ref;
+  var uint id = outer.id_ref;
   outer.id_ref = outer.id_ref + 1;
   var u64 start_time = 0;
 
@@ -106,9 +112,9 @@ do
       [[ TABLE =  load (@buffer)()]]
       type = [[ TABLE.type ]];
 
-      if type == JOIN then
+      if type == P_JOIN then
         buffer = [] .. "return {";
-        buffer = buffer .. "type=" .. [[ tostring (@JOIN) ]];
+        buffer = buffer .. "type=" .. [[ tostring (@S_JOINED) ]];
         buffer = buffer .. ",id=" .. [[ tostring(@id) ]];
         buffer = buffer .. ",peers=" .. [[ tostring(@outer.peers_count) ]];
         buffer = buffer .. "}\n";
@@ -118,7 +124,7 @@ do
 
         emit outer.send_broadcast_join (id);
 
-      else/if type == REGULAR_SEND then
+      else/if type == P_REGULAR_SEND then
         var int from = [[ TABLE.from ]];
         vector[] byte payload = [] .. [[ serialize(TABLE.payload) ]];
 
@@ -127,12 +133,12 @@ do
       end
     end
   with
-    var int new_id;
+    var uint new_id;
     every new_id in outer.send_broadcast_join do
       spawn Send_Broadcast_Join (&client, new_id);
     end
   with
-    var int from;
+    var uint from;
     every from in outer.send_broadcast_message do
       spawn Send_Broadcast_Message (&client, from, &outer.cur_payload);
     end
@@ -143,13 +149,16 @@ end
 /* We must include tcp-server after we've defined UV_TCP_Server_Handler */
 #include "uv/tcp-server.ceu"
 
+
+/*** CLIENT API ***/
 data IPeer with
   var& _uv_tcp_t tcp;
   var uint id;
   vector&[] byte rbuffer;
   vector&[] byte wbuffer;
   vector&[] byte message;
-  event (void) joined;
+  event (uint, usize) joined;
+  event (uint, usize) new_peer;
   event (void) incoming_message;
   event (void) send;
   event (void) sent;
@@ -167,17 +176,18 @@ do
     vector []byte rbuffer;
     vector []byte wbuffer;
     vector []byte message;
-    var IPeer ref_ = val IPeer (&tcp_, 0, &rbuffer, &wbuffer, &message, _, _, _, _);
+    var IPeer ref_ = val IPeer (&tcp_, 0, &rbuffer, &wbuffer, &message,
+                                _, _, _, _, _);
     peer = &ref_;
 
     await connected;
 
     par do
       wbuffer = [] .. "return {";
-      wbuffer = wbuffer .. "type=" .. [[ tostring (@JOIN) ]];
+      wbuffer = wbuffer .. "type=" .. [[ tostring (@P_JOIN) ]];
       wbuffer = wbuffer .. "}\n";
 
-      /* send JOIN message */
+      /* send P_JOIN message */
       await UV_TCP_Write(&ref_.tcp, &wbuffer);
     with
       loop do
@@ -185,7 +195,7 @@ do
         vector[] byte payload = [] .. ref_.wbuffer;
         ref_.wbuffer = [] .. "return{payload=" .. payload;
         ref_.wbuffer = ref_.wbuffer .. ",from=" .. [[ tostring (@ref_.id) ]];
-        ref_.wbuffer = ref_.wbuffer .. ",type=" .. [[ tostring (@REGULAR_SEND) ]];
+        ref_.wbuffer = ref_.wbuffer .. ",type=" .. [[ tostring (@P_REGULAR_SEND) ]];
         var u64 ts = _now();
         ref_.wbuffer = ref_.wbuffer .. ",timestamp=" .. [[ tostring(@ts) ]];
         ref_.wbuffer = ref_.wbuffer .. "}\n";
@@ -205,6 +215,9 @@ do
             if ref_.rbuffer[i] != { '\n' } then
               ref_.message = ref_.message .. [ref_.rbuffer[i]];
             else
+              _printf ("[Peer (%u)]Incoming Message: %s\n", ref_.id,
+                  &&ref_.message[0]);
+
               var int type = _;
 
               /* parse message */
@@ -212,21 +225,22 @@ do
 
               type = [[ TABLE.type ]];
 
-              if type == JOIN then
+              if type == S_JOINED then
                 ref_.id = [[ TABLE.id ]];
-                _printf ("[Peer (%d)] My id: %d\n", ref_.id, ref_.id);
-                emit ref_.joined;
+                var int peers = [[ TABLE.peers ]];
+                emit ref_.joined (ref_.id, peers);
 
-              else/if type == REGULAR_SEND then 
-                ref_.message = [] .. "return " .. [[ serialize (TABLE.payload) ]]; 
-                _printf ("[Peer (%d)] Incoming message: %s\n", ref_.id,
-                                                  &&ref_.message[0]);
+              else/if type == S_NEW_PEER then
+                var int new_peer = [[ TABLE.peers ]];
+                var int peers = [[ TABLE.peers ]];
+                emit ref_.new_peer (new_peer, peers);
+
+              else/if type == S_BROADCAST then
+                ref_.message= [] .. "return" .. [[serialize (TABLE.payload)]];
                 emit ref_.incoming_message;
 
               else
-                _printf ("[Peer (%d)] Incoming message: %s\n", ref_.id,
-                                                  &&ref_.message[0]);
-                emit ref_.incoming_message;
+                _printf ("[Peer (%d) Unknow message type.\n", ref_.id);
               end
 
               ref_.message = [] .. "";
