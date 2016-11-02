@@ -42,7 +42,7 @@ par/or do
         peer.wbuffer = [] .. "{";
         peer.wbuffer = peer.wbuffer .. "id=" .. [[ tostring(@peer.id) ]];
         peer.wbuffer = peer.wbuffer .. ",type=" .. [[ tostring(@KEY) ]];
-        peer.wbuffer = peer.wbuffer .. ",key=\'" .. [ key[0] ] .. "'";
+        peer.wbuffer = peer.wbuffer .. ",key=\'" .. (_ID(key) as _char&&) .. "'";
         peer.wbuffer = peer.wbuffer .. "}";
 
         emit peer.send;

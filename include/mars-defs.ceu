@@ -35,6 +35,8 @@ native/pre do
  ##define DEBUG 0
 ##endif
 
+##define ID(x) x
+
 #define debug(fmt, ...) \
   do { if (DEBUG) fprintf(stderr, "%s:%d: " fmt, __FILE__, \
       __LINE__, __VA_ARGS__); } while (0)
@@ -45,6 +47,11 @@ native/nohold
   _now,
   _debug,
 ;
+
+native/pure
+  _ID,
+;
+
 [[
    function serialize (o)
      local result = '{'
@@ -60,7 +67,6 @@ native/nohold
      return result
    end
 ]]
-
 
 #endif
 
