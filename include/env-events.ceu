@@ -1,0 +1,13 @@
+#ifndef ENV_EVENTS_
+#define ENV_EVENTS_
+
+/* "output" */
+event (_char_ptr_ext) send_key;
+event (void) send_click;
+
+/* "input" */
+event (uint) id_ready;
+event (_char_ptr_ext, uint) keyed;
+event (uint) clicked;
+
+#endif
