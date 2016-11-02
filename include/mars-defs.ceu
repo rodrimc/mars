@@ -1,0 +1,66 @@
+#ifndef _CEU_MARS_DEFS
+#define _CEU_MARS_DEFS
+
+#define LOCALHOST "0.0.0.0"
+#define PORT 8888
+#define BACKLOG 128
+
+/**** MESSAGE CODES ****/
+/* peers -> server */
+#define P_JOIN                10
+#define P_REGULAR_SEND        11
+#define P_CONCURRENT_SEND     12
+#define P_ORDERED_SEND        13
+
+/* server -> peers */
+#define S_JOINED              20
+#define S_NEW_PEER            21
+#define S_BROADCAST           22
+/* more? */
+
+native/pre do
+  ##include <time.h>
+
+  long long unsigned int now (void)
+  {
+    struct timespec ts;
+    clock_gettime(CLOCK_REALTIME, &ts);
+    return (long long unsigned int)ts.tv_sec * 1000000000L + ts.tv_nsec;
+  }
+
+##ifdef DEBUG
+ ##undef DEBUG
+ ##define DEBUG 1
+##else
+ ##define DEBUG 0
+##endif
+
+#define debug(fmt, ...) \
+  do { if (DEBUG) fprintf(stderr, "%s:%d: " fmt, __FILE__, \
+      __LINE__, __VA_ARGS__); } while (0)
+
+end
+
+native/nohold
+  _now,
+  _debug,
+;
+[[
+   function serialize (o)
+     local result = '{'
+     for k,v in pairs(o) do
+       result = result ..  k .. '='
+       if type (v) == 'string' then
+         result = result .. "'" .. v .. "',"
+       else
+         result = result .. v .. ','
+       end
+     end
+     result = result .. '}'
+     return result
+   end
+]]
+
+
+#endif
+

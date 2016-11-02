@@ -6,7 +6,7 @@ event (void) ok;
 #define KEY 0
 
 par/or do
-  #include "mars.ceu"
+  #include "mars-client.ceu"
 
   var& IPeer peer;
   watching Peer (LOCALHOST, 8888, 0) -> (&peer)

@@ -1,0 +1,111 @@
+#ifndef _CEU_MARS_CLIENT
+#define _CEU_MARS_CLIENT
+
+#include "uv/uv.ceu"
+#include "uv/tcp.ceu"
+
+#include "mars-defs.ceu"
+
+/*** CLIENT API ***/
+data IPeer with
+  var& _uv_tcp_t tcp;
+  var uint id;
+  vector&[] byte rbuffer;
+  vector&[] byte wbuffer;
+  vector&[] byte message;
+  event (uint, usize) joined;
+  event (uint, usize) new_peer;
+  event (void) incoming_message;
+  event (void) send;
+  event (void) sent;
+end
+
+code/await Peer (var _char&& ip, var int port, var int session)
+                          -> (var& IPeer peer)
+                            -> void
+do
+  event& (void) connected;
+  var& _uv_tcp_t tcp_;
+
+  watching UV_TCP_Connect(ip, port) -> (&tcp_, &connected)
+  do
+    vector []byte rbuffer;
+    vector []byte wbuffer;
+    vector []byte message;
+    var IPeer ref_ = val IPeer (&tcp_, 0, &rbuffer, &wbuffer, &message,
+                                _, _, _, _, _);
+    peer = &ref_;
+
+    await connected;
+
+    par do
+      wbuffer = [] .. "return {";
+      wbuffer = wbuffer .. "type=" .. [[ tostring (@P_JOIN) ]];
+      wbuffer = wbuffer .. "}\n";
+
+      /* send P_JOIN message */
+      await UV_TCP_Write(&ref_.tcp, &wbuffer);
+    with
+      loop do
+        await ref_.send;
+        vector[] byte payload = [] .. ref_.wbuffer;
+        ref_.wbuffer = [] .. "return{payload=" .. payload;
+        ref_.wbuffer = ref_.wbuffer .. ",from=" .. [[ tostring (@ref_.id) ]];
+        ref_.wbuffer = ref_.wbuffer .. ",type=" .. [[ tostring (@P_REGULAR_SEND) ]];
+        var u64 ts = _now();
+        ref_.wbuffer = ref_.wbuffer .. ",timestamp=" .. [[ tostring(@ts) ]];
+        ref_.wbuffer = ref_.wbuffer .. "}\n";
+
+        _debug ("[Peer (%d)] sending: %s\n", ref_.id, &&ref_.wbuffer[0]);
+        await UV_TCP_Write(&ref_.tcp, &ref_.wbuffer);
+        emit ref_.sent;
+      end
+    with
+      /* await message */
+      loop do
+        event& usize ok;
+        watching UV_Stream_Read(&ref_.tcp, &ref_.rbuffer) -> (&ok) do
+          await ok;
+          var usize i;
+          loop i in [0 -> $ref_.rbuffer[ do
+            if ref_.rbuffer[i] != { '\n' } then
+              ref_.message = ref_.message .. [ref_.rbuffer[i]];
+            else
+              _debug ("[Peer (%u)]Incoming Message: %s\n", ref_.id,
+                  &&ref_.message[0]);
+
+              var int type = _;
+
+              /* parse message */
+              [[ TABLE =  load (@message)()]]
+
+              type = [[ TABLE.type ]];
+
+              if type == S_JOINED then
+                ref_.id = [[ TABLE.id ]];
+                var int peers = [[ TABLE.peers ]];
+                emit ref_.joined (ref_.id, peers);
+
+              else/if type == S_NEW_PEER then
+                var int new_peer = [[ TABLE.peers ]];
+                var int peers = [[ TABLE.peers ]];
+                emit ref_.new_peer (new_peer, peers);
+
+              else/if type == S_BROADCAST then
+                ref_.message= [] .. "return" .. [[serialize (TABLE.payload)]];
+                emit ref_.incoming_message;
+
+              else
+                _debug ("[Peer (%d) Unknow message type.\n", ref_.id);
+              end
+
+              ref_.message = [] .. "";
+            end
+          end
+        end
+      end
+    end
+  end
+end
+
+#endif
