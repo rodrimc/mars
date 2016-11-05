@@ -51,8 +51,7 @@ par/or do
         stub.wbuffer = stub.wbuffer .. ",key=\'" .. (_ID(key) as _char&&) .. "'";
         stub.wbuffer = stub.wbuffer .. "}";
 
-        emit stub.send;
-        await stub.sent;
+        spawn Stub_Send_Message (&stub);
       end
     with
       /* CLICK */
@@ -63,8 +62,7 @@ par/or do
         stub.wbuffer = stub.wbuffer .. ",type=" .. [[ tostring(@CLICK) ]];
         stub.wbuffer = stub.wbuffer .. "}";
 
-        emit stub.send;
-        await stub.sent;
+        spawn Stub_Send_Message (&stub);
       end
     end
   end
