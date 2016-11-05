@@ -10,34 +10,34 @@ event (void) mirror_ok;
 par/or do
   #include "mars-client.ceu"
 
-  var& IPeer peer;
-  watching Peer (LOCALHOST, 8888, 0) -> (&peer)
+  var& IStub stub;
+  watching Stub (LOCALHOST, 8888, 0) -> (&stub)
   do
     par do
       var uint id;
       var usize peers;
-      (id, peers) = await peer.joined;
+      (id, peers) = await stub.joined;
       emit mirror_ok;
       emit id_ready (id);
     with
       loop do
         var uint new_peer;
         var usize peers;
-        (new_peer, peers) = await peer.new_peer;
+        (new_peer, peers) = await stub.new_peer;
       end
     with
-      every peer.incoming_message do
-        _printf ("[APP(%u)] Message: %s\n", peer.id, &&peer.message[0]);
+      every stub.incoming_message do
+        _printf ("[APP(%u)] Message: %s\n", stub.id, &&stub.message[0]);
 
-        [[ TABLE = load (@peer.message)() ]]
+        [[ TABLE = load (@stub.message)() ]]
         var int type = [[ TABLE.type ]];
+        var uint peer = [[ TABLE.id ]];
 
         if type == KEY then
           vector[] byte key = [] .. [[ TABLE.key ]];
-          emit keyed (&&key[0], peer.id);
+          emit keyed (&&key[0], peer);
 
         else/if type == CLICK then
-          var uint peer = [[ TABLE.id ]];
           emit clicked (peer);
         end
       end
@@ -45,26 +45,26 @@ par/or do
       /* KEY */
       loop do
         var _char_ptr_ext key = await send_key;
-        peer.wbuffer = [] .. "{";
-        peer.wbuffer = peer.wbuffer .. "id=" .. [[ tostring(@peer.id) ]];
-        peer.wbuffer = peer.wbuffer .. ",type=" .. [[ tostring(@KEY) ]];
-        peer.wbuffer = peer.wbuffer .. ",key=\'" .. (_ID(key) as _char&&) .. "'";
-        peer.wbuffer = peer.wbuffer .. "}";
+        stub.wbuffer = [] .. "{";
+        stub.wbuffer = stub.wbuffer .. "id=" .. [[ tostring(@stub.id) ]];
+        stub.wbuffer = stub.wbuffer .. ",type=" .. [[ tostring(@KEY) ]];
+        stub.wbuffer = stub.wbuffer .. ",key=\'" .. (_ID(key) as _char&&) .. "'";
+        stub.wbuffer = stub.wbuffer .. "}";
 
-        emit peer.send;
-        await peer.sent;
+        emit stub.send;
+        await stub.sent;
       end
     with
       /* CLICK */
       loop do
         await send_click;
-        peer.wbuffer = [] .. "{";
-        peer.wbuffer = peer.wbuffer .. "id=" .. [[ tostring(@peer.id) ]];
-        peer.wbuffer = peer.wbuffer .. ",type=" .. [[ tostring(@CLICK) ]];
-        peer.wbuffer = peer.wbuffer .. "}";
+        stub.wbuffer = [] .. "{";
+        stub.wbuffer = stub.wbuffer .. "id=" .. [[ tostring(@stub.id) ]];
+        stub.wbuffer = stub.wbuffer .. ",type=" .. [[ tostring(@CLICK) ]];
+        stub.wbuffer = stub.wbuffer .. "}";
 
-        emit peer.send;
-        await peer.sent;
+        emit stub.send;
+        await stub.sent;
       end
     end
   end

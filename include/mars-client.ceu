@@ -7,7 +7,7 @@
 #include "mars-defs.ceu"
 
 /*** CLIENT API ***/
-data IPeer with
+data IStub with
   var& _uv_tcp_t tcp;
   var uint id;
   vector&[] byte rbuffer;
@@ -20,8 +20,8 @@ data IPeer with
   event (void) sent;
 end
 
-code/await Peer (var _char&& ip, var int port, var int session)
-                          -> (var& IPeer peer)
+code/await Stub (var _char&& ip, var int port, var int session)
+                          -> (var& IStub stub)
                             -> void
 do
   event& (void) connected;
@@ -32,9 +32,9 @@ do
     vector []byte rbuffer;
     vector []byte wbuffer;
     vector []byte message;
-    var IPeer ref_ = val IPeer (&tcp_, 0, &rbuffer, &wbuffer, &message,
+    var IStub ref_ = val IStub (&tcp_, 0, &rbuffer, &wbuffer, &message,
                                 _, _, _, _, _);
-    peer = &ref_;
+    stub = &ref_;
 
     await connected;
 
@@ -56,7 +56,7 @@ do
         ref_.wbuffer = ref_.wbuffer .. ",timestamp=" .. [[ tostring(@ts) ]];
         ref_.wbuffer = ref_.wbuffer .. "}\n";
 
-        _debug ("[Peer (%d)] sending: %s\n", ref_.id, &&ref_.wbuffer[0]);
+        _debug ("[Stub (%d)] sending: %s\n", ref_.id, &&ref_.wbuffer[0]);
         await UV_TCP_Write(&ref_.tcp, &ref_.wbuffer);
         emit ref_.sent;
       end
@@ -71,7 +71,7 @@ do
             if ref_.rbuffer[i] != { '\n' } then
               ref_.message = ref_.message .. [ref_.rbuffer[i]];
             else
-              _debug ("[Peer (%u)]Incoming Message: %s\n", ref_.id,
+              _debug ("[Stub (%u)]Incoming Message: %s\n", ref_.id,
                   &&ref_.message[0]);
 
               var int type = _;
@@ -96,7 +96,7 @@ do
                 emit ref_.incoming_message;
 
               else
-                _debug ("[Peer (%d) Unknow message type.\n", ref_.id);
+                _debug ("[Stub (%d) Unknow message type.\n", ref_.id);
               end
 
               ref_.message = [] .. "";
