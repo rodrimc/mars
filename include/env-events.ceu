@@ -1,13 +1,44 @@
 #ifndef ENV_EVENTS_
 #define ENV_EVENTS_
 
-/* "output" */
-event (_char_ptr_ext) send_key;
-event (void) send_click;
+#include "media/raw.ceu"
+
+event (_char_ptr_ext, bool) stub_key;
+event (int, int, int, bool) stub_mouse_clicked;
 
 /* "input" */
 event (uint) id_ready;
 event (_char_ptr_ext, uint) keyed;
 event (uint) clicked;
+
+code/await 
+MarsScene (var Size? size)
+                  -> (var& IScene scene)
+                      -> void
+do
+  var& IScene real_scene_; 
+  watching Scene (size) -> (&real_scene_)
+  do
+    var IScene dummy_scene = val IScene (&real_scene_.ref, &real_scene_.size, 
+                       _, _, _, _, _, _, _);
+    scene = &dummy_scene;
+
+    par do
+      var int x;
+      var int y;
+      var int button;
+      var bool press;
+      every (x, y, button, press) in real_scene_.mouse_clicked do
+        emit outer.stub_mouse_clicked (x, y, button, press);
+      end
+    with
+      var _char_ptr_ext key;
+      var bool press;
+      every (key, press) in real_scene_.key do
+        emit outer.stub_key (key, press);
+      end
+    end
+  end
+end
 
 #endif

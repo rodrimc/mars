@@ -1,4 +1,3 @@
-#include "media/raw.ceu"
 #include "env-events.ceu"
 
 /* internal */
@@ -6,6 +5,7 @@ event (void) mirror_ok;
 
 #define KEY 0
 #define CLICK 1
+
 
 par/or do
   #include "mars-client.ceu"
@@ -44,25 +44,39 @@ par/or do
     with
       /* KEY */
       loop do
-        var _char_ptr_ext key = await send_key;
-        stub.wbuffer = [] .. "{";
-        stub.wbuffer = stub.wbuffer .. "id=" .. [[ tostring(@stub.id) ]];
-        stub.wbuffer = stub.wbuffer .. ",type=" .. [[ tostring(@KEY) ]];
-        stub.wbuffer = stub.wbuffer .. ",key=\'" .. (_ID(key) as _char&&) .. "'";
-        stub.wbuffer = stub.wbuffer .. "}";
+        var _char_ptr_ext key;
+        var bool press;
+        every (key, press) in stub_key do
+          stub.wbuffer = [] .. "{";
+          stub.wbuffer = stub.wbuffer .. "id=" .. [[ tostring(@stub.id) ]];
+          stub.wbuffer = stub.wbuffer .. ",type=" .. [[ tostring(@KEY) ]];
+          stub.wbuffer = stub.wbuffer .. ",key=\'" .. (_ID(key) as _char&&) .. "'";
+          stub.wbuffer = stub.wbuffer .. ",press=" .. [[ tostring(@press) ]];
+          stub.wbuffer = stub.wbuffer .. "}";
 
-        spawn Stub_Send_Message (&stub);
+          spawn Stub_Send_Message (&stub);
+        end
       end
     with
       /* CLICK */
       loop do
-        await send_click;
-        stub.wbuffer = [] .. "{";
-        stub.wbuffer = stub.wbuffer .. "id=" .. [[ tostring(@stub.id) ]];
-        stub.wbuffer = stub.wbuffer .. ",type=" .. [[ tostring(@CLICK) ]];
-        stub.wbuffer = stub.wbuffer .. "}";
+        var int x;
+        var int y;
+        var int button;
+        var bool press;
 
-        spawn Stub_Send_Message (&stub);
+        every (x, y, button, press) in stub_mouse_clicked do
+          stub.wbuffer = [] .. "{";
+          stub.wbuffer = stub.wbuffer .. "id=" .. [[ tostring(@stub.id) ]];
+          stub.wbuffer = stub.wbuffer .. ",type=" .. [[ tostring(@CLICK) ]];
+          stub.wbuffer = stub.wbuffer .. ",x=" .. [[ tostring(@x) ]];
+          stub.wbuffer = stub.wbuffer .. ",y=" .. [[ tostring(@y) ]];
+          stub.wbuffer = stub.wbuffer .. ",button=" .. [[ tostring(@button) ]];
+          stub.wbuffer = stub.wbuffer .. ",press=" .. [[ tostring(@press) ]];
+          stub.wbuffer = stub.wbuffer .. "}";
+
+          spawn Stub_Send_Message (&stub);
+        end
       end
     end
   end

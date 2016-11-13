@@ -1,4 +1,4 @@
-#include "media/media.ceu"
+#include "env-events.ceu"
 
 var& IScene scene;
 var& IPlay play;
@@ -12,15 +12,15 @@ var Media.Video video = val Media.Video (
                 1.0,
                 1.0);
 
-watching Scene (Size (width, height)) -> (&scene),
+watching MarsScene (Size (width, height)) -> (&scene),
          Play (&scene, &video) -> (&play)
 do
   var _char_ptr_ext key;
   var bool press;
   every (key, press) in scene.key do
-    if press then
-      emit send_key (key);
-    end
+    /* if press then */
+    /*   emit send_key (key); */
+    /* end */
   end
 end
 
