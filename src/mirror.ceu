@@ -1,4 +1,4 @@
-#include "multidevice2.ceu"
+#include "mars.ceu"
 #include "media/media.ceu"
 
 var& IPeer peer;

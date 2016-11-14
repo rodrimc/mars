@@ -26,7 +26,8 @@ par/or do
         (new_peer, peers) = await stub.new_peer;
       end
     with
-      every stub.incoming_message do
+      loop do
+        await stub.incoming_message;
         _printf ("[APP(%u)] Message: %s\n", stub.id, &&stub.message[0]);
 
         [[ TABLE = load (@stub.message)() ]]
@@ -46,16 +47,15 @@ par/or do
       loop do
         var _char_ptr_ext key;
         var bool press;
-        every (key, press) in stub_key do
-          stub.wbuffer = [] .. "{";
-          stub.wbuffer = stub.wbuffer .. "id=" .. [[ tostring(@stub.id) ]];
-          stub.wbuffer = stub.wbuffer .. ",type=" .. [[ tostring(@KEY) ]];
-          stub.wbuffer = stub.wbuffer .. ",key=\'" .. (_ID(key) as _char&&) .. "'";
-          stub.wbuffer = stub.wbuffer .. ",press=" .. [[ tostring(@press) ]];
-          stub.wbuffer = stub.wbuffer .. "}";
+        (key, press) = await stub_key;
+        stub.wbuffer = [] .. "{";
+        stub.wbuffer = stub.wbuffer .. "id=" .. [[ tostring(@stub.id) ]];
+        stub.wbuffer = stub.wbuffer .. ",type=" .. [[ tostring(@KEY) ]];
+        stub.wbuffer = stub.wbuffer .. ",key=\'" .. (_ID(key) as _char&&) .. "'";
+        stub.wbuffer = stub.wbuffer .. ",press=" .. [[ tostring(@press) ]];
+        stub.wbuffer = stub.wbuffer .. "}";
 
-          spawn Stub_Send_Message (&stub);
-        end
+        spawn Stub_Send_Message (&stub);
       end
     with
       /* CLICK */
@@ -65,18 +65,17 @@ par/or do
         var int button;
         var bool press;
 
-        every (x, y, button, press) in stub_mouse_clicked do
-          stub.wbuffer = [] .. "{";
-          stub.wbuffer = stub.wbuffer .. "id=" .. [[ tostring(@stub.id) ]];
-          stub.wbuffer = stub.wbuffer .. ",type=" .. [[ tostring(@CLICK) ]];
-          stub.wbuffer = stub.wbuffer .. ",x=" .. [[ tostring(@x) ]];
-          stub.wbuffer = stub.wbuffer .. ",y=" .. [[ tostring(@y) ]];
-          stub.wbuffer = stub.wbuffer .. ",button=" .. [[ tostring(@button) ]];
-          stub.wbuffer = stub.wbuffer .. ",press=" .. [[ tostring(@press) ]];
-          stub.wbuffer = stub.wbuffer .. "}";
+        (x, y, button, press) = await stub_mouse_clicked;
+        stub.wbuffer = [] .. "{";
+        stub.wbuffer = stub.wbuffer .. "id=" .. [[ tostring(@stub.id) ]];
+        stub.wbuffer = stub.wbuffer .. ",type=" .. [[ tostring(@CLICK) ]];
+        stub.wbuffer = stub.wbuffer .. ",x=" .. [[ tostring(@x) ]];
+        stub.wbuffer = stub.wbuffer .. ",y=" .. [[ tostring(@y) ]];
+        stub.wbuffer = stub.wbuffer .. ",button=" .. [[ tostring(@button) ]];
+        stub.wbuffer = stub.wbuffer .. ",press=" .. [[ tostring(@press) ]];
+        stub.wbuffer = stub.wbuffer .. "}";
 
-          spawn Stub_Send_Message (&stub);
-        end
+        spawn Stub_Send_Message (&stub);
       end
     end
   end

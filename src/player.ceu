@@ -18,9 +18,7 @@ do
   var _char_ptr_ext key;
   var bool press;
   every (key, press) in scene.key do
-    /* if press then */
-    /*   emit send_key (key); */
-    /* end */
+    _printf ("%s\n", key);
   end
 end
 
