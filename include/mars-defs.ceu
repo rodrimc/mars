@@ -60,7 +60,7 @@ native/pure
        if type (v) == 'string' then
          result = result .. "'" .. v .. "',"
        else
-         result = result .. v .. ','
+         result = result .. tostring(v) .. ','
        end
      end
      result = result .. '}'
