@@ -1,0 +1,234 @@
+#ifndef ENV_EVENTS_
+#define ENV_EVENTS_
+
+#include "c.ceu"
+#include "media/raw.ceu"
+
+event (_char_ptr_ext, bool) mars_scene_key;
+event (int, int, int, bool) mars_scene_mouse_clicked;
+
+event (_char_ptr_ext, bool, uint) remote_mars_scene_key;
+event (int, int, int, bool, uint) remote_mars_scene_mouse_clicked;
+
+var uint my_id = 0;
+
+data IMarsScene with
+  var& IScene real;
+  event (int, int, int, bool, uint)  mouse_clicked;
+  event (int, int, uint)             mouse_moved;
+  event (_char_ptr_ext, bool, uint)  key;
+  event (u64, uint)                  tick;
+  event (_char_ptr_ext, uint)        error;
+  event (void)                       quit;
+end
+
+code/await
+Scene (var Size? size)
+                -> (var& IMarsScene scene)
+                    -> void
+do
+  var& IScene real;
+  watching SceneFull (size) -> (&real)
+  do
+    var IMarsScene ref_ = val IMarsScene (&real, _, _, _, _, _, _);
+    scene = &ref_;
+
+    par do
+      var int x;
+      var int y;
+      var int button;
+      var bool press;
+      every (x, y, button, press) in real.mouse_clicked do
+        emit outer.mars_scene_mouse_clicked (x, y, button, press);
+      end
+    with
+      var _char_ptr_ext key;
+      var bool press;
+      every (key, press) in real.key do
+        emit outer.mars_scene_key (key, press);
+      end
+    with
+      var int x;
+      var int y;
+      every (x, y) in real.mouse_moved do
+        emit ref_.mouse_moved (x, y, outer.my_id);
+      end
+    with
+      var u64 tick;
+      every (tick) in real.tick do
+        emit ref_.tick (tick, outer.my_id);
+      end
+    with
+      var _char_ptr_ext error;
+      every (error) in real.error do
+        emit ref_.error (error, outer.my_id);
+      end
+    with
+      await ref_.quit;
+      emit real.quit;
+
+    /* REMOTE EVENTS */
+    with
+      /* KEY */
+      var _char_ptr_ext key;
+      var bool press;
+      var uint peer;
+      every (key, press, peer) in outer.remote_mars_scene_key do
+        emit ref_.key (key, press, peer);
+      end
+    with
+      /* MOUSE CLICKED */
+      var int x;
+      var int y;
+      var int button;
+      var bool press;
+      var uint peer;
+      every (x, y, button, press, peer) in 
+                                      outer.remote_mars_scene_mouse_clicked do
+        emit ref_.mouse_clicked (x, y, button, press, peer);
+      end
+    end
+  end
+end
+
+code/await
+Play (var& IMarsScene scene, var& Media media)
+                -> (var& IPlay play)
+                    -> void
+do
+  await PlayFull (&scene.real, &media) -> (&play);
+end
+
+/* Scene.Mars functions */
+code/tight
+Scene_Pause (var& IMarsScene scene) -> void
+do
+  call Scene_Pause_Base (&scene.real);
+end
+
+code/tight
+Scene_Resume (var& IMarsScene scene) -> void
+do
+  call Scene_Resume_Base (&scene.real);
+end
+
+code/tight
+Scene_Set_Tick_Interval (var& IMarsScene scene, var u64 interval) -> void
+do
+  call Scene_Set_Tick_Interval_Base (&scene.real, interval);
+end
+
+/* Play_New */
+
+code/tight/dynamic
+Play_New (var& IMarsScene scene, dynamic var& Media media) -> _lp_Media&&
+do
+  escape call/dynamic Play_New_Base (&scene.real, &media);
+end
+
+code/tight/dynamic
+Play_New (var& IMarsScene scene, dynamic var& Media.Text media) -> _lp_Media&&
+do
+  escape call/dynamic Play_New_Base (&scene.real, &media);
+end
+
+code/tight/dynamic
+Play_New (var& IMarsScene scene, dynamic var& Media.Image media) -> _lp_Media&&
+do
+  escape call/dynamic Play_New_Base (&scene.real, &media);
+end
+
+code/tight/dynamic
+Play_New (var& IMarsScene scene, dynamic var& Media.Video media) -> _lp_Media&&
+do
+  escape call/dynamic Play_New_Base (&scene.real, &media);
+end
+
+code/tight/dynamic
+Play_New (var& IMarsScene scene, dynamic var& Media.Audio media) -> _lp_Media&&
+do
+  escape call/dynamic Play_New_Base (&scene.real, &media);
+end
+
+/* Play_Set_Media */
+
+code/tight/dynamic
+Play_Set_Media (var& IPlay play, dynamic var& Media media) -> void
+do
+  call/dynamic Play_Set_Media_Base (&play, &media);
+end
+
+code/tight/dynamic
+Play_Set_Media (var& IPlay play, dynamic var& Media.Text text) -> void
+do
+  call/dynamic Play_Set_Media_Base (&play, &text);
+end
+
+code/tight/dynamic
+Play_Set_Media (var& IPlay play, dynamic var& Media.Image image) -> void
+do
+  call/dynamic Play_Set_Media_Base (&play, &image);
+end
+
+code/tight/dynamic
+Play_Set_Media (var& IPlay play, dynamic var& Media.Audio audio) -> void
+do
+  call/dynamic Play_Set_Media_Base (&play, &audio);
+end
+
+code/tight/dynamic
+Play_Set_Media (var& IPlay play, dynamic var& Media.Video video) -> void
+do
+  call/dynamic Play_Set_Media_Base (&play, &video);
+end
+
+/* Play_Set_* */
+code/tight
+Play_Set_Char (var& IPlay play, var _char&& name, var _char&& value) -> void
+do
+  call Play_Set_Char_Base (&play, name, value);
+end
+
+code/tight
+Play_Set_Int (var& IPlay play, var _char&& name, var int value) -> void
+do
+  call Play_Set_Int_Base (&play, name, value);
+end
+
+code/tight
+Play_Get_Int (var& IPlay play, var _char&& name) -> int
+do
+  escape call Play_Get_Int_Base (&play, name);
+end
+
+code/tight
+Play_Set_Bool (var& IPlay play, var _char&& name, var bool value) -> void
+do
+  call Play_Set_Bool_Base (&play, name, value);
+end
+
+code/tight
+Play_Get_Bool (var& IPlay play, var _char&& name) -> bool 
+do
+  escape call Play_Get_Bool_Base (&play, name);
+end
+
+code/tight
+Play_Set_Region (var& IPlay play, var Region region) -> void
+do
+  call Play_Set_Region_Base (&play, region);
+end
+
+code/tight
+Play_Seek (var& IPlay play, var u64 time, var bool relative) -> void
+do
+  call Play_Seek_Base (&play, time, relative);
+end
+
+code/tight
+Play_Get_Running_Time (var& IPlay play) -> u64 
+do
+  escape call Play_Get_Running_Time_Base (&play);
+end
+
+#endif

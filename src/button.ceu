@@ -1,9 +1,4 @@
-#include "media/media.ceu"
-#include "env-events.ceu"
-
-_printf ("awaiting for id...\n");
-var uint myid = await id_ready;
-_printf ("id ready (%u)\n", myid);
+#include "mars-media.ceu"
 
 var Size size = val Size (720, 480);
 
@@ -18,29 +13,25 @@ var Media.Text text = val Media.Text (
                 Region(0, 350, size.width, 100, 2),
                 0xffffffff);
 
-var& IScene scene;
+var& IMarsScene scene;
 watching Scene(size) -> (&scene)
 do
   spawn Play (&scene, &video);
   var& IPlay p;
   watching Play(&scene, &text) -> (&p) do
     par/or do
-      var bool pressed;
-      every (_, _, _, pressed) in scene.mouse_clicked do
-        if pressed then
-          emit send_click;
+      vector[] byte str;
+      var bool press;
+      var uint id = _;
+      every (_, _, _, press, id) in scene.mouse_clicked do
+        if (press) then
+          str = [] .. "Player " ..  [[ tostring (@id) ]] .. " clicked";
+          call Play_Set_Char (&p, "text", &&str[0]);
         end
       end
     with
-      var uint id = _;
-      every id in clicked do
-        vector[] byte str;
-        str = [] .. "Player " ..  [[ tostring (@id) ]] .. " clicked";
-        call Play_Set_Char (&p, "text", &&str[0]);
-      end
-    with
       var _char_ptr_ext key;
-      (key, _) = await scene.key until (_strcmp(key, "q") == 0);
+      (key, _, _) = await scene.key until (_strcmp(key, "q") == 0);
     end
   end
 end
