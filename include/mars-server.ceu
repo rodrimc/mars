@@ -56,6 +56,9 @@ do
     outer.peers_count = outer.peers_count - 1;
   end
 
+  pool [] Send_Broadcast_Join pool_broadcast_join;
+  pool [] Send_Broadcast_Message pool_broadcast_message;
+
   par do
     loop do
       vector[] byte buffer;
@@ -90,12 +93,14 @@ do
   with
     var uint new_id;
     every new_id in outer.send_broadcast_join do
-      spawn Send_Broadcast_Join (&client, new_id);
+      spawn Send_Broadcast_Join (&client, new_id)
+            in pool_broadcast_join;
     end
   with
     var uint from;
     every from in outer.send_broadcast_message do
-      spawn Send_Broadcast_Message (&client, from, &outer.cur_payload);
+      spawn Send_Broadcast_Message (&client, from, &outer.cur_payload)
+            in pool_broadcast_message;
     end
   end
 
