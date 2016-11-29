@@ -1,4 +1,4 @@
-#include "mars-media.ceu"
+#include "mars/mars-media.ceu"
 
 /* internal */
 event (void) mirror_ok;
@@ -7,7 +7,7 @@ event (void) mirror_ok;
 #define CLICK 1
 
 par/or do
-  #include "mars-client.ceu"
+  #include "mars/mars-client.ceu"
 
   pool [] Stub_Send_Message send_message_pool;
 
@@ -24,7 +24,7 @@ par/or do
         var uint new_peer;
         var usize peers;
         every (new_peer, peers) in stub.new_peer do
-          if (peers >= 2) then
+          if (peers >= 1) then
             emit mirror_ok;
           end
         end

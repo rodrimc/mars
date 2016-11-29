@@ -1,7 +1,7 @@
-#include "mars-media.ceu"
+#include "mars/mars-media.ceu"
 
-var& IMarsScene scene;
-var& IPlay play;
+var& IScene scene;
+var& IPlayer play;
 
 var int width = 640;
 var int height = 480;

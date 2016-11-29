@@ -1,25 +1,31 @@
-CEU_DIR    = /home/rodrigocosta/workspace/ceu
-CEU_MEDIA_DIR = /home/rodrigocosta/workspace/ceu-media
-CEU_UV_DIR = /home/rodrigocosta/workspace/ceu-libuv
+#Dependencies
+CEU_DIR    		= $(error set CEU_DIR to Céu directory)
+CEU_MEDIA_DIR	= $(error set CEU_MEDIA_DIR to Céu-Media directory)
+CEU_UV_DIR 		= $(error set CEU_UV_DIR to Céu-libuv directory)
 
-all: PROG = $(error set PROG variable to point to a CÉU program)
+#all target
+all: PROG 		= $(error set PROG to a CÉU program)
 all: PROG_SED = $(PROG://=\/)
+all: MODULES 	= play lua5.3 libuv
+all: SRC_NAME	= $(notdir $(PROG))
 
-all: MODULES = play lua5.3 libuv
+#server target
 server: MODULES = lua5.3 libuv
+server: SRC_NAME= $(notdir $(SRC))
 
+#both targets
 server all: override CFLAGS := `pkg-config $(MODULES) --libs --cflags` -lpthread $(CFLAGS)
 
-SRC_NAME= $(notdir $(SRC))
-BIN = $(SRC_NAME:%.ceu=%)
+#variables
+BIN					= $(SRC_NAME:%.ceu=%)
+BUILD_PATH 	= build
+TEMP 				= temp.ceu
 
-BUILD_PATH = build
 
-TEMP = temp.ceu
-
+#targets
 all:
 	mkdir -p $(BUILD_PATH)
-	cp $(SRC) $(TEMP)
+	cp $(SYNC) $(TEMP)
 	sed s:PROG:"\"$(PROG_SED)\"":g -i $(TEMP)
 	ceu --pre --pre-args="-I$(CEU_DIR)/include -I$(CEU_MEDIA_DIR)/include		\
 						-I$(CEU_UV_DIR)/include -I./include"													\

@@ -1,0 +1,224 @@
+#ifndef ENV_EVENTS_
+#define ENV_EVENTS_
+
+#include "c.ceu"
+#include "media/raw.ceu"
+
+event (_char_ptr_ext, bool) mars_scene_key;
+event (int, int, int, bool) mars_scene_mouse_clicked;
+
+event (_char_ptr_ext, bool, uint) remote_mars_scene_key;
+event (int, int, int, bool, uint) remote_mars_scene_mouse_clicked;
+
+var uint my_id = 0;
+
+/* SCENE */
+data IScene with
+  var& ISceneRaw raw;
+  event (int, int, int, bool, uint)  mouse_clicked;
+  event (int, int, uint)             mouse_moved;
+  event (_char_ptr_ext, bool, uint)  key;
+  event (u64, uint)                  tick;
+  event (_char_ptr_ext, uint)        error;
+  event (void)                       quit;
+end
+
+code/await
+Scene (var Size? size)
+                -> (var& IScene scene)
+                    -> void
+do
+  var& ISceneRaw raw;
+  var Size raw_size =  _;
+  if (size?) then
+    raw_size = size!;
+  end
+  watching Scene_Raw (raw_size) -> (&raw)
+  do
+    var IScene ref_ = val IScene (&raw, _, _, _, _, _, _);
+    scene = &ref_;
+    par do
+      var int x;
+      var int y;
+      var int button;
+      var bool press;
+      every (x, y, button, press) in raw.mouse_clicked do
+        emit outer.mars_scene_mouse_clicked (x, y, button, press);
+      end
+    with
+      var _char_ptr_ext key;
+      var bool press;
+      every (key, press) in raw.key do
+        emit outer.mars_scene_key (key, press);
+      end
+    with
+      var int x;
+      var int y;
+      every (x, y) in raw.mouse_moved do
+        emit ref_.mouse_moved (x, y, outer.my_id);
+      end
+    with
+      var u64 tick;
+      every (tick) in raw.tick do
+        emit ref_.tick (tick, outer.my_id);
+      end
+    with
+      var _char_ptr_ext error;
+      every (error) in raw.error do
+        emit ref_.error (error, outer.my_id);
+      end
+    with
+      await ref_.quit;
+      emit raw.quit;
+
+    /* REMOTE EVENTS */
+    with
+      /* KEY */
+      var _char_ptr_ext key;
+      var bool press;
+      var uint peer;
+      every (key, press, peer) in outer.remote_mars_scene_key do
+        emit ref_.key (key, press, peer);
+      end
+    with
+      /* MOUSE CLICKED */
+      var int x;
+      var int y;
+      var int button;
+      var bool press;
+      var uint peer;
+      every (x, y, button, press, peer) in
+                                      outer.remote_mars_scene_mouse_clicked do
+        emit ref_.mouse_clicked (x, y, button, press, peer);
+      end
+    end
+  end
+end
+
+/* Scene functions */
+code/tight
+Scene_Pause (var& IScene scene) -> void
+do
+  call Scene_Raw_Pause (&scene.raw);
+end
+
+code/tight
+Scene_Resume (var& IScene scene) -> void
+do
+  call Scene_Raw_Resume (&scene.raw);
+end
+
+code/tight
+Scene_Set_Tick_Interval (var& IScene scene, var u64 interval) -> void
+do
+  call Scene_Raw_Set_Tick_Interval (&scene.raw, interval);
+end
+
+/* PLAYER */
+data IPlayer with
+  var& IPlayerRaw raw;
+  event void      ok;
+  event void      sought;
+end
+
+code/await Play (var& IScene scene, var& Media media)
+                  -> (var& IPlayer player)
+                      -> void
+do
+  var& IPlayerRaw raw;
+
+  watching Play_Raw (&scene.raw, &media) -> (&raw)
+  do
+    var IPlayer ref_ = val IPlayer (&raw, _, _);
+    player = &ref_;
+    par do
+      every raw.ok do
+        emit ref_.ok;
+      end
+    with
+      every raw.sought do
+        emit ref_.sought;
+      end
+    end
+  end
+end
+
+code/tight/dynamic
+Player_Set_Media (var& IPlayer player, dynamic var& Media media) -> void
+do
+  call/dynamic Player_Raw_Set_Media (&player.raw, &media);
+end
+
+code/tight/dynamic
+Player_Set_Media (var& IPlayer player, dynamic var& Media.Text text) -> void
+do
+  call/dynamic Player_Raw_Set_Media (&player.raw, &text);
+end
+
+code/tight/dynamic
+Player_Set_Media (var& IPlayer player, dynamic var& Media.Image image) -> void
+do
+  call/dynamic Player_Raw_Set_Media (&player.raw, &image);
+end
+
+code/tight/dynamic
+Player_Set_Media (var& IPlayer player, dynamic var& Media.Audio audio) -> void
+do
+  call/dynamic Player_Raw_Set_Media (&player.raw, &audio);
+end
+
+code/tight/dynamic
+Player_Set_Media (var& IPlayer player, dynamic var& Media.Video video) -> void
+do
+  call/dynamic Player_Raw_Set_Media (&player.raw, &video);
+end
+
+code/tight
+Player_Set_Char (var& IPlayer player, var _char&& name, var _char&& value) -> void
+do
+  call Player_Raw_Set_Char (&player.raw, name, value);
+end
+
+code/tight
+Player_Set_Int (var& IPlayer player, var _char&& name, var int value) -> void
+do
+  call Player_Raw_Set_Int (&player.raw, name, value);
+end
+
+code/tight
+Player_Get_Int (var& IPlayer player, var _char&& name) -> int
+do
+  escape call Player_Raw_Get_Int (&player.raw, name);
+end
+
+code/tight
+Player_Set_Bool (var& IPlayer player, var _char&& name, var bool value) -> void
+do
+  call Player_Raw_Set_Bool (&player.raw, name, value);
+end
+
+code/tight
+Player_Get_Bool (var& IPlayer player, var _char&& name) -> bool
+do
+  escape call Player_Raw_Get_Bool (&player.raw, name);
+end
+
+code/tight
+Player_Set_Region (var& IPlayer player, var Region region) -> void
+do
+  call Player_Raw_Set_Region (&player.raw, region);
+end
+
+code/tight
+Player_Seek (var& IPlayer player, var u64 time, var bool relative) -> void
+do
+  call Player_Raw_Seek (&player.raw, time, relative);
+end
+
+code/tight
+Player_Get_Running_Time (var& IPlayer player) -> u64
+do
+  escape call Player_Raw_Get_Running_Time (&player.raw);
+end
+
+#endif
