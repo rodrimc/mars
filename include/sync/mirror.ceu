@@ -4,7 +4,8 @@
 event (void) mirror_ok;
 
 #define KEY 0
-#define CLICK 1
+#define SCENE_CLICK 1
+#define PLAYER_CLICK 2 
 
 par/or do
   #include "mars/mars-client.ceu"
@@ -18,13 +19,13 @@ par/or do
       var uint id;
       var usize peers;
       (id, peers) = await stub.joined;
-      my_id = id;
+      device_id = id;
     with
       watching mirror_ok do
         var uint new_peer;
         var usize peers;
         every (new_peer, peers) in stub.new_peer do
-          if (peers >= 1) then
+          if (peers >= 2) then
             emit mirror_ok;
           end
         end
@@ -35,30 +36,45 @@ par/or do
         /* _printf ("[APP(%u)] Message: %s\n", stub.id, &&stub.message[0]); */
 
         [[ TABLE = load (@stub.message)() ]]
+        var uint device = [[ TABLE.device ]];
+        var uint obj = [[ TABLE.object ]];
         var int type = [[ TABLE.type ]];
-        var uint peer = [[ TABLE.id ]];
 
         if type == KEY then
           vector[] byte key = [] .. [[ TABLE.key ]];
           var bool press = [[ TABLE.press ]];
 
-          emit remote_mars_scene_key (&&key[0], press, peer);
-        else/if type == CLICK then
+          emit remote_mars_scene_key (device, obj, &&key[0], press);
+        else/if type == SCENE_CLICK then
           var int x = [[ TABLE.x ]];
           var int y = [[ TABLE.y ]];
           var int button = [[ TABLE.button ]];
           var bool press = [[ TABLE.press ]];
 
-          emit remote_mars_scene_mouse_clicked (x, y, button, press, peer);
+          emit remote_mars_scene_mouse_clicked (device, obj, x, y, 
+                                                button, press);
+
+        else/if type == PLAYER_CLICK then
+          var int x = [[ TABLE.x ]];
+          var int y = [[ TABLE.y ]];
+          var int button = [[ TABLE.button ]];
+          var bool press = [[ TABLE.press ]];
+
+          emit remote_mars_player_mouse_clicked (device, obj, x, y, 
+                                                 button, press);
         end
       end
     with
+      /* SCENE */
+    
       /* KEY */
+      var uint obj;
       var _char_ptr_ext key;
       var bool press;
-      every (key, press) in mars_scene_key do
+      every (obj, key, press) in mars_scene_key do
         stub.wbuffer = [] .. "{";
-        stub.wbuffer = stub.wbuffer .. "id=" .. [[ tostring(@stub.id) ]];
+        stub.wbuffer = stub.wbuffer .. "device=" .. [[ tostring(@stub.id) ]];
+        stub.wbuffer = stub.wbuffer .. ",object=" .. [[ tostring(@obj) ]];
         stub.wbuffer = stub.wbuffer .. ",type=" .. [[ tostring(@KEY) ]];
         stub.wbuffer = stub.wbuffer .. ",key=\'" .. (_ID(key) as _char&&) .. "'";
         stub.wbuffer = stub.wbuffer .. ",press=" .. [[ tostring(@press) ]];
@@ -75,7 +91,7 @@ par/or do
       every (x, y, button, press) in mars_scene_mouse_clicked do
         stub.wbuffer = [] .. "{";
         stub.wbuffer = stub.wbuffer .. "id=" .. [[ tostring(@stub.id) ]];
-        stub.wbuffer = stub.wbuffer .. ",type=" .. [[ tostring(@CLICK) ]];
+        stub.wbuffer = stub.wbuffer .. ",type=" .. [[ tostring(@SCENE_CLICK) ]];
         stub.wbuffer = stub.wbuffer .. ",x=" .. [[ tostring(@x) ]];
         stub.wbuffer = stub.wbuffer .. ",y=" .. [[ tostring(@y) ]];
         stub.wbuffer = stub.wbuffer .. ",button=" .. [[ tostring(@button) ]];
@@ -84,6 +100,24 @@ par/or do
 
         spawn Stub_Send_Message (&stub) in send_message_pool;
       end
+      
+    /* with */
+    /*   /1* PLAYER *1/ */
+    /*   var int x; */
+    /*   var int y; */
+    /*   var int button; */
+    /*   var bool press; */
+    /*   every (x, y, button, press) in mars_player_mouse_clicked do */
+    /*     stub.wbuffer = [] .. "{"; */
+    /*     stub.wbuffer = stub.wbuffer .. "id=" .. [[ tostring(@stub.id) ]]; */
+    /*     stub.wbuffer = stub.wbuffer .. ",type=" .. [[ tostring(@PLAYER_CLICK) ]]; */
+    /*     stub.wbuffer = stub.wbuffer .. ",x=" .. [[ tostring(@x) ]]; */
+    /*     stub.wbuffer = stub.wbuffer .. ",y=" .. [[ tostring(@y) ]]; */
+    /*     stub.wbuffer = stub.wbuffer .. ",button=" .. [[ tostring(@button) ]]; */
+    /*     stub.wbuffer = stub.wbuffer .. ",press=" .. [[ tostring(@press) ]]; */
+    /*     stub.wbuffer = stub.wbuffer .. "}"; */
+
+    /*     spawn Stub_Send_Message (&stub) in send_message_pool; */
     end
   end
 with

@@ -4,23 +4,39 @@
 #include "c.ceu"
 #include "media/raw.ceu"
 
-event (_char_ptr_ext, bool) mars_scene_key;
-event (int, int, int, bool) mars_scene_mouse_clicked;
+/* Scene */
+event (uint, int, int, int, bool) mars_scene_mouse_clicked;
+event (uint, _char_ptr_ext, bool) mars_scene_key;
 
-event (_char_ptr_ext, bool, uint) remote_mars_scene_key;
-event (int, int, int, bool, uint) remote_mars_scene_mouse_clicked;
+event (uint, uint, _char_ptr_ext, bool) remote_mars_scene_key;
+event (uint, uint, int, int, int, bool) remote_mars_scene_mouse_clicked;
 
-var uint my_id = 0;
+/* Player */
+event (int, int, int, bool) mars_player_mouse_clicked;
+
+event (uint, uint, int, int, int, bool) remote_mars_player_mouse_clicked;
+
+var uint device_id = 0;
+
+/* SCENE INPUT EVENTS */
+input (uint, uint, int, int, int, bool) CM_SCENE_MOUSE_CLICK;
+input (uint, uint, int, int)            CM_SCENE_MOUSE_MOVE;
+input (uint, uint, _char_ptr_ext, bool) CM_SCENE_KEY;
+input (uint, uint, u64)                 CM_SCENE_TICK;
+input (uint, uint, _char_ptr_ext)       CM_SCENE_ERROR;
+
+/* PLAYER INPUT EVENTS */
+input (uint, uint)                      CM_PLAYER_START;
+input (uint, uint)                      CM_PLAYER_STOP;
+input (uint, uint)                      CM_PLAYER_PAUSE;
+input (uint, uint)                      CM_PLAYER_SOUGHT;
+input (uint, uint, int, int, int, bool) CM_PLAYER_MOUSE_CLICK;
 
 /* SCENE */
 data IScene with
-  var& ISceneRaw raw;
-  event (int, int, int, bool, uint)  mouse_clicked;
-  event (int, int, uint)             mouse_moved;
-  event (_char_ptr_ext, bool, uint)  key;
-  event (u64, uint)                  tick;
-  event (_char_ptr_ext, uint)        error;
-  event (void)                       quit;
+  var& ISceneRaw  raw;
+  var&  uint      self;
+  event (void)    quit;
 end
 
 code/await
@@ -38,34 +54,50 @@ do
     var IScene ref_ = val IScene (&raw, _, _, _, _, _, _);
     scene = &ref_;
     par do
+      var uint id;
       var int x;
       var int y;
       var int button;
       var bool press;
-      every (x, y, button, press) in raw.mouse_clicked do
-        emit outer.mars_scene_mouse_clicked (x, y, button, press);
+      loop do
+        (id, x, y, button, press) = await CM_SCENE_RAW_MOUSE_CLICK; 
+        emit outer.mars_scene_mouse_clicked (id, x, y, button, press);
       end
     with
+      var uint id;
       var _char_ptr_ext key;
       var bool press;
-      every (key, press) in raw.key do
-        emit outer.mars_scene_key (key, press);
+      loop do
+        (id, key, press) = await CM_SCENE_RAW_KEY;
+        emit outer.mars_scene_key (id, key, press);
       end
     with
+      var uint id;
       var int x;
       var int y;
-      every (x, y) in raw.mouse_moved do
-        emit ref_.mouse_moved (x, y, outer.my_id);
+      loop do
+        (id, x, y) = await CM_SCENE_RAW_MOUSE_MOVE; 
+        await async (id, x, y) do
+          emit CM_SCENE_MOUSE_MOVE (id, x, y);
+        end
       end
     with
+      var uint id;
       var u64 tick;
-      every (tick) in raw.tick do
-        emit ref_.tick (tick, outer.my_id);
+      loop do
+        (id, tick) = await CM_SCENE_RAW_TICK; 
+        await async (id, tick) do
+          emit CM_SCENE_TICK (id, tick);
+        end
       end
     with
+      var uint id;
       var _char_ptr_ext error;
-      every (error) in raw.error do
-        emit ref_.error (error, outer.my_id);
+      loop do
+        (id, error) = await CM_SCENE_RAW_ERROR; 
+        await async (id, error) do
+          emit CM_SCENE_ERROR (id, error);
+        end
       end
     with
       await ref_.quit;
@@ -74,22 +106,31 @@ do
     /* REMOTE EVENTS */
     with
       /* KEY */
+      var uint device;
+      var uint id;
       var _char_ptr_ext key;
       var bool press;
-      var uint peer;
-      every (key, press, peer) in outer.remote_mars_scene_key do
-        emit ref_.key (key, press, peer);
+      loop do
+        (device, id, key, press) in outer.remote_mars_scene_key;
+        async (device, id, key, press) do
+          emit CM_SCENE_KEY (device, id, key, press);
+        end
       end
     with
       /* MOUSE CLICKED */
+      var uint device;
+      var uint id; 
       var int x;
       var int y;
       var int button;
       var bool press;
       var uint peer;
-      every (x, y, button, press, peer) in
-                                      outer.remote_mars_scene_mouse_clicked do
-        emit ref_.mouse_clicked (x, y, button, press, peer);
+      loop do
+        (device, id, x, y, button, press) = await 
+                                      outer.remote_mars_scene_mouse_clicked;
+        async (device, id, x, y, button, press) do
+          emit CM_SCENE_MOUSE_CLICK (device, id, x, y, button, press);
+        end
       end
     end
   end
@@ -116,9 +157,10 @@ end
 
 /* PLAYER */
 data IPlayer with
-  var& IPlayerRaw raw;
-  event void      ok;
-  event void      sought;
+  var& IPlayerRaw             raw;
+  event void                  ok;
+  event void                  sought;
+  event (int, int, int, bool) mouse_clicked;
 end
 
 code/await Play (var& IScene scene, var& Media media)
@@ -129,7 +171,7 @@ do
 
   watching Play_Raw (&scene.raw, &media) -> (&raw)
   do
-    var IPlayer ref_ = val IPlayer (&raw, _, _);
+    var IPlayer ref_ = val IPlayer (&raw, _, _, _);
     player = &ref_;
     par do
       every raw.ok do
@@ -138,6 +180,14 @@ do
     with
       every raw.sought do
         emit ref_.sought;
+      end
+    with
+      var int x;
+      var int y;
+      var int button;
+      var bool press;
+      every (x, y, button, press) in raw.mouse_clicked do
+        emit outer.mars_player_mouse_clicked (x, y, button, press);
       end
     end
   end
