@@ -1,0 +1,109 @@
+native
+  _strdup,
+;
+
+/* Scene */
+event (uint, int, int, int, bool) mars_scene_mouse_clicked;
+event (uint, _char_ptr_ext, bool) mars_scene_key;
+
+event (uint, uint, _char_ptr_ext, bool) remote_mars_scene_key;
+event (uint, uint, int, int, int, bool) remote_mars_scene_mouse_clicked;
+
+/* Player */
+event (uint, int, int, int, bool) mars_player_mouse_clicked;
+
+event (uint, uint, int, int, int, bool) remote_mars_player_mouse_clicked;
+
+var uint device_id = 0;
+
+/* SCENE INPUT EVENTS */
+input (uint, uint, int, int, int, bool) CM_SCENE_MOUSE_CLICK;
+input (uint, uint, int, int)            CM_SCENE_MOUSE_MOVE;
+input (uint, uint, _char_ptr_ext, bool) CM_SCENE_KEY;
+input (uint, uint, u64)                 CM_SCENE_TICK;
+input (uint, _char_ptr_ext)             CM_SCENE_ERROR;
+
+/* PLAYER INPUT EVENTS */
+input (uint, uint)                      CM_PLAYER_START;
+input (uint, uint)                      CM_PLAYER_STOP;
+input (uint, uint)                      CM_PLAYER_PAUSE;
+input (uint, uint)                      CM_PLAYER_SOUGHT;
+input (uint, uint, int, int, int, bool) CM_PLAYER_MOUSE_CLICK;
+/* async emits wrapped in code/awaits */
+code/await Emit_Scene_Key_Event (var uint device, var uint obj,
+                                 var _char_ptr_ext key, var bool press) -> void
+do
+  var&? _char_ptr_ext buff = &_strdup (key)
+    finalize (buff) with
+      if buff? then
+        _free (buff!);
+      end
+    end;
+
+  await async (device, obj, buff, press) do
+    emit CM_SCENE_KEY (device, obj, buff, press);
+  end
+end
+
+code/await Emit_Scene_Error_Event (var uint device,
+                                   var _char_ptr_ext error) -> void
+do
+  var&? _char_ptr_ext buff = &_strdup (error)
+    finalize (buff) with
+      if buff? then
+        _free (buff!);
+      end
+    end;
+
+  await async (device, buff) do
+    emit CM_SCENE_ERROR (device, buff);
+  end
+end
+
+code/await Emit_Scene_Mouse_Move_Event (var uint device, var uint id,
+                                        var int x, var int y) -> void
+do
+  await async (device, id, x, y) do
+    emit CM_SCENE_MOUSE_MOVE (device, id, x, y);
+  end
+end
+
+code/await Emit_Scene_Mouse_Click_Event (var uint device, var uint id,
+                                         var int x, var int y, var int button,
+                                         var bool press) -> void
+do
+  await async (device, id, x, y, button, press) do
+    emit CM_SCENE_MOUSE_CLICK (device, id, x, y, button, press);
+  end
+end
+
+code/await Emit_Scene_Tick_Event (var uint device, var uint id, var u64 tick)
+                                                         -> void
+do
+  await async (device, id, tick) do
+    emit CM_SCENE_TICK (device, id, tick);
+  end
+end
+
+code/await Emit_Player_Start_Event (var uint device, var uint id) -> void
+do
+  await async (device, id) do
+    emit CM_PLAYER_START (device, id);
+  end
+end
+
+code/await Emit_Player_Stop_Event (var uint device, var uint id) -> void
+do
+  await async (device, id) do
+    emit CM_PLAYER_STOP (device, id);
+  end
+end
+
+code/await Emit_Player_Sought_Event (var uint device, var uint id) -> void
+do
+  await async (device, id) do
+    emit CM_PLAYER_SOUGHT (device, id);
+  end
+end
+
+

@@ -19,6 +19,7 @@ par/or do
       var uint id;
       var usize peers;
       (id, peers) = await stub.joined;
+      /* device_id is defined in mars-media.ceu */
       device_id = id;
     with
       watching mirror_ok do
@@ -84,13 +85,15 @@ par/or do
       end
     with
       /* CLICK */
+      var uint obj;
       var int x;
       var int y;
       var int button;
       var bool press;
-      every (x, y, button, press) in mars_scene_mouse_clicked do
+      every (obj, x, y, button, press) in mars_scene_mouse_clicked do
         stub.wbuffer = [] .. "{";
-        stub.wbuffer = stub.wbuffer .. "id=" .. [[ tostring(@stub.id) ]];
+        stub.wbuffer = stub.wbuffer .. "device=" .. [[ tostring(@stub.id) ]];
+        stub.wbuffer = stub.wbuffer .. ",object=" .. [[ tostring(@obj) ]];
         stub.wbuffer = stub.wbuffer .. ",type=" .. [[ tostring(@SCENE_CLICK) ]];
         stub.wbuffer = stub.wbuffer .. ",x=" .. [[ tostring(@x) ]];
         stub.wbuffer = stub.wbuffer .. ",y=" .. [[ tostring(@y) ]];
@@ -101,23 +104,26 @@ par/or do
         spawn Stub_Send_Message (&stub) in send_message_pool;
       end
       
-    /* with */
-    /*   /1* PLAYER *1/ */
-    /*   var int x; */
-    /*   var int y; */
-    /*   var int button; */
-    /*   var bool press; */
-    /*   every (x, y, button, press) in mars_player_mouse_clicked do */
-    /*     stub.wbuffer = [] .. "{"; */
-    /*     stub.wbuffer = stub.wbuffer .. "id=" .. [[ tostring(@stub.id) ]]; */
-    /*     stub.wbuffer = stub.wbuffer .. ",type=" .. [[ tostring(@PLAYER_CLICK) ]]; */
-    /*     stub.wbuffer = stub.wbuffer .. ",x=" .. [[ tostring(@x) ]]; */
-    /*     stub.wbuffer = stub.wbuffer .. ",y=" .. [[ tostring(@y) ]]; */
-    /*     stub.wbuffer = stub.wbuffer .. ",button=" .. [[ tostring(@button) ]]; */
-    /*     stub.wbuffer = stub.wbuffer .. ",press=" .. [[ tostring(@press) ]]; */
-    /*     stub.wbuffer = stub.wbuffer .. "}"; */
+    with
+      /* PLAYER */
+      var uint obj;
+      var int x;
+      var int y;
+      var int button;
+      var bool press;
+      every (obj, x, y, button, press) in mars_player_mouse_clicked do
+        stub.wbuffer = [] .. "{";
+        stub.wbuffer = stub.wbuffer .. "device=" .. [[ tostring(@stub.id) ]];
+        stub.wbuffer = stub.wbuffer .. ",object=" .. [[ tostring(@obj) ]];
+        stub.wbuffer = stub.wbuffer .. ",type=" .. [[ tostring(@PLAYER_CLICK) ]];
+        stub.wbuffer = stub.wbuffer .. ",x=" .. [[ tostring(@x) ]];
+        stub.wbuffer = stub.wbuffer .. ",y=" .. [[ tostring(@y) ]];
+        stub.wbuffer = stub.wbuffer .. ",button=" .. [[ tostring(@button) ]];
+        stub.wbuffer = stub.wbuffer .. ",press=" .. [[ tostring(@press) ]];
+        stub.wbuffer = stub.wbuffer .. "}";
 
-    /*     spawn Stub_Send_Message (&stub) in send_message_pool; */
+        spawn Stub_Send_Message (&stub) in send_message_pool;
+      end
     end
   end
 with

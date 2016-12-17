@@ -14,21 +14,20 @@ server: MODULES = lua5.3 libuv
 server: SRC_NAME= $(notdir $(SRC))
 
 #both targets
-server all: override CFLAGS := `pkg-config $(MODULES) --libs --cflags` -lpthread $(CFLAGS)
+server all: override CFLAGS := $(shell pkg-config $(MODULES) --libs --cflags)\
+																-lpthread $(CFLAGS)
 
 #variables
 BIN					= $(SRC_NAME:%.ceu=%)
 BUILD_PATH 	= build
-TEMP 				= temp.ceu
+TEMP 				:= $(BUILD_PATH)/temp-$(shell date --iso=ns).ceu 
 
-
-#targets
 all:
 	mkdir -p $(BUILD_PATH)
 	cp $(SYNC) $(TEMP)
 	sed s:PROG:"\"$(PROG_SED)\"":g -i $(TEMP)
 	ceu --pre --pre-args="-I$(CEU_DIR)/include -I$(CEU_MEDIA_DIR)/include		\
-						-I$(CEU_UV_DIR)/include -I./include"													\
+						-I$(CEU_UV_DIR)/include -I./include -I./"											\
 	          --pre-input=$(TEMP)																						\
 	    --ceu --ceu-err-unused=pass --ceu-err-uninitialized=pass						\
 	    --env --env-types=$(CEU_DIR)/env/types.h														\

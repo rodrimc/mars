@@ -15,10 +15,19 @@ var Media.Video video = val Media.Video (
 watching Scene (Size (width, height)) -> (&scene),
          Play (&scene, &video) -> (&play)
 do
-  var _char_ptr_ext key;
+  var uint device;
+  var uint obj;
+  var int x, y, button;
   var bool press;
-  every (key, press, _) in scene.key do
-    _printf ("%s\n", key);
+  every (device, obj, x, y, button, press) in CM_SCENE_MOUSE_CLICK do
+    var _char_ptr_ext str = _;
+    if (press) then
+      str = "down";
+    else
+      str = "up";
+    end
+    _printf ("(%u device) (%u object) (%d, %d) (%d button) (%s)\n",
+                device, obj, x, y, button, str);
   end
 end
 

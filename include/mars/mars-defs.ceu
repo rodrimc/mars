@@ -20,6 +20,7 @@
 
 native/pre do
   ##include <time.h>
+  ##include <string.h>
 
   long long unsigned int now (void)
   {
