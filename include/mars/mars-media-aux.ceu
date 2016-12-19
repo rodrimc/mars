@@ -33,11 +33,9 @@ input (uint, uint, int, int, int, bool) CM_PLAYER_MOUSE_CLICK;
 code/await Emit_Scene_Key_Event (var uint device, var uint obj,
                                  var _char_ptr_ext key, var bool press) -> void
 do
-  var&? _char_ptr_ext buff = &_strdup (key)
+  var&? _char buff = &_strdup (key)
     finalize (buff) with
-      if buff? then
-        _free (buff!);
-      end
+      _free (&&buff!);
     end;
 
   await async (device, obj, buff, press) do
