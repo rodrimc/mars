@@ -57,4 +57,3 @@ server:
 
 clean:
 	rm -rf $(BUILD_PATH)
-	rm temp.ceu

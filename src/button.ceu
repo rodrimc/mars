@@ -33,7 +33,8 @@ watching Scene(size) -> (&scene)
 do
   spawn Play (&scene, &video);
   var& IPlayer p;
-  watching Play(&scene, &text) -> (&p) do
+  watching Play(&scene, &text) -> (&p)
+  do
     par/or do
       vector[] byte str;
       await 5s;
@@ -47,7 +48,7 @@ do
 
         (device, obj, _, _, _, press) = await CM_PLAYER_MOUSE_CLICK
                                         until (press and obj == p_button.self);
-        str = [] .. "Winner: " ..  [[ tostring (@device) ]] .. " clicked. ";
+        str = [] .. "Winner: Player " ..  [[ tostring (@device) ]] .. ". ";
         if (device == device_id) then
           str = str .. "You won!";
         else
