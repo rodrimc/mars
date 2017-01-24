@@ -10,14 +10,21 @@ var Media.Video video = val Media.Video (
                 1.0);
 
 var Media.Text text = val Media.Text (
-                [] .. "", [] .. "sans 40",
+                [] .. "", [] .. "sans 20",
                 Region(0, 350, size.width, 100, 2),
                 0xffffffff);
 
-var Media.Image m_button = val Media.Image (
-                [] .. "resources/button.png",
-                Region (size.width/2 - b_size.width/2,  
-                        size.height/2 - b_size.height/2, 
+var Media.Image on_button = val Media.Image (
+                [] .. "resources/on.png",
+                Region (size.width/2 - b_size.width/2,
+                        size.height/2 - b_size.height/2,
+                        b_size.width, b_size.height, 2),
+                1.0);
+
+var Media.Image off_button = val Media.Image (
+                [] .. "resources/off.png",
+                Region (size.width/2 - b_size.width/2,
+                        size.height/2 - b_size.height/2,
                         b_size.width, b_size.height, 2),
                 1.0);
 
@@ -29,24 +36,32 @@ do
   watching Play(&scene, &text) -> (&p) do
     par/or do
       vector[] byte str;
-      var bool press = _;
-      var uint id = _;
+      await 5s;
+      var& IPlayer p_button;
+      watching Play (&scene, &on_button) -> (&p_button), 10s
+      do
+        var uint device;
+        var uint obj;
+        var bool press = _;
+        var uint id = _;
 
-      /* await 5s; */
-      /* var& IPlayer p_button; */
-      /* watching Play (&scene, &m_button) -> (&p_button) do */
-      /*   await p_button.mouse_clicked; */
-      /* end */
-
-      every (_, _, _, press, id) in scene.mouse_clicked do
-        if (press) then
-          str = [] .. "Player " ..  [[ tostring (@id) ]] .. " clicked";
-          call Player_Set_Char (&p, "text", &&str[0]);
+        (device, obj, _, _, _, press) = await CM_PLAYER_MOUSE_CLICK
+                                        until (press and obj == p_button.self);
+        str = [] .. "Winner: " ..  [[ tostring (@device) ]] .. " clicked. ";
+        if (device == device_id) then
+          str = str .. "You won!";
+        else
+          str = str .. "You lost!";
         end
+
+        call Player_Set_Char (&p, "text", &&str[0]);
+        await Play (&scene, &off_button);
       end
     with
+      var uint device;
+      var uint obj;
       var _char_ptr_ext key;
-      (key, _, _) = await scene.key until (_strcmp(key, "q") == 0);
+      (device, obj, key, _) = await CM_SCENE_KEY until (_strcmp(key, "q") == 0);
     end
   end
 end
