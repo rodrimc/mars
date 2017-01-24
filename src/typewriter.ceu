@@ -1,0 +1,55 @@
+#include "mars/mars-media.ceu"
+
+var int width = 1080;
+var int height = 720;
+
+var Media.Video m = val Media.Video (
+                          [].."resources/bunny.ogg",
+                          Region(0, 0, width, height, 1),
+                          1.0,
+                          1.0
+                        );
+
+var Media.Text text = val Media.Text (
+                          [] .. "",
+                          [] .. "",
+                          Region (0, 600, width, 100, 2),
+                          0xffffffff,
+                          );
+
+var Media.Text label = val Media.Text (
+                          [] .. "Type a text",
+                          [] .. "",
+                          Region (0, 550, width, 100, 2),
+                          0xff484848,
+                          );
+
+
+var& IScene scene;
+var& IPlayer p;
+var& IPlayer p_text;
+watching Scene(Size(width,height)) -> (&scene),
+         Play(&scene, &m) -> (&p),
+         Play(&scene, &text) -> (&p_text)
+do
+  par do 
+    spawn Play (&scene, &label);
+  with
+    var bool press;
+    var _char_ptr_ext key;
+    vector[] byte towrite = [] .. "";
+    every (_, _, key, press) in CM_SCENE_KEY do
+      if (press) then
+        if _strcmp(key, "space") == 0 then
+          towrite = towrite .. " ";
+        else
+          towrite = towrite .. [key[0]];
+        end
+        call Player_Set_Char (&p_text, "text", &&towrite[0]);
+      end
+    end
+  end
+end
+
+escape 0;
+
