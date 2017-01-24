@@ -34,7 +34,7 @@ par/or do
     with
       loop do
         await stub.incoming_message;
-        /* _printf ("[APP(%u)] Message: %s\n", stub.id, &&stub.message[0]); */
+        _debug ("[APP(%u)] Message: %s\n", stub.id, &&stub.message[0]);
 
         [[ TABLE = load (@stub.message)() ]]
         var uint device = [[ TABLE.device ]];

@@ -104,4 +104,12 @@ do
   end
 end
 
+code/await Emit_Player_Mouse_Click_Event (var uint device, var uint id,
+                                          var int x, var int y, var int button,
+                                          var bool press) -> void
+do
+  await async (device, id, x, y, button, press) do
+    emit CM_PLAYER_MOUSE_CLICK (device, id, x, y, button, press);
+  end
+end
 

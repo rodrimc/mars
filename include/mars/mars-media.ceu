@@ -100,17 +100,27 @@ do
       end
     with
       /* MOUSE CLICKED */
-      var uint device;
-      var uint id;
-      var int x;
-      var int y;
-      var int button;
-      var bool press;
-      pool [] Emit_Scene_Mouse_Click_Event scene_mouse_click_event_pool;
-      every (device, id, x, y, button, press)
-                                   in outer.remote_mars_scene_mouse_clicked do
-        spawn Emit_Scene_Mouse_Click_Event (device, id, x, y, button, press)
-                                            in scene_mouse_click_event_pool;
+      var uint device = 0;
+      var uint id = 0;
+      var int x = 0;
+      var int y = 0;
+      var int button = 0;
+      var bool press = false;
+
+      par do
+        pool [] Emit_Scene_Mouse_Click_Event scene_mouse_click_event_pool;
+        every (device, id, x, y, button, press)
+                                     in outer.remote_mars_scene_mouse_clicked do
+          spawn Emit_Scene_Mouse_Click_Event (device, id, x, y, button, press)
+                                              in scene_mouse_click_event_pool;
+        end
+      with
+        pool [] Emit_Player_Mouse_Click_Event player_mouse_click_event_pool;
+        every (device, id, x, y, button, press)
+                                     in outer.remote_mars_player_mouse_clicked do
+          spawn Emit_Player_Mouse_Click_Event (device, id, x, y, button, press)
+                                              in player_mouse_click_event_pool;
+        end
       end
     end
   end
@@ -168,7 +178,7 @@ do
       pool [] Emit_Player_Sought_Event player_sought_event_pool;
       every (source) in CM_PLAYER_RAW_SOUGHT do
         if _LP_MEDIA(source) == &&raw.ref then
-          spawn Emit_Player_Start_Event (outer.device_id, ref_.self)
+          spawn Emit_Player_Sought_Event (outer.device_id, ref_.self)
                                          in player_sought_event_pool;
         end
       end
@@ -177,7 +187,7 @@ do
       pool [] Emit_Player_Stop_Event player_stop_event_pool;
       every (source) in CM_PLAYER_RAW_STOP do
         if _LP_MEDIA(source) == &&raw.ref then
-          spawn Emit_Player_Start_Event (outer.device_id, ref_.self)
+          spawn Emit_Player_Stop_Event (outer.device_id, ref_.self)
                                          in player_stop_event_pool;
         end
       end
