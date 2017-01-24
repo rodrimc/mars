@@ -8,7 +8,7 @@ event (void) mirror_ok;
 #define PLAYER_CLICK 2 
 
 par/or do
-  #include "mars/mars-client.ceu"
+  #include "mars/core/mars-client.ceu"
 
   pool [] Stub_Send_Message send_message_pool;
 

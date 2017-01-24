@@ -1,4 +1,4 @@
-#include "mars/mars-server.ceu"
+#include "mars/core/mars-server.ceu"
 
 _printf ("[server] Starting server...\n");
 await UV_TCP_Server (LOCALHOST, PORT, BACKLOG);
