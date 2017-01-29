@@ -1,11 +1,11 @@
 
 #include "mars/mars-media.ceu"
 
-var int width = 400;
-var int height = 300;
+var int width = 1920/2;
+var int height = 400;
 
 var Media.Video m = val Media.Video (
-                          [].."resources/clock.ogv",
+                          [].."resources/bunny.ogg",
                           Region(0, 0, 0, 0, 1),
                           1.0,
                           1.0
@@ -17,11 +17,15 @@ watching Scene(Size(width,height)) -> (&scene),
          Play(&scene, &m) -> (&p),
          CM_SCENE_KEY
 do
-  _printf ("device: %u\n", device_id);
+  var uint device;
+  (device, _) = await CM_PLAYER_START
+                until (device == device_id);
+  width = call Player_Get_Int (&p, "width");
+
   if (device_id % 2 == 1) then
-    call Player_Set_Int (&p, "crop-left",  width/2); 
+    call Player_Set_Int (&p, "crop-left",  width/2);
   else
-    call Player_Set_Int (&p, "crop-right",  width/2); 
+    call Player_Set_Int (&p, "crop-right",  width/2);
   end
   await FOREVER;
 end
