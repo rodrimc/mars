@@ -255,6 +255,18 @@ do
 end
 
 code/tight
+Player_Set_Double (var& IPlayer player, var _char&& name, var f64 value) -> void
+do
+  call Player_Raw_Set_Double (&player.raw, name, value);
+end
+
+code/tight
+Player_Get_Double (var& IPlayer player, var _char&& name) -> f64
+do
+  escape call Player_Raw_Get_Double (&player.raw, name);
+end
+
+code/tight
 Player_Set_Bool (var& IPlayer player, var _char&& name, var bool value) -> void
 do
   call Player_Raw_Set_Bool (&player.raw, name, value);
