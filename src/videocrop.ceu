@@ -1,11 +1,11 @@
 
 #include "mars/mars-media.ceu"
 
-var int width = 1920/2;
+var int width = 300;
 var int height = 400;
 
 var Media.Video m = val Media.Video (
-                          [].."resources/bunny.ogg",
+                          [].."resources/clock.ogv",
                           Region(0, 0, 0, 0, 1),
                           1.0,
                           1.0
@@ -23,9 +23,9 @@ do
   width = call Player_Get_Int (&p, "width");
 
   if (device_id % 2 == 1) then
-    call Player_Set_Int (&p, "crop-left",  width/2);
+    call Player_Set_Double (&p, "crop-left",  0.5);
   else
-    call Player_Set_Int (&p, "crop-right",  width/2);
+    call Player_Set_Double (&p, "crop-right",  0.5);
   end
   await FOREVER;
 end
