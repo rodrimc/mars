@@ -285,7 +285,7 @@ do
 end
 
 code/tight
-Player_Seek (var& IPlayer player, var u64 time, var bool relative) -> void
+Player_Seek (var& IPlayer player, var s64 time, var bool relative) -> void
 do
   call Player_Raw_Seek (&player.raw, time, relative);
 end
