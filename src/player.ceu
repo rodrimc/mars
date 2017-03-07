@@ -15,11 +15,11 @@ var Media.Video video = val Media.Video (
 watching Scene (Size (width, height)) -> (&scene),
          Play (&scene, &video) -> (&play)
 do
-  var uint device;
   var uint obj;
   var int x, y, button;
   var bool press;
-  every (device, obj, x, y, button, press) in CM_SCENE_MOUSE_CLICK do
+  every (obj, x, y, button, press) in CM_SCENE_MOUSE_CLICK do
+    var uint device = call Get_Event_Device_Id ();
     var _char_ptr_ext str = _;
     if (press) then
       str = "down";

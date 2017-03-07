@@ -17,9 +17,10 @@ watching Scene(Size(width,height)) -> (&scene),
          Play(&scene, &m) -> (&p),
          CM_SCENE_KEY
 do
-  var uint device;
-  (device, _) = await CM_PLAYER_START
-                until (device == device_id);
+  var uint device_id = call Get_Device_Id();
+  await CM_PLAYER_START
+    until (device_id == call Get_Event_Device_Id());
+
   width = call Player_Get_Int (&p, "width");
 
   if (device_id % 2 == 1) then

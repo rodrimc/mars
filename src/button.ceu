@@ -41,15 +41,16 @@ do
       var& IPlayer p_button;
       watching Play (&scene, &on_button) -> (&p_button), 10s
       do
-        var uint device;
         var uint obj;
         var bool press = _;
         var uint id = _;
 
-        (device, obj, _, _, _, press) = await CM_PLAYER_MOUSE_CLICK
-                                        until (press and obj == p_button.self);
+        (obj, _, _, _, press) = await CM_PLAYER_MOUSE_CLICK
+                                until (press and obj == p_button.self);
+
+        var uint device = call Get_Event_Device_Id ();
         str = [] .. "Winner: Player " ..  [[ tostring (@device) ]] .. ". ";
-        if (device == device_id) then
+        if (device == call Get_Device_Id()) then
           str = str .. "You won!";
         else
           str = str .. "You lost!";
@@ -59,10 +60,9 @@ do
         await Play (&scene, &off_button);
       end
     with
-      var uint device;
       var uint obj;
       var _char_ptr_ext key;
-      (device, obj, key, _) = await CM_SCENE_KEY until (_strcmp(key, "q") == 0);
+      (obj, key, _) = await CM_SCENE_KEY until (_strcmp(key, "q") == 0);
     end
   end
 end
