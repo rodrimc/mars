@@ -1,0 +1,58 @@
+#include "mars/mars-media.ceu"
+
+var int amount = 10;
+var int width = 600;
+var int height = 400;
+
+var int img_width = 30;
+var int img_height = 100;
+
+var Media.Image green = val MEDIA_IMAGE ([] .. "resources/green.png"); 
+var Media.Image red = val MEDIA_IMAGE ([] .. "resources/red.png"); 
+
+green.region.y = height/2 - img_height/2;
+
+red.region.x = width - img_width;
+red.region.y = height/2 - img_height/2;
+
+var& IScene scene;
+var& IPlayer p_green;
+var& IPlayer p_red;
+
+watching Scene (Size (600, 400)) -> (&scene),
+         Play (&scene, &green) -> (&p_green),
+         Play (&scene, &red) -> (&p_red)
+do
+  var uint color;
+  vector[] byte text = [] .. "Your color is ";
+  var& IPlayer self;
+  if call Get_Device_Id () % 2 == 0 then
+    color = 0xff00ff00;
+    text = text .. "green";
+    self = &p_green;
+  else
+    color = 0xffff0000;
+    text = text .. "red";
+    self = &p_red;
+  end
+
+  var Media.Text display = val Media.Text ([] .. text, [] .. "sans bold 30", 
+          Region (0, height - 200, 600, 200, 2), color); 
+  spawn Play (&scene, &display);
+
+  var _char_ptr_ext key;  
+  var bool press;
+  every (_, key, press) in CM_SCENE_KEY do
+    var int y = call Player_Get_Int (&self, "y");
+    if press and call Get_Device_Id () == call Get_Event_Device_Id () then 
+      if _strcmp (key, "Up") == 0 then
+        call Player_Set_Int (&self, "y", y - amount);
+      else/if _strcmp (key, "Down") == 0 then
+        call Player_Set_Int (&self, "y", y + amount);
+      end
+    end
+  end
+end
+
+
+escape 0;
