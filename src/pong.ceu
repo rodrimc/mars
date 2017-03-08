@@ -1,5 +1,14 @@
 #include "mars/mars-media.ceu"
 
+native/pre do
+  ##include <math.h>
+end
+
+native
+  _ceil,
+;
+
+
 var int amount = 10;
 var int width = 600;
 var int height = 400;
@@ -7,21 +16,74 @@ var int height = 400;
 var int img_width = 30;
 var int img_height = 100;
 
+var int ball_width = 30;
+var int ball_height = 30;
+
+data Direction with
+  var float x;
+  var float y;
+end;
+
+code/tight
+Compute_Collision (var& IPlayer ball, var &IPlayer green, 
+    var& IPlayer red, var& Direction dir) -> void do 
+
+  var int x = call Player_Get_Int (&ball, "x");
+  var int y = call Player_Get_Int (&ball, "y");
+
+  var int green_x = call Player_Get_Int (&green, "x");
+  var int green_y = call Player_Get_Int (&green, "y");
+
+  var int red_x = call Player_Get_Int (&red, "x");
+  var int red_y = call Player_Get_Int (&red, "y");
+
+  if (x <= outer.img_width  and
+      y >= green_y and y <= green_y + outer.img_height) or
+     (x >= outer.width - (outer.img_width + outer.ball_width) and
+      y >= red_y and y <= red_y + outer.img_height) then
+    dir.x = dir.x * -1;
+  end
+
+  if y <= 0 or y + outer.ball_height >= outer.height then
+    dir.y = dir.y * -1;
+  end
+end
+
+code/tight
+Update (var& IPlayer ball, var& Direction dir, var float speed, 
+    var float time_diff) -> void do 
+
+  var int x = call Player_Get_Int (&ball, "x");
+  var int y = call Player_Get_Int (&ball, "y");
+
+  var int newx = x + (_ceil (dir.x * speed * time_diff) as int);
+  var int newy = y + (_ceil (dir.y * speed * time_diff) as int);
+
+  call Player_Set_Int (&ball, "x", newx);
+  call Player_Set_Int (&ball, "y", newy);
+end
+
 var Media.Image green = val MEDIA_IMAGE ([] .. "resources/green.png"); 
 var Media.Image red = val MEDIA_IMAGE ([] .. "resources/red.png"); 
+var Media.Image blue = val MEDIA_IMAGE ([] .. "resources/blue.png"); 
 
 green.region.y = height/2 - img_height/2;
 
 red.region.x = width - img_width;
 red.region.y = height/2 - img_height/2;
 
+blue.region.x = img_width + 20;
+blue.region.y = height/2 - 15;
+
 var& IScene scene;
 var& IPlayer p_green;
 var& IPlayer p_red;
+var& IPlayer p_ball;
 
 watching Scene (Size (600, 400)) -> (&scene),
          Play (&scene, &green) -> (&p_green),
-         Play (&scene, &red) -> (&p_red)
+         Play (&scene, &red) -> (&p_red),
+         Play (&scene, &blue) -> (&p_ball)
 do
   var uint color;
   vector[] byte text = [] .. "Your color is ";
@@ -40,16 +102,26 @@ do
           Region (0, height - 200, 600, 200, 2), color); 
   spawn Play (&scene, &display);
 
-  var _char_ptr_ext key;  
-  var bool press;
-  every (_, key, press) in CM_SCENE_KEY do
-    var int y = call Player_Get_Int (&self, "y");
-    if press and call Get_Device_Id () == call Get_Event_Device_Id () then 
-      if _strcmp (key, "Up") == 0 then
-        call Player_Set_Int (&self, "y", y - amount);
-      else/if _strcmp (key, "Down") == 0 then
-        call Player_Set_Int (&self, "y", y + amount);
+  par do
+    var _char_ptr_ext key;
+    var bool press;
+    every (_, key, press) in CM_SCENE_KEY do
+      var int y = call Player_Get_Int (&self, "y");
+      if press and call Get_Device_Id () == call Get_Event_Device_Id () then 
+        if _strcmp (key, "Up") == 0 then
+          call Player_Set_Int (&self, "y", y - amount);
+        else/if _strcmp (key, "Down") == 0 then
+          call Player_Set_Int (&self, "y", y + amount);
+        end
       end
+    end
+  with
+    var Direction dir = val Direction (2.5, -3);
+    var float speed = 0.4;
+    var int tick = 30;
+    every (tick)ms do
+      call Update (&p_ball, &dir, speed, tick * 0.1);
+      call Compute_Collision (&p_ball, &p_green, &p_red, &dir);
     end
   end
 end
