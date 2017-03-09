@@ -25,8 +25,8 @@ data Direction with
 end;
 
 code/tight
-Compute_Collision (var& IPlayer ball, var &IPlayer green, 
-    var& IPlayer red, var& Direction dir) -> void do 
+Compute_Collision (var& IPlayer ball, var &IPlayer green,
+    var& IPlayer red, var& Direction dir) -> void do
 
   var int x = call Player_Get_Int (&ball, "x");
   var int y = call Player_Get_Int (&ball, "y");
@@ -50,8 +50,8 @@ Compute_Collision (var& IPlayer ball, var &IPlayer green,
 end
 
 code/tight
-Update (var& IPlayer ball, var& Direction dir, var float speed, 
-    var float time_diff) -> void do 
+Update (var& IPlayer ball, var& Direction dir, var float speed,
+    var float time_diff) -> void do
 
   var int x = call Player_Get_Int (&ball, "x");
   var int y = call Player_Get_Int (&ball, "y");
@@ -63,9 +63,9 @@ Update (var& IPlayer ball, var& Direction dir, var float speed,
   call Player_Set_Int (&ball, "y", newy);
 end
 
-var Media.Image green = val MEDIA_IMAGE ([] .. "resources/green.png"); 
-var Media.Image red = val MEDIA_IMAGE ([] .. "resources/red.png"); 
-var Media.Image blue = val MEDIA_IMAGE ([] .. "resources/blue.png"); 
+var Media.Image green = val MEDIA_IMAGE ([] .. "resources/green.png");
+var Media.Image red = val MEDIA_IMAGE ([] .. "resources/red.png");
+var Media.Image blue = val MEDIA_IMAGE ([] .. "resources/blue.png");
 
 green.region.y = height/2 - img_height/2;
 
@@ -88,30 +88,40 @@ do
   var uint color;
   vector[] byte text = [] .. "Your color is ";
   var& IPlayer self;
+  var& IPlayer opponent;
   if call Get_Device_Id () % 2 == 0 then
     color = 0xff00ff00;
     text = text .. "green";
     self = &p_green;
+    opponent = &p_red;
   else
     color = 0xffff0000;
     text = text .. "red";
     self = &p_red;
+    opponent = &p_green;
   end
 
-  var Media.Text display = val Media.Text ([] .. text, [] .. "sans bold 30", 
-          Region (0, height - 200, 600, 200, 2), color); 
+  var Media.Text display = val Media.Text ([] .. text, [] .. "sans bold 30",
+          Region (0, height - 200, 600, 200, 2), color);
   spawn Play (&scene, &display);
 
   par do
     var _char_ptr_ext key;
     var bool press;
     every (_, key, press) in CM_SCENE_KEY do
-      var int y = call Player_Get_Int (&self, "y");
-      if press and call Get_Device_Id () == call Get_Event_Device_Id () then 
-        if _strcmp (key, "Up") == 0 then
-          call Player_Set_Int (&self, "y", y - amount);
-        else/if _strcmp (key, "Down") == 0 then
-          call Player_Set_Int (&self, "y", y + amount);
+      if press then
+        var& IPlayer p;
+        if call Get_Device_Id () == call Get_Event_Device_Id () then
+          p = &self;
+        else
+          p = &opponent;
+        end
+        var int y = call Player_Get_Int (&p, "y");
+        if _strcmp (key, "Up") == 0  and y - amount >= 0 then
+          call Player_Set_Int (&p, "y", y - amount);
+        else/if _strcmp (key, "Down") == 0 and
+            y + amount + img_height <= height then
+          call Player_Set_Int (&p, "y", y + amount);
         end
       end
     end
@@ -125,6 +135,5 @@ do
     end
   end
 end
-
 
 escape 0;
