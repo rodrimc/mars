@@ -15,12 +15,12 @@ server: SRC_NAME= $(notdir $(SRC))
 
 #both targets
 server all: override CFLAGS := $(shell pkg-config $(MODULES) --libs --cflags)\
-																-lpthread $(CFLAGS)
+																-lpthread $(CFLAGS) -lm
 
 #variables
 BIN					= $(SRC_NAME:%.ceu=%)
 BUILD_PATH 	= build
-TEMP 				:= $(BUILD_PATH)/temp-$(shell date --iso=ns).ceu 
+TEMP 				:= $(BUILD_PATH)/temp-$(shell date --iso=ns).ceu
 
 all:
 	mkdir -p $(BUILD_PATH)
