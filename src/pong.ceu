@@ -8,7 +8,6 @@ native
   _ceil,
 ;
 
-
 var int amount = 10;
 var int width = 600;
 var int height = 400;
@@ -24,9 +23,15 @@ data Direction with
   var float y;
 end;
 
+var int turn = 1;
+var int wall = 1;
+
+var bool have_won = _;
+event (void) round_ended;
+
 code/tight
 Compute_Collision (var& IPlayer ball, var &IPlayer green,
-    var& IPlayer red, var& Direction dir) -> void do
+    var& IPlayer red, var& Direction dir, var& float speed) -> void do
 
   var int x = call Player_Get_Int (&ball, "x");
   var int y = call Player_Get_Int (&ball, "y");
@@ -37,15 +42,20 @@ Compute_Collision (var& IPlayer ball, var &IPlayer green,
   var int red_x = call Player_Get_Int (&red, "x");
   var int red_y = call Player_Get_Int (&red, "y");
 
-  if (x <= outer.img_width  and
+  if (outer.turn == -1 and x < outer.img_width  and
       y >= green_y and y <= green_y + outer.img_height) or
-     (x >= outer.width - (outer.img_width + outer.ball_width) and
+     (outer.turn == 1  and
+      x > outer.width - (outer.img_width + outer.ball_width) and
       y >= red_y and y <= red_y + outer.img_height) then
     dir.x = dir.x * -1;
+    speed = speed + 0.05;
+    outer.turn = outer.turn * -1;
   end
 
-  if y <= 0 or y + outer.ball_height >= outer.height then
+  if (y <= 0 and outer.wall == 1) or
+     (y + outer.ball_height >= outer.height and outer.wall == -1) then
     dir.y = dir.y * -1;
+    outer.wall = outer.wall * -1;
   end
 end
 
@@ -80,15 +90,17 @@ var& IPlayer p_green;
 var& IPlayer p_red;
 var& IPlayer p_ball;
 
+var Region text_region = val Region (0, height - 200, 600, 200, 2);
+
 watching Scene (Size (600, 400)) -> (&scene),
          Play (&scene, &green) -> (&p_green),
          Play (&scene, &red) -> (&p_red),
          Play (&scene, &blue) -> (&p_ball)
 do
-  var uint color;
-  vector[] byte text = [] .. "Your color is ";
   var& IPlayer self;
   var& IPlayer opponent;
+  var uint color;
+  vector[] byte text = [] .. "Your color is ";
   if call Get_Device_Id () % 2 == 0 then
     color = 0xff00ff00;
     text = text .. "green";
@@ -101,11 +113,12 @@ do
     opponent = &p_green;
   end
 
-  var Media.Text display = val Media.Text ([] .. text, [] .. "sans bold 30",
-          Region (0, height - 200, 600, 200, 2), color);
-  spawn Play (&scene, &display);
+  par/or do
+    var Media.Text display = val Media.Text ([] .. text, [] .. "sans bold 30",
+          text_region, color);
 
-  par do
+    await Play (&scene, &display);
+  with
     var _char_ptr_ext key;
     var bool press;
     every (_, key, press) in CM_SCENE_KEY do
@@ -127,12 +140,44 @@ do
     end
   with
     var Direction dir = val Direction (2.5, -3);
-    var float speed = 0.4;
     var int tick = 30;
+    var float speed = 0.4;
     every (tick)ms do
       call Update (&p_ball, &dir, speed, tick * 0.1);
-      call Compute_Collision (&p_ball, &p_green, &p_red, &dir);
+      call Compute_Collision (&p_ball, &p_green, &p_red, &dir, &speed);
+
+      var int x = call Player_Get_Int (&p_ball, "x");
+
+      if x <= 0 then
+        if &&self == &&p_red then
+          have_won = true;
+        else
+          have_won = false;
+        end
+        emit round_ended;
+      else/if x >= width then
+        if &&self == &&p_red then
+          have_won = false;
+        else
+          have_won = true;
+        end
+        emit round_ended;
+      end
     end
+  with
+    await round_ended;
+  end
+
+  var Media.Text m_end;
+  if have_won then
+    m_end = val MEDIA_TEXT ([] .. "Congrats, you won!");
+  else
+    m_end = val MEDIA_TEXT ([] .. "Game Over!");
+  end
+
+  m_end.region = text_region;
+  watching 5s do
+    await Play (&scene, &m_end);
   end
 end
 
