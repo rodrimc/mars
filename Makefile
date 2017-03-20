@@ -4,10 +4,11 @@ CEU_MEDIA_DIR	= $(error set CEU_MEDIA_DIR to Céu-Media directory)
 CEU_UV_DIR 		= $(error set CEU_UV_DIR to Céu-libuv directory)
 
 #all target
-all: PROG 		= $(error set PROG to a CÉU program)
-all: PROG_SED = $(PROG://=\/)
-all: MODULES 	= play lua5.3 libuv
-all: SRC_NAME	= $(notdir $(PROG))
+all: PROG 					= $(error set PROG to a CÉU program)
+all: PROG_SED 			= $(PROG://=\/)
+all: MODULES 				= play lua5.3 libuv
+all: SRC_NAME				= $(notdir $(PROG))
+all: override SYNC := include/sync/mirror.ceu
 
 #server target
 server: MODULES = lua5.3 libuv
