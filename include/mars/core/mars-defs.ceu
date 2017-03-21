@@ -16,6 +16,11 @@
 #define S_JOINED              20
 #define S_NEW_PEER            21
 #define S_BROADCAST           22
+
+/* event codes */
+#define EVT_KEY                0
+#define EVT_SCENE_CLICK        1
+#define EVT_PLAYER_CLICK       2
 /* more? */
 
 native/pre do

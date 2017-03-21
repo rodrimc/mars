@@ -3,12 +3,25 @@
 /* internal */
 event (void) mirror_ok;
 
-#define KEY 0
-#define SCENE_CLICK 1
-#define PLAYER_CLICK 2 
-
 par/or do
   #include "mars/core/mars-client.ceu"
+  var int min_peers = _;
+
+  code/tight Load_Sync_Config (void) -> void do
+    [[
+      CONFIG = {}
+      min_peers = 2
+      chunk = loadfile ('config.lua')
+      if chunk then
+        CONFIG = chunk ()
+
+        min_peers = CONFIG.MIN_PEERS or min_peers
+      end
+    ]]
+    outer.min_peers = [[ min_peers ]];
+  end
+
+  call Load_Sync_Config ();
 
   pool [] Stub_Send_Message send_message_pool;
 
@@ -26,7 +39,7 @@ par/or do
         var uint new_peer;
         var usize peers;
         every (new_peer, peers) in stub.new_peer do
-          if (peers >= 2) then
+          if (peers >= min_peers) then
             emit mirror_ok;
           end
         end
@@ -41,33 +54,33 @@ par/or do
         var uint obj = [[ TABLE.object ]];
         var int type = [[ TABLE.type ]];
 
-        if type == KEY then
+        if type == EVT_KEY then
           vector[] byte key = [] .. [[ TABLE.key ]];
           var bool press = [[ TABLE.press ]];
 
           emit remote_mars_scene_key (device, obj, &&key[0], press);
-        else/if type == SCENE_CLICK then
+        else/if type == EVT_SCENE_CLICK then
           var int x = [[ TABLE.x ]];
           var int y = [[ TABLE.y ]];
           var int button = [[ TABLE.button ]];
           var bool press = [[ TABLE.press ]];
 
-          emit remote_mars_scene_mouse_clicked (device, obj, x, y, 
+          emit remote_mars_scene_mouse_clicked (device, obj, x, y,
                                                 button, press);
 
-        else/if type == PLAYER_CLICK then
+        else/if type == EVT_PLAYER_CLICK then
           var int x = [[ TABLE.x ]];
           var int y = [[ TABLE.y ]];
           var int button = [[ TABLE.button ]];
           var bool press = [[ TABLE.press ]];
 
-          emit remote_mars_player_mouse_clicked (device, obj, x, y, 
+          emit remote_mars_player_mouse_clicked (device, obj, x, y,
                                                  button, press);
         end
       end
     with
       /* SCENE */
-    
+
       /* KEY */
       var uint obj;
       var _char_ptr_ext key;
@@ -76,7 +89,7 @@ par/or do
         stub.wbuffer = [] .. "{";
         stub.wbuffer = stub.wbuffer .. "device=" .. [[ tostring(@stub.id) ]];
         stub.wbuffer = stub.wbuffer .. ",object=" .. [[ tostring(@obj) ]];
-        stub.wbuffer = stub.wbuffer .. ",type=" .. [[ tostring(@KEY) ]];
+        stub.wbuffer = stub.wbuffer .. ",type=" .. [[ tostring(@EVT_KEY) ]];
         stub.wbuffer = stub.wbuffer .. ",key=\'" .. (_ID(key) as _char&&) .. "'";
         stub.wbuffer = stub.wbuffer .. ",press=" .. [[ tostring(@press) ]];
         stub.wbuffer = stub.wbuffer .. "}";
@@ -94,7 +107,7 @@ par/or do
         stub.wbuffer = [] .. "{";
         stub.wbuffer = stub.wbuffer .. "device=" .. [[ tostring(@stub.id) ]];
         stub.wbuffer = stub.wbuffer .. ",object=" .. [[ tostring(@obj) ]];
-        stub.wbuffer = stub.wbuffer .. ",type=" .. [[ tostring(@SCENE_CLICK) ]];
+        stub.wbuffer = stub.wbuffer .. ",type=" .. [[ tostring(@EVT_SCENE_CLICK) ]];
         stub.wbuffer = stub.wbuffer .. ",x=" .. [[ tostring(@x) ]];
         stub.wbuffer = stub.wbuffer .. ",y=" .. [[ tostring(@y) ]];
         stub.wbuffer = stub.wbuffer .. ",button=" .. [[ tostring(@button) ]];
@@ -103,7 +116,7 @@ par/or do
 
         spawn Stub_Send_Message (&stub) in send_message_pool;
       end
-      
+
     with
       /* PLAYER */
       var uint obj;
@@ -115,7 +128,7 @@ par/or do
         stub.wbuffer = [] .. "{";
         stub.wbuffer = stub.wbuffer .. "device=" .. [[ tostring(@stub.id) ]];
         stub.wbuffer = stub.wbuffer .. ",object=" .. [[ tostring(@obj) ]];
-        stub.wbuffer = stub.wbuffer .. ",type=" .. [[ tostring(@PLAYER_CLICK) ]];
+        stub.wbuffer = stub.wbuffer .. ",type=" .. [[ tostring(@EVT_PLAYER_CLICK) ]];
         stub.wbuffer = stub.wbuffer .. ",x=" .. [[ tostring(@x) ]];
         stub.wbuffer = stub.wbuffer .. ",y=" .. [[ tostring(@y) ]];
         stub.wbuffer = stub.wbuffer .. ",button=" .. [[ tostring(@button) ]];
