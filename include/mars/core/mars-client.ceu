@@ -8,98 +8,125 @@
 
 /*** CLIENT API ***/
 data IStub with
-  var& _uv_tcp_t tcp;
+  var& UV_Stream tcp;
   var uint id;
-  vector&[] byte rbuffer;
-  vector&[] byte wbuffer;
-  vector&[] byte message;
+  var&[] byte wbuffer;
+  var&[] byte rbuffer;
+  var&[] byte message;
   event (uint, usize) joined;
   event (uint, usize) new_peer;
-  event (void) incoming_message;
+  event (none) incoming_message;
 end
 
-code/await Stub_Send_Message (var& IStub stub) -> void  
+code/await Stub_Send_Message (var& IStub stub) -> none
 do
-  vector[] byte message = [] .. "return{";
-  message = message .. "payload=" .. stub.wbuffer;
-  message = message .. ",from=" .. [[ tostring (@stub.id) ]];
-  message = message .. ",type=" .. [[ tostring (@P_REGULAR_SEND) ]];
-  var u64 ts = _now();
-  message = message .. ",timestamp=" .. [[ tostring(@ts) ]];
-  message = message .. "}\n";
+  var[] byte buf = [] .. "return {type=";
 
-  _debug ("[Stub (%d)] sending: %s\n", stub.id, &&message[0]);
-  await UV_TCP_Write(&stub.tcp, &message);
+  var[] byte tmp = [] .. [[ tostring (@P_REGULAR_SEND) ]];
+  call Str_Cat (&buf, &tmp);
+
+  tmp = [] .. ",payload=";
+  call Str_Cat (&buf, &tmp);
+
+  tmp = [] .. stub.wbuffer;
+  call Str_Cat (&buf, &tmp);
+
+  tmp = [] .. ",from=";
+  call Str_Cat (&buf, &tmp);
+
+  tmp = [] .. [[ tostring (@stub.id) ]];
+  call Str_Cat (&buf, &tmp);
+
+  tmp = [] .. ",timestamp=";
+  call Str_Cat (&buf, &tmp);
+
+  var u64 ts = _now();
+  tmp = [] .. [[ tostring (@ts) ]];
+  call Str_Cat (&buf, &tmp);
+
+  tmp = [] .. "}";
+  call Str_Cat (&buf, &tmp);
+
+  stub.tcp.wBuffer = [] .. buf .. "\n";
+
+  _debug ("[Stub (%d)] sending: %s\n", stub.id, &&stub.tcp.wBuffer[0]);
+  await UV_Stream_Write_N(&stub.tcp, _);
+end
+
+code/await Handle_Message (var&[] byte buffer, var& IStub ref_) -> none
+do
+  var usize i;
+  var int type = _;
+
+  /* parse message */
+  [[ TABLE =  load (@buffer)()]]
+  type = [[ TABLE.type ]];
+
+  _debug ("type: %d\n", type);
+
+  if type == S_JOINED then
+    ref_.id = [[ TABLE.id ]];
+    var int peers = [[ TABLE.peers ]];
+    emit ref_.joined (ref_.id, peers);
+
+  else/if type == S_NEW_PEER then
+    var int new_peer = [[ TABLE.peers ]];
+    var int peers = [[ TABLE.peers ]];
+    emit ref_.new_peer (new_peer, peers);
+
+  else/if type == S_BROADCAST then
+    ref_.message= [] .. "return";
+    var[] byte buf = [] .. [[serialize (TABLE.payload)]];
+
+    call Str_Cat (&ref_.message, &buf);
+    emit ref_.incoming_message;
+  else
+    _debug ("[Stub (%d) Unknow message type.\n", ref_.id);
+  end
+
+  ref_.message = [] .. "";
+  $ref_.tcp.rBuffer = 0;
 end
 
 code/await Stub (var _char&& ip, var int port, var int session)
                           -> (var& IStub stub)
-                            -> void
+                            -> none
 do
-  event& (void) connected;
-  var& _uv_tcp_t tcp_;
-
-  watching UV_TCP_Connect(ip, port) -> (&tcp_, &connected)
-  do
-    vector []byte rbuffer;
-    vector []byte wbuffer;
-    vector []byte message;
-    var IStub ref_ = val IStub (&tcp_, 0, &rbuffer, &wbuffer, &message,
-                                _, _, _);
+  var&? UV_TCP_Connect connection = spawn UV_TCP_Connect(ip, port, _);
+  watching connection do
+    var[] byte rbuffer;
+    var[] byte wbuffer;
+    var[] byte message;
+    var IStub ref_ = val IStub (&connection.stream, 0, &rbuffer, &wbuffer,
+                                &message, _, _, _);
     stub = &ref_;
 
-    await connected;
+    await connection.ok;
 
     par do
-      wbuffer = [] .. "return {";
-      wbuffer = wbuffer .. "type=" .. [[ tostring (@P_JOIN) ]];
-      wbuffer = wbuffer .. "}\n";
+      var[] byte buf = [] .. "return {type=";
+      var[] byte tmp = [] .. [[ tostring(@P_JOIN) ]];
+
+      call Str_Cat (&buf, &tmp);
+
+      tmp = [] .. "}";
+      call Str_Cat (&buf, &tmp);
+
+      ref_.tcp.wBuffer = [] .. buf .. "\n";
 
       /* send P_JOIN message */
-      await UV_TCP_Write(&ref_.tcp, &wbuffer);
+      _debug ("[Stub (%d)] sending %s\n", ref_.id, &&ref_.tcp.wBuffer[0]);
+      await UV_Stream_Write_N(&ref_.tcp, _);
     with
       /* await message */
+      pool [] Handle_Message pool_handle_message;
       loop do
-        event& usize ok;
-        watching UV_Stream_Read(&ref_.tcp, &ref_.rbuffer) -> (&ok) do
-          await ok;
-          var usize i;
-          loop i in [0 -> $ref_.rbuffer[ do
-            if ref_.rbuffer[i] != { '\n' } then
-              ref_.message = ref_.message .. [ref_.rbuffer[i]];
-            else
-              _debug ("[Stub (%u)]Incoming Message: %s\n", ref_.id,
-                  &&ref_.message[0]);
+        var [] byte buffer;
+        call Clear_Vector (&ref_.tcp.rBuffer);
+        await UV_Stream_Read_Line(&ref_.tcp, &buffer);
 
-              var int type = _;
-
-              /* parse message */
-              [[ TABLE =  load (@message)()]]
-
-              type = [[ TABLE.type ]];
-
-              if type == S_JOINED then
-                ref_.id = [[ TABLE.id ]];
-                var int peers = [[ TABLE.peers ]];
-                emit ref_.joined (ref_.id, peers);
-
-              else/if type == S_NEW_PEER then
-                var int new_peer = [[ TABLE.peers ]];
-                var int peers = [[ TABLE.peers ]];
-                emit ref_.new_peer (new_peer, peers);
-
-              else/if type == S_BROADCAST then
-                ref_.message= [] .. "return" .. [[serialize (TABLE.payload)]];
-                emit ref_.incoming_message;
-
-              else
-                _debug ("[Stub (%d) Unknow message type.\n", ref_.id);
-              end
-
-              ref_.message = [] .. "";
-            end
-          end
-        end
+        _debug ("[Stub (%d)] received: %s\n", ref_.id, &&buffer[0]);
+        spawn Handle_Message (&buffer, &ref_) in pool_handle_message;
       end
     end
   end

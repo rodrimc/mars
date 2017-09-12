@@ -1,50 +1,124 @@
 #ifndef _CEU_MARS_SERVER
 #define _CEU_MARS_SERVER
 
-#include "uv/uv.ceu"
+#include "mars-defs.ceu"
+
 #include "uv/tcp.ceu"
 
-#include "mars-defs.ceu"
+data UV_TCP_Server_Data;
 
 /*** SERVER SIDE ***/
 event (uint) send_broadcast_join;
 event (uint) send_broadcast_message;
-vector []byte cur_payload;
+var []byte cur_payload;
 
 var uint id_ref = 1;
 var usize peers_count = 0;
 
-code/await Send_Broadcast_Join (var& _uv_tcp_t client, var uint id) -> void
+code/await Send_Join_Reply (var& UV_Stream client, var uint id) -> none
 do
-  vector[] byte buffer = [] .. "";
+  var[] byte buf = [] .. "return {type=";
+  var[] byte tmp = [] .. [[ tostring (@S_JOINED) ]];
 
-  buffer = [] .. "return {type=" .. [[ tostring(@S_NEW_PEER) ]];
-  buffer = buffer .. ",new_peer=" .. [[ tostring (@id) ]];
-  buffer = buffer .. ",peers=" .. [[ tostring (@outer.peers_count) ]];
-  var u64 ts = _now ();
-  buffer = buffer .. ",timestamp=" .. [[ tostring (@ts) ]];
-  buffer = buffer .. "}\n";
+  call Str_Cat (&buf, &tmp);
 
-  await UV_TCP_Write (&client, &buffer);
+  tmp = [] .. ",id=";
+  call Str_Cat (&buf, &tmp);
+
+  tmp = [] .. [[ tostring (@id) ]];
+  call Str_Cat (&buf, &tmp);
+
+  tmp = [] .. ",peers=";
+  call Str_Cat (&buf, &tmp);
+
+  tmp = [] .. [[ tostring (@outer.peers_count) ]];
+  call Str_Cat (&buf, &tmp);
+
+  tmp = [] .. "}";
+  call Str_Cat (&buf, &tmp);
+
+  client.wBuffer = [] .. buf .. "\n";
+
+  _debug ("[server] sending: %s\n", &&client.wBuffer[0]);
+  await UV_Stream_Write_N (&client, _);
 end
 
-code/await Send_Broadcast_Message (var& _uv_tcp_t client, var uint from,
-                                   vector& []byte payload) -> void
+
+code/await Send_Broadcast_Join (var& UV_Stream client, var uint id) -> none
 do
-  vector[] byte buffer = [] .. "";
+  var[] byte buf = [] .. "return {type=";
+  var[] byte tmp = [] .. [[ tostring (@S_NEW_PEER) ]];
 
-  buffer = [] .. "return {from=" .. [[ tostring (@from) ]];
-  buffer = buffer .. ",type=" .. [[ tostring (@S_BROADCAST) ]];
-  buffer = buffer .. ",payload=" .. payload;
+  call Str_Cat (&buf, &tmp);
+
+  tmp = [] .. ",new_peer=";
+  call Str_Cat (&buf, &tmp);
+
+  tmp = [] .. [[ tostring (@id) ]];
+  call Str_Cat (&buf, &tmp);
+
+  tmp = [] .. ",peers=";
+  call Str_Cat (&buf, &tmp);
+
+  tmp = [] .. [[ tostring (@outer.peers_count) ]];
+  call Str_Cat (&buf, &tmp);
+
+  tmp = [] .. ",timestamp=";
+  call Str_Cat (&buf, &tmp);
+
   var u64 ts = _now ();
-  buffer = buffer .. ",timestamp=" .. [[ tostring (@ts) ]];
-  buffer = buffer .. "}\n";
 
-  _debug ("[server] sent: %s", &&buffer[0]);
-  await UV_TCP_Write (&client, &buffer);
+  tmp = [] .. [[ tostring (@ts) ]];
+  call Str_Cat (&buf, &tmp);
+
+  tmp = [] .. "}";
+  call Str_Cat (&buf, &tmp);
+
+  client.wBuffer = [] .. buf .. "\n";
+
+  _debug ("[server] sending: %s\n", &&client.wBuffer[0]);
+  await UV_Stream_Write_N (&client, _);
 end
 
-code/await UV_TCP_Server_Handler (var& _uv_tcp_t client) -> int
+code/await Send_Broadcast_Message (var& UV_Stream client, var uint from,
+                                   var& []byte payload) -> none
+do
+  var[] byte buf = [] .. "return {type=";
+  var[] byte tmp = [] .. [[ tostring (@S_BROADCAST) ]];
+
+  call Str_Cat (&buf, &tmp);
+
+  tmp = [] .. ",from=";
+  call Str_Cat (&buf, &tmp);
+
+  tmp = [] .. [[ tostring (@from) ]];
+  call Str_Cat (&buf, &tmp);
+
+  tmp = [] .. ",payload=";
+  call Str_Cat (&buf, &tmp);
+
+  tmp = [] .. payload;
+  call Str_Cat (&buf, &tmp);
+
+  tmp = [] .. ",timestamp=";
+  call Str_Cat (&buf, &tmp);
+
+  var u64 ts = _now ();
+  tmp = [] .. [[ tostring (@ts) ]];
+  call Str_Cat (&buf, &tmp);
+
+  tmp = [] .. "}";
+  call Str_Cat (&buf, &tmp);
+
+  client.wBuffer = [] .. buf .. "\n";
+
+  _debug ("[server] sending: %s\n", &&client.wBuffer[0]);
+  await UV_Stream_Write_N (&client, _);
+end
+
+/* Handler for each client */
+code/await UV_TCP_Server_Handler (var& UV_Stream client,
+                                  var& UV_TCP_Server_Data shared) -> int
 do
   var uint session = _;
   var uint id = outer.id_ref;
@@ -56,35 +130,29 @@ do
     outer.peers_count = outer.peers_count - 1;
   end
 
-  pool [] Send_Broadcast_Join pool_broadcast_join;
-  pool [] Send_Broadcast_Message pool_broadcast_message;
+  pool[] Send_Join_Reply        pool_join_reply;
+  pool[] Send_Broadcast_Join    pool_broadcast_join;
+  pool[] Send_Broadcast_Message pool_broadcast_message;
 
   par do
     loop do
-      vector[] byte buffer;
-      await UV_TCP_ReadLine(&client, &buffer);
+      var [] byte buffer;
+      call Clear_Vector (&client.rBuffer);
+
+      await UV_Stream_Read_Line(&client, &buffer);
       _debug ("[server] received: %s\n", &&buffer[0]);
 
       var int type = _;
 
-      [[ TABLE =  load (@buffer)()]]
+      [[ TABLE =  load (@buffer)() ]]
       type = [[ TABLE.type ]];
 
       if type == P_JOIN then
-        buffer = [] .. "return {";
-        buffer = buffer .. "type=" .. [[ tostring (@S_JOINED) ]];
-        buffer = buffer .. ",id=" .. [[ tostring(@id) ]];
-        buffer = buffer .. ",peers=" .. [[ tostring(@outer.peers_count) ]];
-        buffer = buffer .. "}\n";
-
-        await UV_TCP_Write (&client, &buffer);
-        _debug ("[server] sent: %s\n", &&buffer[0]);
-
+        spawn Send_Join_Reply (&client, id) in pool_join_reply;
         emit outer.send_broadcast_join (id);
-
       else/if type == P_REGULAR_SEND then
         var int from = [[ TABLE.from ]];
-        vector[] byte payload = [] .. [[ serialize(TABLE.payload) ]];
+        var [] byte payload = [] .. [[ serialize(TABLE.payload) ]];
 
         outer.cur_payload = [] .. payload;
         emit outer.send_broadcast_message (from);

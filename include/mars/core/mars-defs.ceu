@@ -41,7 +41,7 @@ native/pre do
  ##define DEBUG 0
 ##endif
 
-##define ID(x) x
+##define PTR(x) x
 
 #define debug(fmt, ...) \
   do { if (DEBUG) fprintf(stderr, "%s:%d: " fmt, __FILE__, \
@@ -55,7 +55,7 @@ native/nohold
 ;
 
 native/pure
-  _ID,
+  _PTR,
 ;
 
 [[
@@ -73,6 +73,15 @@ native/pure
      return result
    end
 ]]
+
+code/tight Str_Cat (var&[] byte vet, var&[] byte payload) -> none do
+  $vet = $vet - 1;
+  vet = vet .. payload;
+end
+
+code/tight Clear_Vector (var&[] byte vet) -> none do
+  $vet = 0;
+end
 
 #endif
 

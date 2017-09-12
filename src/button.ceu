@@ -28,25 +28,22 @@ var Media.Image off_button = val Media.Image (
                         b_size.width, b_size.height, 2),
                 1.0);
 
-var& IScene scene;
-watching Scene(size) -> (&scene)
-do
-  spawn Play (&scene, &video);
-  var& IPlayer p;
-  watching Play(&scene, &text) -> (&p)
-  do
+var&? Scene scene = spawn Scene(size);
+watching scene do
+  spawn Play (&scene.scene, &video);
+  var&? Play p = spawn Play(&scene.scene, &text);
+  watching  p do
     par/or do
-      vector[] byte str;
+      var[] byte str;
       await 5s;
-      var& IPlayer p_button;
-      watching Play (&scene, &on_button) -> (&p_button), 10s
-      do
+      var&? Play p_button = spawn Play (&scene.scene, &on_button);
+      watching p_button, 10s do
         var uint obj;
         var bool press = _;
         var uint id = _;
 
         (obj, _, _, _, press) = await CM_PLAYER_MOUSE_CLICK
-                                until (press and obj == p_button.self);
+                                until (press and obj == p_button.player.self);
 
         var uint device = call Get_Event_Device_Id ();
         str = [] .. "Winner: Player " ..  [[ tostring (@device) ]] .. ". ";
@@ -56,8 +53,8 @@ do
           str = str .. "You lost!";
         end
 
-        call Player_Set_Char (&p, "text", &&str[0]);
-        await Play (&scene, &off_button);
+        call Player_Set_Char (&p.player, "text", &&str[0]);
+        await Play (&scene.scene, &off_button);
       end
     with
       var uint obj;

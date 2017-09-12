@@ -9,27 +9,26 @@
 data IScene with
   var& ISceneRaw  raw;
   var&  uint      self;
-  event (void)    quit;
+  event (none)    quit;
 end
 
 code/await
 Scene (var Size? size)
                 -> (var& IScene scene)
-                    -> void
+                    -> none
 do
-  var& ISceneRaw raw;
   var Size raw_size =  _;
   var& uint device_id_ref = &outer.device_id;
 
   if (size?) then
     raw_size = size!;
   end
-  watching Scene_Raw (raw_size) -> (&raw)
-  do
+  var&? Scene_Raw scene_raw = spawn Scene_Raw (raw_size);
+  watching scene_raw do
     var uint self = _SCENE_SEED;
     _SCENE_SEED = _SCENE_SEED + 1;
 
-    var IScene ref_ = val IScene (&raw, &self, _);
+    var IScene ref_ = val IScene (&scene_raw.scene, &self, _);
     scene = &ref_;
     par do
       var _GObject&& source;
@@ -38,7 +37,7 @@ do
       var int button;
       var bool press;
       every (source, x, y, button, press) in CM_SCENE_RAW_MOUSE_CLICK do
-        if _LP_SCENE(source) == &&raw.ref then
+        if _LP_SCENE(source) == &&scene_raw.scene.ref then
           emit outer.mars_scene_mouse_clicked (ref_.self, x, y, button, press);
         end
       end
@@ -47,7 +46,7 @@ do
       var _char_ptr_ext key;
       var bool press;
       every (source, key, press) in CM_SCENE_RAW_KEY do
-        if _LP_SCENE(source) == &&raw.ref then
+        if _LP_SCENE(source) == &&scene_raw.scene.ref then
           emit outer.mars_scene_key (ref_.self, key, press);
         end
       end
@@ -57,7 +56,7 @@ do
       var int y;
       pool [] Emit_Scene_Mouse_Move_Event scene_mouse_move_event_pool;
       every (source, x, y) in CM_SCENE_RAW_MOUSE_MOVE do
-        if _LP_SCENE(source) == &&raw.ref then
+        if _LP_SCENE(source) == &&scene_raw.scene.ref then
           spawn Emit_Scene_Mouse_Move_Event (outer.device_id, ref_.self, x, y)
                                              in scene_mouse_move_event_pool;
         end
@@ -67,7 +66,7 @@ do
       var u64 tick;
       pool [] Emit_Scene_Tick_Event scene_tick_event_pool;
       every (source, tick) in CM_SCENE_RAW_TICK do
-        if _LP_SCENE(source) == &&raw.ref then
+        if _LP_SCENE(source) == &&scene_raw.scene.ref then
           spawn Emit_Scene_Tick_Event (outer.device_id, ref_.self, tick)
                                        in scene_tick_event_pool;
         end
@@ -77,14 +76,14 @@ do
       var _char_ptr_ext error;
       pool [] Emit_Scene_Error_Event scene_error_event_pool;
       every (source, error) in CM_SCENE_RAW_ERROR do
-        if _LP_SCENE(source) == &&raw.ref then
+        if _LP_SCENE(source) == &&scene_raw.scene.ref then
           spawn Emit_Scene_Error_Event (outer.device_id, error)
                                         in scene_error_event_pool;
         end
       end
     with
       await ref_.quit;
-      emit raw.quit;
+      emit scene_raw.scene.quit;
 
     /* REMOTE EVENTS */
     with
@@ -128,19 +127,19 @@ end
 
 /* Scene functions */
 code/tight
-Scene_Pause (var& IScene scene) -> void
+Scene_Pause (var& IScene scene) -> none
 do
   call Scene_Raw_Pause (&scene.raw);
 end
 
 code/tight
-Scene_Resume (var& IScene scene) -> void
+Scene_Resume (var& IScene scene) -> none
 do
   call Scene_Raw_Resume (&scene.raw);
 end
 
 code/tight
-Scene_Set_Tick_Interval (var& IScene scene, var u64 interval) -> void
+Scene_Set_Tick_Interval (var& IScene scene, var u64 interval) -> none
 do
   call Scene_Raw_Set_Tick_Interval (&scene.raw, interval);
 end
@@ -153,22 +152,21 @@ end
 
 code/await Play (var& IScene scene, var& Media media)
                   -> (var& IPlayer player)
-                      -> void
+                      -> none
 do
-  var& IPlayerRaw raw;
+  var&? Play_Raw player_raw = spawn Play_Raw (&scene.raw, &media);
 
-  watching Play_Raw (&scene.raw, &media) -> (&raw)
-  do
+  watching player_raw do
     var uint self = _PLAYER_SEED;
     _PLAYER_SEED = _PLAYER_SEED + 1;
 
-    var IPlayer ref_ = val IPlayer (&raw, &self);
+    var IPlayer ref_ = val IPlayer (&player_raw.player, &self);
     player = &ref_;
     par do
       var _GObject&& source;
       pool [] Emit_Player_Start_Event player_start_event_pool;
       every (source) in CM_PLAYER_RAW_START do
-        if _LP_MEDIA(source) == &&raw.ref then
+        if _LP_MEDIA(source) == &&player_raw.player.ref then
           spawn Emit_Player_Start_Event (outer.device_id, ref_.self)
                                          in player_start_event_pool;
         end
@@ -177,7 +175,7 @@ do
       var _GObject&& source;
       pool [] Emit_Player_Sought_Event player_sought_event_pool;
       every (source) in CM_PLAYER_RAW_SOUGHT do
-        if _LP_MEDIA(source) == &&raw.ref then
+        if _LP_MEDIA(source) == &&player_raw.player.ref then
           spawn Emit_Player_Sought_Event (outer.device_id, ref_.self)
                                          in player_sought_event_pool;
         end
@@ -186,7 +184,7 @@ do
       var _GObject&& source;
       pool [] Emit_Player_Stop_Event player_stop_event_pool;
       every (source) in CM_PLAYER_RAW_STOP do
-        if _LP_MEDIA(source) == &&raw.ref then
+        if _LP_MEDIA(source) == &&player_raw.player.ref then
           spawn Emit_Player_Stop_Event (outer.device_id, ref_.self)
                                          in player_stop_event_pool;
         end
@@ -198,7 +196,7 @@ do
       var int button;
       var bool press;
       every (source, x, y, button, press) in CM_PLAYER_RAW_MOUSE_CLICK do
-        if _LP_MEDIA(source) == &&raw.ref then
+        if _LP_MEDIA(source) == &&player_raw.player.ref then
           emit outer.mars_player_mouse_clicked (ref_.self, x, y, button, press);
         end
       end
@@ -207,43 +205,43 @@ do
 end
 
 code/tight/dynamic
-Player_Set_Media (var& IPlayer player, dynamic var& Media media) -> void
+Player_Set_Media (var& IPlayer player, var&/dynamic Media media) -> none
 do
   call/dynamic Player_Raw_Set_Media (&player.raw, &media);
 end
 
 code/tight/dynamic
-Player_Set_Media (var& IPlayer player, dynamic var& Media.Text text) -> void
+Player_Set_Media (var& IPlayer player, var&/dynamic Media.Text text) -> none
 do
   call/dynamic Player_Raw_Set_Media (&player.raw, &text);
 end
 
 code/tight/dynamic
-Player_Set_Media (var& IPlayer player, dynamic var& Media.Image image) -> void
+Player_Set_Media (var& IPlayer player, var&/dynamic Media.Image image) -> none
 do
   call/dynamic Player_Raw_Set_Media (&player.raw, &image);
 end
 
 code/tight/dynamic
-Player_Set_Media (var& IPlayer player, dynamic var& Media.Audio audio) -> void
+Player_Set_Media (var& IPlayer player, var&/dynamic Media.Audio audio) -> none
 do
   call/dynamic Player_Raw_Set_Media (&player.raw, &audio);
 end
 
 code/tight/dynamic
-Player_Set_Media (var& IPlayer player, dynamic var& Media.Video video) -> void
+Player_Set_Media (var& IPlayer player, var&/dynamic Media.Video video) -> none
 do
   call/dynamic Player_Raw_Set_Media (&player.raw, &video);
 end
 
 code/tight
-Player_Set_Char (var& IPlayer player, var _char&& name, var _char&& value) -> void
+Player_Set_Char (var& IPlayer player, var _char&& name, var _char&& value) -> none
 do
   call Player_Raw_Set_Char (&player.raw, name, value);
 end
 
 code/tight
-Player_Set_Int (var& IPlayer player, var _char&& name, var int value) -> void
+Player_Set_Int (var& IPlayer player, var _char&& name, var int value) -> none
 do
   call Player_Raw_Set_Int (&player.raw, name, value);
 end
@@ -255,19 +253,19 @@ do
 end
 
 code/tight
-Player_Set_Double (var& IPlayer player, var _char&& name, var f64 value) -> void
+Player_Set_Double (var& IPlayer player, var _char&& name, var r64 value) -> none
 do
   call Player_Raw_Set_Double (&player.raw, name, value);
 end
 
 code/tight
-Player_Get_Double (var& IPlayer player, var _char&& name) -> f64
+Player_Get_Double (var& IPlayer player, var _char&& name) -> r64
 do
   escape call Player_Raw_Get_Double (&player.raw, name);
 end
 
 code/tight
-Player_Set_Bool (var& IPlayer player, var _char&& name, var bool value) -> void
+Player_Set_Bool (var& IPlayer player, var _char&& name, var bool value) -> none
 do
   call Player_Raw_Set_Bool (&player.raw, name, value);
 end
@@ -279,13 +277,13 @@ do
 end
 
 code/tight
-Player_Set_Region (var& IPlayer player, var Region region) -> void
+Player_Set_Region (var& IPlayer player, var Region region) -> none
 do
   call Player_Raw_Set_Region (&player.raw, region);
 end
 
 code/tight
-Player_Seek (var& IPlayer player, var s64 time, var bool relative) -> void
+Player_Seek (var& IPlayer player, var s64 time, var bool relative) -> none
 do
   call Player_Raw_Seek (&player.raw, time, relative);
 end

@@ -1,13 +1,13 @@
 #include "mars/mars-media.ceu"
 
 /* internal */
-event (void) mirror_ok;
+event (none) mirror_ok;
 
 par/or do
   #include "mars/core/mars-client.ceu"
   var int min_peers = _;
 
-  code/tight Load_Sync_Config (void) -> void do
+  code/tight Load_Sync_Config (none) -> none do
     [[
       CONFIG = {}
       min_peers = 2
@@ -23,22 +23,21 @@ par/or do
 
   call Load_Sync_Config ();
 
-  pool [] Stub_Send_Message send_message_pool;
 
-  var& IStub stub;
-  watching Stub (LOCALHOST, 8888, 0) -> (&stub)
-  do
+  var&? Stub stub = spawn Stub (LOCALHOST, 8888, 0);
+  watching stub do
+    pool [] Stub_Send_Message send_message_pool;
     par do
       var uint id;
       var usize peers;
-      (id, peers) = await stub.joined;
+      (id, peers) = await stub.stub.joined;
       /* device_id is defined in mars-media.ceu */
       device_id = id;
     with
       watching mirror_ok do
         var uint new_peer;
         var usize peers;
-        every (new_peer, peers) in stub.new_peer do
+        every (new_peer, peers) in stub.stub.new_peer do
           if (peers >= min_peers) then
             emit mirror_ok;
           end
@@ -46,16 +45,16 @@ par/or do
       end
     with
       loop do
-        await stub.incoming_message;
-        _debug ("[APP(%u)] Message: %s\n", stub.id, &&stub.message[0]);
+        await stub.stub.incoming_message;
+        _debug ("[APP(%u)] Message: %s\n", stub.stub.id, &&stub.stub.message[0]);
 
-        [[ TABLE = load (@stub.message)() ]]
+        [[ TABLE = load (@stub.stub.message)() ]]
         var uint device = [[ TABLE.device ]];
         var uint obj = [[ TABLE.object ]];
         var int type = [[ TABLE.type ]];
 
         if type == EVT_KEY then
-          vector[] byte key = [] .. [[ TABLE.key ]];
+          var[] byte key = [] .. [[ TABLE.key ]];
           var bool press = [[ TABLE.press ]];
 
           emit remote_mars_scene_key (device, obj, &&key[0], press);
@@ -85,16 +84,41 @@ par/or do
       var uint obj;
       var _char_ptr_ext key;
       var bool press;
+      var[] byte tmp;
       every (obj, key, press) in mars_scene_key do
-        stub.wbuffer = [] .. "{";
-        stub.wbuffer = stub.wbuffer .. "device=" .. [[ tostring(@stub.id) ]];
-        stub.wbuffer = stub.wbuffer .. ",object=" .. [[ tostring(@obj) ]];
-        stub.wbuffer = stub.wbuffer .. ",type=" .. [[ tostring(@EVT_KEY) ]];
-        stub.wbuffer = stub.wbuffer .. ",key=\'" .. (_ID(key) as _char&&) .. "'";
-        stub.wbuffer = stub.wbuffer .. ",press=" .. [[ tostring(@press) ]];
-        stub.wbuffer = stub.wbuffer .. "}";
+        stub.stub.wbuffer = [] .. "{device=";
 
-        spawn Stub_Send_Message (&stub) in send_message_pool;
+        tmp = [] .. [[ tostring(@stub.stub.id) ]];
+        call Str_Cat (&stub.stub.wbuffer, &tmp);
+
+        tmp = [] .. ",object=";
+        call Str_Cat (&stub.stub.wbuffer, &tmp);
+
+        tmp = [] .. [[ tostring(@obj) ]];
+        call Str_Cat (&stub.stub.wbuffer, &tmp);
+
+        tmp = [] .. ",type=";
+        call Str_Cat (&stub.stub.wbuffer, &tmp);
+
+        tmp = [] .. [[ tostring(@EVT_KEY) ]];
+        call Str_Cat (&stub.stub.wbuffer, &tmp);
+
+        tmp = [] .. ",key=\'";
+        call Str_Cat (&stub.stub.wbuffer, &tmp);
+
+        tmp = [] .. (_PTR(key) as _char&&);
+        call Str_Cat (&stub.stub.wbuffer, &tmp);
+
+        tmp = [] .. "\',press=";
+        call Str_Cat (&stub.stub.wbuffer, &tmp);
+
+        tmp = [] .. [[ tostring(@press) ]];
+        call Str_Cat (&stub.stub.wbuffer, &tmp);
+
+        tmp = [] .. "}";
+        call Str_Cat (&stub.stub.wbuffer, &tmp);
+
+        spawn Stub_Send_Message (&stub.stub) in send_message_pool;
       end
     with
       /* CLICK */
@@ -103,18 +127,53 @@ par/or do
       var int y;
       var int button;
       var bool press;
+      var[] byte tmp;
       every (obj, x, y, button, press) in mars_scene_mouse_clicked do
-        stub.wbuffer = [] .. "{";
-        stub.wbuffer = stub.wbuffer .. "device=" .. [[ tostring(@stub.id) ]];
-        stub.wbuffer = stub.wbuffer .. ",object=" .. [[ tostring(@obj) ]];
-        stub.wbuffer = stub.wbuffer .. ",type=" .. [[ tostring(@EVT_SCENE_CLICK) ]];
-        stub.wbuffer = stub.wbuffer .. ",x=" .. [[ tostring(@x) ]];
-        stub.wbuffer = stub.wbuffer .. ",y=" .. [[ tostring(@y) ]];
-        stub.wbuffer = stub.wbuffer .. ",button=" .. [[ tostring(@button) ]];
-        stub.wbuffer = stub.wbuffer .. ",press=" .. [[ tostring(@press) ]];
-        stub.wbuffer = stub.wbuffer .. "}";
+        stub.stub.wbuffer = [] .. "{device=";
 
-        spawn Stub_Send_Message (&stub) in send_message_pool;
+        tmp = [] .. [[ tostring(@stub.stub.id) ]];
+        call Str_Cat (&stub.stub.wbuffer, &tmp);
+
+        tmp = [] .. ",object=";
+        call Str_Cat (&stub.stub.wbuffer, &tmp);
+
+        tmp = [] .. [[ tostring(@obj) ]];
+        call Str_Cat (&stub.stub.wbuffer, &tmp);
+
+        tmp = [] .. ",type=";
+        call Str_Cat (&stub.stub.wbuffer, &tmp);
+
+        tmp = [] .. [[ tostring(@EVT_SCENE_CLICK) ]];
+        call Str_Cat (&stub.stub.wbuffer, &tmp);
+
+        tmp = [] .. ",x=";
+        call Str_Cat (&stub.stub.wbuffer, &tmp);
+
+        tmp = [] .. [[ tostring(@x) ]];
+        call Str_Cat (&stub.stub.wbuffer, &tmp);
+
+        tmp = [] .. ",y=";
+        call Str_Cat (&stub.stub.wbuffer, &tmp);
+
+        tmp = [] .. [[ tostring(@y) ]];
+        call Str_Cat (&stub.stub.wbuffer, &tmp);
+
+        tmp = [] .. ",button=";
+        call Str_Cat (&stub.stub.wbuffer, &tmp);
+
+        tmp = [] .. [[ tostring(@button) ]];
+        call Str_Cat (&stub.stub.wbuffer, &tmp);
+
+        tmp = [] .. ",press=";
+        call Str_Cat (&stub.stub.wbuffer, &tmp);
+
+        tmp = [] .. [[ tostring(@press) ]];
+        call Str_Cat (&stub.stub.wbuffer, &tmp);
+
+        tmp = [] .. "}";
+        call Str_Cat (&stub.stub.wbuffer, &tmp);
+
+        spawn Stub_Send_Message (&stub.stub) in send_message_pool;
       end
 
     with
@@ -124,18 +183,53 @@ par/or do
       var int y;
       var int button;
       var bool press;
+      var[] byte tmp;
       every (obj, x, y, button, press) in mars_player_mouse_clicked do
-        stub.wbuffer = [] .. "{";
-        stub.wbuffer = stub.wbuffer .. "device=" .. [[ tostring(@stub.id) ]];
-        stub.wbuffer = stub.wbuffer .. ",object=" .. [[ tostring(@obj) ]];
-        stub.wbuffer = stub.wbuffer .. ",type=" .. [[ tostring(@EVT_PLAYER_CLICK) ]];
-        stub.wbuffer = stub.wbuffer .. ",x=" .. [[ tostring(@x) ]];
-        stub.wbuffer = stub.wbuffer .. ",y=" .. [[ tostring(@y) ]];
-        stub.wbuffer = stub.wbuffer .. ",button=" .. [[ tostring(@button) ]];
-        stub.wbuffer = stub.wbuffer .. ",press=" .. [[ tostring(@press) ]];
-        stub.wbuffer = stub.wbuffer .. "}";
+        stub.stub.wbuffer = [] .. "{device=";
 
-        spawn Stub_Send_Message (&stub) in send_message_pool;
+        tmp = [] .. [[ tostring(@stub.stub.id) ]];
+        call Str_Cat (&stub.stub.wbuffer, &tmp);
+
+        tmp = [] .. ",object=";
+        call Str_Cat (&stub.stub.wbuffer, &tmp);
+
+        tmp = [] .. [[ tostring(@obj) ]];
+        call Str_Cat (&stub.stub.wbuffer, &tmp);
+
+        tmp = [] .. ",type=";
+        call Str_Cat (&stub.stub.wbuffer, &tmp);
+
+        tmp = [] .. [[ tostring(@EVT_PLAYER_CLICK) ]];
+        call Str_Cat (&stub.stub.wbuffer, &tmp);
+
+        tmp = [] .. ",x=";
+        call Str_Cat (&stub.stub.wbuffer, &tmp);
+
+        tmp = [] .. [[ tostring(@x) ]];
+        call Str_Cat (&stub.stub.wbuffer, &tmp);
+
+        tmp = [] .. ",y=";
+        call Str_Cat (&stub.stub.wbuffer, &tmp);
+
+        tmp = [] .. [[ tostring(@y) ]];
+        call Str_Cat (&stub.stub.wbuffer, &tmp);
+
+        tmp = [] .. ",button=";
+        call Str_Cat (&stub.stub.wbuffer, &tmp);
+
+        tmp = [] .. [[ tostring(@button) ]];
+        call Str_Cat (&stub.stub.wbuffer, &tmp);
+
+        tmp = [] .. ",press=";
+        call Str_Cat (&stub.stub.wbuffer, &tmp);
+
+        tmp = [] .. [[ tostring(@press) ]];
+        call Str_Cat (&stub.stub.wbuffer, &tmp);
+
+        tmp = [] .. "}";
+        call Str_Cat (&stub.stub.wbuffer, &tmp);
+
+        spawn Stub_Send_Message (&stub.stub) in send_message_pool;
       end
     end
   end
