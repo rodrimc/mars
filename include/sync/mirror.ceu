@@ -1,10 +1,10 @@
 #include "mars/mars-media.ceu"
+#include "mars/core/mars-client.ceu"
 
 /* internal */
 event (none) mirror_ok;
 
 par/or do
-  #include "mars/core/mars-client.ceu"
   var int min_peers = _;
 
   code/tight Load_Sync_Config (none) -> none do
