@@ -1,4 +1,5 @@
 #include "mars/mars-media.ceu"
+#include <r-util.ceu>
 
 var Size size = val Size (720, 480);
 var Size b_size = val Size (100, 100);
@@ -46,7 +47,11 @@ watching scene do
                                 until (press and obj == p_button.player.self);
 
         var uint device = call Get_Event_Device_Id ();
-        str = [] .. "Winner: Player " ..  [[ tostring (@device) ]] .. ". ";
+        var [] byte tmp = [] .. [[ tostring (@device) ]];
+
+        str = [] .. "Winner: Player ";
+        call R_Vec_Cat (&str, &tmp);
+
         if (device == call Get_Device_Id()) then
           str = str .. "You won!";
         else
