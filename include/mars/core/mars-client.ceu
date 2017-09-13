@@ -23,33 +23,33 @@ do
   var[] byte buf = [] .. "return {type=";
 
   var[] byte tmp = [] .. [[ tostring (@P_REGULAR_SEND) ]];
-  call Str_Cat (&buf, &tmp);
+  call R_Vec_Cat (&buf, &tmp);
 
   tmp = [] .. ",payload=";
-  call Str_Cat (&buf, &tmp);
+  call R_Vec_Cat (&buf, &tmp);
 
   tmp = [] .. stub.wbuffer;
-  call Str_Cat (&buf, &tmp);
+  call R_Vec_Cat (&buf, &tmp);
 
   tmp = [] .. ",from=";
-  call Str_Cat (&buf, &tmp);
+  call R_Vec_Cat (&buf, &tmp);
 
   tmp = [] .. [[ tostring (@stub.id) ]];
-  call Str_Cat (&buf, &tmp);
+  call R_Vec_Cat (&buf, &tmp);
 
   tmp = [] .. ",timestamp=";
-  call Str_Cat (&buf, &tmp);
+  call R_Vec_Cat (&buf, &tmp);
 
   var u64 ts = _now();
   tmp = [] .. [[ tostring (@ts) ]];
-  call Str_Cat (&buf, &tmp);
+  call R_Vec_Cat (&buf, &tmp);
 
   tmp = [] .. "}";
-  call Str_Cat (&buf, &tmp);
+  call R_Vec_Cat (&buf, &tmp);
 
   stub.tcp.wBuffer = [] .. buf .. "\n";
 
-  _debug ("[Stub (%d)] sending: %s\n", stub.id, &&stub.tcp.wBuffer[0]);
+  _log ("[Stub (%d)] sending: %s\n", stub.id, &&stub.tcp.wBuffer[0]);
   await UV_Stream_Write_N(&stub.tcp, _);
 end
 
@@ -62,7 +62,7 @@ do
   [[ TABLE =  load (@buffer)()]]
   type = [[ TABLE.type ]];
 
-  _debug ("type: %d\n", type);
+  _log ("type: %d\n", type);
 
   if type == S_JOINED then
     ref_.id = [[ TABLE.id ]];
@@ -78,10 +78,10 @@ do
     ref_.message= [] .. "return";
     var[] byte buf = [] .. [[serialize (TABLE.payload)]];
 
-    call Str_Cat (&ref_.message, &buf);
+    call R_Vec_Cat (&ref_.message, &buf);
     emit ref_.incoming_message;
   else
-    _debug ("[Stub (%d) Unknow message type.\n", ref_.id);
+    _log ("[Stub (%d) Unknow message type.\n", ref_.id);
   end
 
   ref_.message = [] .. "";
@@ -107,25 +107,25 @@ do
       var[] byte buf = [] .. "return {type=";
       var[] byte tmp = [] .. [[ tostring(@P_JOIN) ]];
 
-      call Str_Cat (&buf, &tmp);
+      call R_Vec_Cat (&buf, &tmp);
 
       tmp = [] .. "}";
-      call Str_Cat (&buf, &tmp);
+      call R_Vec_Cat (&buf, &tmp);
 
       ref_.tcp.wBuffer = [] .. buf .. "\n";
 
       /* send P_JOIN message */
-      _debug ("[Stub (%d)] sending %s\n", ref_.id, &&ref_.tcp.wBuffer[0]);
+      _log ("[Stub (%d)] sending %s\n", ref_.id, &&ref_.tcp.wBuffer[0]);
       await UV_Stream_Write_N(&ref_.tcp, _);
     with
       /* await message */
       pool [] Handle_Message pool_handle_message;
       loop do
         var [] byte buffer;
-        call Clear_Vector (&ref_.tcp.rBuffer);
+        call R_Clear_Vec (&ref_.tcp.rBuffer);
         await UV_Stream_Read_Line(&ref_.tcp, &buffer);
 
-        _debug ("[Stub (%d)] received: %s\n", ref_.id, &&buffer[0]);
+        _log ("[Stub (%d)] received: %s\n", ref_.id, &&buffer[0]);
         spawn Handle_Message (&buffer, &ref_) in pool_handle_message;
       end
     end

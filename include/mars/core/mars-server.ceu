@@ -20,26 +20,26 @@ do
   var[] byte buf = [] .. "return {type=";
   var[] byte tmp = [] .. [[ tostring (@S_JOINED) ]];
 
-  call Str_Cat (&buf, &tmp);
+  call R_Vec_Cat (&buf, &tmp);
 
   tmp = [] .. ",id=";
-  call Str_Cat (&buf, &tmp);
+  call R_Vec_Cat (&buf, &tmp);
 
   tmp = [] .. [[ tostring (@id) ]];
-  call Str_Cat (&buf, &tmp);
+  call R_Vec_Cat (&buf, &tmp);
 
   tmp = [] .. ",peers=";
-  call Str_Cat (&buf, &tmp);
+  call R_Vec_Cat (&buf, &tmp);
 
   tmp = [] .. [[ tostring (@outer.peers_count) ]];
-  call Str_Cat (&buf, &tmp);
+  call R_Vec_Cat (&buf, &tmp);
 
   tmp = [] .. "}";
-  call Str_Cat (&buf, &tmp);
+  call R_Vec_Cat (&buf, &tmp);
 
   client.wBuffer = [] .. buf .. "\n";
 
-  _debug ("[server] sending: %s\n", &&client.wBuffer[0]);
+  _log ("[server] sending: %s\n", &&client.wBuffer[0]);
   await UV_Stream_Write_N (&client, _);
 end
 
@@ -49,34 +49,34 @@ do
   var[] byte buf = [] .. "return {type=";
   var[] byte tmp = [] .. [[ tostring (@S_NEW_PEER) ]];
 
-  call Str_Cat (&buf, &tmp);
+  call R_Vec_Cat (&buf, &tmp);
 
   tmp = [] .. ",new_peer=";
-  call Str_Cat (&buf, &tmp);
+  call R_Vec_Cat (&buf, &tmp);
 
   tmp = [] .. [[ tostring (@id) ]];
-  call Str_Cat (&buf, &tmp);
+  call R_Vec_Cat (&buf, &tmp);
 
   tmp = [] .. ",peers=";
-  call Str_Cat (&buf, &tmp);
+  call R_Vec_Cat (&buf, &tmp);
 
   tmp = [] .. [[ tostring (@outer.peers_count) ]];
-  call Str_Cat (&buf, &tmp);
+  call R_Vec_Cat (&buf, &tmp);
 
   tmp = [] .. ",timestamp=";
-  call Str_Cat (&buf, &tmp);
+  call R_Vec_Cat (&buf, &tmp);
 
   var u64 ts = _now ();
 
   tmp = [] .. [[ tostring (@ts) ]];
-  call Str_Cat (&buf, &tmp);
+  call R_Vec_Cat (&buf, &tmp);
 
   tmp = [] .. "}";
-  call Str_Cat (&buf, &tmp);
+  call R_Vec_Cat (&buf, &tmp);
 
   client.wBuffer = [] .. buf .. "\n";
 
-  _debug ("[server] sending: %s\n", &&client.wBuffer[0]);
+  _log ("[server] sending: %s\n", &&client.wBuffer[0]);
   await UV_Stream_Write_N (&client, _);
 end
 
@@ -86,33 +86,33 @@ do
   var[] byte buf = [] .. "return {type=";
   var[] byte tmp = [] .. [[ tostring (@S_BROADCAST) ]];
 
-  call Str_Cat (&buf, &tmp);
+  call R_Vec_Cat (&buf, &tmp);
 
   tmp = [] .. ",from=";
-  call Str_Cat (&buf, &tmp);
+  call R_Vec_Cat (&buf, &tmp);
 
   tmp = [] .. [[ tostring (@from) ]];
-  call Str_Cat (&buf, &tmp);
+  call R_Vec_Cat (&buf, &tmp);
 
   tmp = [] .. ",payload=";
-  call Str_Cat (&buf, &tmp);
+  call R_Vec_Cat (&buf, &tmp);
 
   tmp = [] .. payload;
-  call Str_Cat (&buf, &tmp);
+  call R_Vec_Cat (&buf, &tmp);
 
   tmp = [] .. ",timestamp=";
-  call Str_Cat (&buf, &tmp);
+  call R_Vec_Cat (&buf, &tmp);
 
   var u64 ts = _now ();
   tmp = [] .. [[ tostring (@ts) ]];
-  call Str_Cat (&buf, &tmp);
+  call R_Vec_Cat (&buf, &tmp);
 
   tmp = [] .. "}";
-  call Str_Cat (&buf, &tmp);
+  call R_Vec_Cat (&buf, &tmp);
 
   client.wBuffer = [] .. buf .. "\n";
 
-  _debug ("[server] sending: %s\n", &&client.wBuffer[0]);
+  _log ("[server] sending: %s\n", &&client.wBuffer[0]);
   await UV_Stream_Write_N (&client, _);
 end
 
@@ -137,10 +137,10 @@ do
   par do
     loop do
       var [] byte buffer;
-      call Clear_Vector (&client.rBuffer);
+      call R_Clear_Vec (&client.rBuffer);
 
       await UV_Stream_Read_Line(&client, &buffer);
-      _debug ("[server] received: %s\n", &&buffer[0]);
+      _log ("[server] received: %s\n", &&buffer[0]);
 
       var int type = _;
 

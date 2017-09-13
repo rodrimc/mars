@@ -46,7 +46,7 @@ par/or do
     with
       loop do
         await stub.stub.incoming_message;
-        _debug ("[APP(%u)] Message: %s\n", stub.stub.id, &&stub.stub.message[0]);
+        _log ("[APP(%u)] Message: %s\n", stub.stub.id, &&stub.stub.message[0]);
 
         [[ TABLE = load (@stub.stub.message)() ]]
         var uint device = [[ TABLE.device ]];
@@ -89,34 +89,34 @@ par/or do
         stub.stub.wbuffer = [] .. "{device=";
 
         tmp = [] .. [[ tostring(@stub.stub.id) ]];
-        call Str_Cat (&stub.stub.wbuffer, &tmp);
+        call R_Vec_Cat (&stub.stub.wbuffer, &tmp);
 
         tmp = [] .. ",object=";
-        call Str_Cat (&stub.stub.wbuffer, &tmp);
+        call R_Vec_Cat (&stub.stub.wbuffer, &tmp);
 
         tmp = [] .. [[ tostring(@obj) ]];
-        call Str_Cat (&stub.stub.wbuffer, &tmp);
+        call R_Vec_Cat (&stub.stub.wbuffer, &tmp);
 
         tmp = [] .. ",type=";
-        call Str_Cat (&stub.stub.wbuffer, &tmp);
+        call R_Vec_Cat (&stub.stub.wbuffer, &tmp);
 
         tmp = [] .. [[ tostring(@EVT_KEY) ]];
-        call Str_Cat (&stub.stub.wbuffer, &tmp);
+        call R_Vec_Cat (&stub.stub.wbuffer, &tmp);
 
         tmp = [] .. ",key=\'";
-        call Str_Cat (&stub.stub.wbuffer, &tmp);
+        call R_Vec_Cat (&stub.stub.wbuffer, &tmp);
 
         tmp = [] .. (_PTR(key) as _char&&);
-        call Str_Cat (&stub.stub.wbuffer, &tmp);
+        call R_Vec_Cat (&stub.stub.wbuffer, &tmp);
 
         tmp = [] .. "\',press=";
-        call Str_Cat (&stub.stub.wbuffer, &tmp);
+        call R_Vec_Cat (&stub.stub.wbuffer, &tmp);
 
         tmp = [] .. [[ tostring(@press) ]];
-        call Str_Cat (&stub.stub.wbuffer, &tmp);
+        call R_Vec_Cat (&stub.stub.wbuffer, &tmp);
 
         tmp = [] .. "}";
-        call Str_Cat (&stub.stub.wbuffer, &tmp);
+        call R_Vec_Cat (&stub.stub.wbuffer, &tmp);
 
         spawn Stub_Send_Message (&stub.stub) in send_message_pool;
       end
@@ -132,46 +132,46 @@ par/or do
         stub.stub.wbuffer = [] .. "{device=";
 
         tmp = [] .. [[ tostring(@stub.stub.id) ]];
-        call Str_Cat (&stub.stub.wbuffer, &tmp);
+        call R_Vec_Cat (&stub.stub.wbuffer, &tmp);
 
         tmp = [] .. ",object=";
-        call Str_Cat (&stub.stub.wbuffer, &tmp);
+        call R_Vec_Cat (&stub.stub.wbuffer, &tmp);
 
         tmp = [] .. [[ tostring(@obj) ]];
-        call Str_Cat (&stub.stub.wbuffer, &tmp);
+        call R_Vec_Cat (&stub.stub.wbuffer, &tmp);
 
         tmp = [] .. ",type=";
-        call Str_Cat (&stub.stub.wbuffer, &tmp);
+        call R_Vec_Cat (&stub.stub.wbuffer, &tmp);
 
         tmp = [] .. [[ tostring(@EVT_SCENE_CLICK) ]];
-        call Str_Cat (&stub.stub.wbuffer, &tmp);
+        call R_Vec_Cat (&stub.stub.wbuffer, &tmp);
 
         tmp = [] .. ",x=";
-        call Str_Cat (&stub.stub.wbuffer, &tmp);
+        call R_Vec_Cat (&stub.stub.wbuffer, &tmp);
 
         tmp = [] .. [[ tostring(@x) ]];
-        call Str_Cat (&stub.stub.wbuffer, &tmp);
+        call R_Vec_Cat (&stub.stub.wbuffer, &tmp);
 
         tmp = [] .. ",y=";
-        call Str_Cat (&stub.stub.wbuffer, &tmp);
+        call R_Vec_Cat (&stub.stub.wbuffer, &tmp);
 
         tmp = [] .. [[ tostring(@y) ]];
-        call Str_Cat (&stub.stub.wbuffer, &tmp);
+        call R_Vec_Cat (&stub.stub.wbuffer, &tmp);
 
         tmp = [] .. ",button=";
-        call Str_Cat (&stub.stub.wbuffer, &tmp);
+        call R_Vec_Cat (&stub.stub.wbuffer, &tmp);
 
         tmp = [] .. [[ tostring(@button) ]];
-        call Str_Cat (&stub.stub.wbuffer, &tmp);
+        call R_Vec_Cat (&stub.stub.wbuffer, &tmp);
 
         tmp = [] .. ",press=";
-        call Str_Cat (&stub.stub.wbuffer, &tmp);
+        call R_Vec_Cat (&stub.stub.wbuffer, &tmp);
 
         tmp = [] .. [[ tostring(@press) ]];
-        call Str_Cat (&stub.stub.wbuffer, &tmp);
+        call R_Vec_Cat (&stub.stub.wbuffer, &tmp);
 
         tmp = [] .. "}";
-        call Str_Cat (&stub.stub.wbuffer, &tmp);
+        call R_Vec_Cat (&stub.stub.wbuffer, &tmp);
 
         spawn Stub_Send_Message (&stub.stub) in send_message_pool;
       end
@@ -188,46 +188,46 @@ par/or do
         stub.stub.wbuffer = [] .. "{device=";
 
         tmp = [] .. [[ tostring(@stub.stub.id) ]];
-        call Str_Cat (&stub.stub.wbuffer, &tmp);
+        call R_Vec_Cat (&stub.stub.wbuffer, &tmp);
 
         tmp = [] .. ",object=";
-        call Str_Cat (&stub.stub.wbuffer, &tmp);
+        call R_Vec_Cat (&stub.stub.wbuffer, &tmp);
 
         tmp = [] .. [[ tostring(@obj) ]];
-        call Str_Cat (&stub.stub.wbuffer, &tmp);
+        call R_Vec_Cat (&stub.stub.wbuffer, &tmp);
 
         tmp = [] .. ",type=";
-        call Str_Cat (&stub.stub.wbuffer, &tmp);
+        call R_Vec_Cat (&stub.stub.wbuffer, &tmp);
 
         tmp = [] .. [[ tostring(@EVT_PLAYER_CLICK) ]];
-        call Str_Cat (&stub.stub.wbuffer, &tmp);
+        call R_Vec_Cat (&stub.stub.wbuffer, &tmp);
 
         tmp = [] .. ",x=";
-        call Str_Cat (&stub.stub.wbuffer, &tmp);
+        call R_Vec_Cat (&stub.stub.wbuffer, &tmp);
 
         tmp = [] .. [[ tostring(@x) ]];
-        call Str_Cat (&stub.stub.wbuffer, &tmp);
+        call R_Vec_Cat (&stub.stub.wbuffer, &tmp);
 
         tmp = [] .. ",y=";
-        call Str_Cat (&stub.stub.wbuffer, &tmp);
+        call R_Vec_Cat (&stub.stub.wbuffer, &tmp);
 
         tmp = [] .. [[ tostring(@y) ]];
-        call Str_Cat (&stub.stub.wbuffer, &tmp);
+        call R_Vec_Cat (&stub.stub.wbuffer, &tmp);
 
         tmp = [] .. ",button=";
-        call Str_Cat (&stub.stub.wbuffer, &tmp);
+        call R_Vec_Cat (&stub.stub.wbuffer, &tmp);
 
         tmp = [] .. [[ tostring(@button) ]];
-        call Str_Cat (&stub.stub.wbuffer, &tmp);
+        call R_Vec_Cat (&stub.stub.wbuffer, &tmp);
 
         tmp = [] .. ",press=";
-        call Str_Cat (&stub.stub.wbuffer, &tmp);
+        call R_Vec_Cat (&stub.stub.wbuffer, &tmp);
 
         tmp = [] .. [[ tostring(@press) ]];
-        call Str_Cat (&stub.stub.wbuffer, &tmp);
+        call R_Vec_Cat (&stub.stub.wbuffer, &tmp);
 
         tmp = [] .. "}";
-        call Str_Cat (&stub.stub.wbuffer, &tmp);
+        call R_Vec_Cat (&stub.stub.wbuffer, &tmp);
 
         spawn Stub_Send_Message (&stub.stub) in send_message_pool;
       end
