@@ -2,7 +2,8 @@
 #define _CEU_MARS_DEFS
 
 #define LOCALHOST "0.0.0.0"
-#define PORT 8888
+#define R_PORT 8888
+#define W_PORT 8889
 #define BACKLOG 128
 
 /**** MESSAGE CODES ****/
