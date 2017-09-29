@@ -13,35 +13,18 @@ end
 event (none) send_join_reply;
 event (uint) send_broadcast_join;
 event (uint) send_broadcast_message;
-event (uint) message_sent;
+event (uint) send_tick_message;
 
-var uint seq_num = 0;
-var bool is_sending_message = false;
 var []byte cur_payload;
 
 var uint id_ref = 1;
 var usize peers_count = 0;
 
-
-code/await Send (var& UV_Stream client, var&[] byte buffer) -> none
-do
-  var uint my_seq_num = outer.seq_num;
-  outer.seq_num = outer.seq_num + 1;
-
-  if outer.is_sending_message then
-    var uint seq = await outer.message_sent until seq == my_seq_num - 1;
+#define FREQ 50
+spawn do
+  every (FREQ)ms do
+    emit send_tick_message(FREQ);
   end
-
-  client.buffer = [] .. buffer .. "\n";
-
-  outer.is_sending_message = true;
-
-  _log ("[server] sending: %s\n", &&buffer[0]);
-  await UV_Stream_Write_N (&client, _);
-  call R_Clear_Vec (&client.buffer);
-
-  outer.is_sending_message = false;
-  emit outer.message_sent (my_seq_num);
 end
 
 code/await Send_Join_Reply (var& UV_Stream client, var uint id) -> none
@@ -63,7 +46,7 @@ do
   tmp = [] .. [[ tostring (@outer.peers_count) .. '\0']];
   call R_Vec_Cat (&buf, &tmp);
 
-  tmp = [] .. "}";
+  tmp = [] .. "}\n";
   call R_Vec_Cat (&buf, &tmp);
 
   await Send (&client, &buf);
@@ -96,7 +79,7 @@ do
   tmp = [] .. [[ tostring (@ts) .. '\0']];
   call R_Vec_Cat (&buf, &tmp);
 
-  tmp = [] .. "}";
+  tmp = [] .. "}\n";
   call R_Vec_Cat (&buf, &tmp);
 
   await Send (&client, &buf);
@@ -132,6 +115,8 @@ do
   tmp = [] .. "}";
   call R_Vec_Cat (&buf, &tmp);
 
+  buf = buf .. "\n";
+
   await Send (&client, &buf);
 
 end
@@ -147,7 +132,7 @@ do
 
     var int type = _;
 
-    [[ TABLE =  load (@buffer)() ]]
+    [[ TABLE = load (@buffer)() ]]
     type = [[ TABLE.type ]];
 
     if type == P_JOIN then

@@ -24,20 +24,23 @@ par/or do
   call Load_Sync_Config ();
 
 
-  var&? Stub stub = spawn Stub (LOCALHOST, 8888, 0);
-  watching stub do
-    pool [] Stub_Send_Message send_message_pool;
+  var&? Client client = spawn Client (LOCALHOST, 0);
+  watching client do
+    await client.stub.all_set_up;
+
+    pool [] Client_Send_Message send_message_pool;
     par do
       var uint id;
       var usize peers;
-      (id, peers) = await stub.stub.joined;
+      (id, peers) = await client.stub.joined;
+      _printf ("joined\n");
       /* device_id is defined in mars-media.ceu */
       device_id = id;
     with
       watching mirror_ok do
         var uint new_peer;
         var usize peers;
-        every (new_peer, peers) in stub.stub.new_peer do
+        every (new_peer, peers) in client.stub.new_peer do
           if (peers >= min_peers) then
             emit mirror_ok;
           end
@@ -45,10 +48,10 @@ par/or do
       end
     with
       loop do
-        await stub.stub.incoming_message;
-        _log ("[APP(%u)] Message: %s\n", stub.stub.id, &&stub.stub.message[0]);
+        await client.stub.incoming_message;
+        _log ("[APP(%u)] Message: %s\n", client.stub.id, &&client.stub.message[0]);
 
-        [[ TABLE = load (@stub.stub.message)() ]]
+        [[ TABLE = load (@client.stub.message)() ]]
         var uint device = [[ TABLE.device ]];
         var uint obj = [[ TABLE.object ]];
         var int type = [[ TABLE.type ]];
@@ -85,40 +88,41 @@ par/or do
       var _char_ptr_ext key;
       var bool press;
       var[] byte tmp;
+      var[] byte buffer;
       every (obj, key, press) in mars_scene_key do
-        stub.stub.wbuffer = [] .. "{device=";
+        buffer = [] .. "{device=";
 
-        tmp = [] .. [[ tostring(@stub.stub.id) ]];
-        call R_Vec_Cat (&stub.stub.wbuffer, &tmp);
+        tmp = [] .. [[ tostring(@client.stub.id) ]];
+        call R_Vec_Cat (&buffer, &tmp);
 
         tmp = [] .. ",object=";
-        call R_Vec_Cat (&stub.stub.wbuffer, &tmp);
+        call R_Vec_Cat (&buffer, &tmp);
 
         tmp = [] .. [[ tostring(@obj) ]];
-        call R_Vec_Cat (&stub.stub.wbuffer, &tmp);
+        call R_Vec_Cat (&buffer, &tmp);
 
         tmp = [] .. ",type=";
-        call R_Vec_Cat (&stub.stub.wbuffer, &tmp);
+        call R_Vec_Cat (&buffer, &tmp);
 
         tmp = [] .. [[ tostring(@EVT_KEY) ]];
-        call R_Vec_Cat (&stub.stub.wbuffer, &tmp);
+        call R_Vec_Cat (&buffer, &tmp);
 
         tmp = [] .. ",key=\'";
-        call R_Vec_Cat (&stub.stub.wbuffer, &tmp);
+        call R_Vec_Cat (&buffer, &tmp);
 
         tmp = [] .. (_PTR(key) as _char&&);
-        call R_Vec_Cat (&stub.stub.wbuffer, &tmp);
+        call R_Vec_Cat (&buffer, &tmp);
 
         tmp = [] .. "\',press=";
-        call R_Vec_Cat (&stub.stub.wbuffer, &tmp);
+        call R_Vec_Cat (&buffer, &tmp);
 
         tmp = [] .. [[ tostring(@press) ]];
-        call R_Vec_Cat (&stub.stub.wbuffer, &tmp);
+        call R_Vec_Cat (&buffer, &tmp);
 
         tmp = [] .. "}";
-        call R_Vec_Cat (&stub.stub.wbuffer, &tmp);
+        call R_Vec_Cat (&buffer, &tmp);
 
-        spawn Stub_Send_Message (&stub.stub) in send_message_pool;
+        spawn Client_Send_Message (&client.stub, &buffer) in send_message_pool;
       end
     with
       /* CLICK */
@@ -128,52 +132,53 @@ par/or do
       var int button;
       var bool press;
       var[] byte tmp;
+      var[] byte buffer;
       every (obj, x, y, button, press) in mars_scene_mouse_clicked do
-        stub.stub.wbuffer = [] .. "{device=";
+        buffer = [] .. "{device=";
 
-        tmp = [] .. [[ tostring(@stub.stub.id) ]];
-        call R_Vec_Cat (&stub.stub.wbuffer, &tmp);
+        tmp = [] .. [[ tostring(@client.stub.id) ]];
+        call R_Vec_Cat (&buffer, &tmp);
 
         tmp = [] .. ",object=";
-        call R_Vec_Cat (&stub.stub.wbuffer, &tmp);
+        call R_Vec_Cat (&buffer, &tmp);
 
         tmp = [] .. [[ tostring(@obj) ]];
-        call R_Vec_Cat (&stub.stub.wbuffer, &tmp);
+        call R_Vec_Cat (&buffer, &tmp);
 
         tmp = [] .. ",type=";
-        call R_Vec_Cat (&stub.stub.wbuffer, &tmp);
+        call R_Vec_Cat (&buffer, &tmp);
 
         tmp = [] .. [[ tostring(@EVT_SCENE_CLICK) ]];
-        call R_Vec_Cat (&stub.stub.wbuffer, &tmp);
+        call R_Vec_Cat (&buffer, &tmp);
 
         tmp = [] .. ",x=";
-        call R_Vec_Cat (&stub.stub.wbuffer, &tmp);
+        call R_Vec_Cat (&buffer, &tmp);
 
         tmp = [] .. [[ tostring(@x) ]];
-        call R_Vec_Cat (&stub.stub.wbuffer, &tmp);
+        call R_Vec_Cat (&buffer, &tmp);
 
         tmp = [] .. ",y=";
-        call R_Vec_Cat (&stub.stub.wbuffer, &tmp);
+        call R_Vec_Cat (&buffer, &tmp);
 
         tmp = [] .. [[ tostring(@y) ]];
-        call R_Vec_Cat (&stub.stub.wbuffer, &tmp);
+        call R_Vec_Cat (&buffer, &tmp);
 
         tmp = [] .. ",button=";
-        call R_Vec_Cat (&stub.stub.wbuffer, &tmp);
+        call R_Vec_Cat (&buffer, &tmp);
 
         tmp = [] .. [[ tostring(@button) ]];
-        call R_Vec_Cat (&stub.stub.wbuffer, &tmp);
+        call R_Vec_Cat (&buffer, &tmp);
 
         tmp = [] .. ",press=";
-        call R_Vec_Cat (&stub.stub.wbuffer, &tmp);
+        call R_Vec_Cat (&buffer, &tmp);
 
         tmp = [] .. [[ tostring(@press) ]];
-        call R_Vec_Cat (&stub.stub.wbuffer, &tmp);
+        call R_Vec_Cat (&buffer, &tmp);
 
         tmp = [] .. "}";
-        call R_Vec_Cat (&stub.stub.wbuffer, &tmp);
+        call R_Vec_Cat (&buffer, &tmp);
 
-        spawn Stub_Send_Message (&stub.stub) in send_message_pool;
+        spawn Client_Send_Message (&client.stub, &buffer) in send_message_pool;
       end
 
     with
@@ -184,52 +189,53 @@ par/or do
       var int button;
       var bool press;
       var[] byte tmp;
+      var[] byte buffer;
       every (obj, x, y, button, press) in mars_player_mouse_clicked do
-        stub.stub.wbuffer = [] .. "{device=";
+        buffer = [] .. "{device=";
 
-        tmp = [] .. [[ tostring(@stub.stub.id) ]];
-        call R_Vec_Cat (&stub.stub.wbuffer, &tmp);
+        tmp = [] .. [[ tostring(@client.stub.id) ]];
+        call R_Vec_Cat (&buffer, &tmp);
 
         tmp = [] .. ",object=";
-        call R_Vec_Cat (&stub.stub.wbuffer, &tmp);
+        call R_Vec_Cat (&buffer, &tmp);
 
         tmp = [] .. [[ tostring(@obj) ]];
-        call R_Vec_Cat (&stub.stub.wbuffer, &tmp);
+        call R_Vec_Cat (&buffer, &tmp);
 
         tmp = [] .. ",type=";
-        call R_Vec_Cat (&stub.stub.wbuffer, &tmp);
+        call R_Vec_Cat (&buffer, &tmp);
 
         tmp = [] .. [[ tostring(@EVT_PLAYER_CLICK) ]];
-        call R_Vec_Cat (&stub.stub.wbuffer, &tmp);
+        call R_Vec_Cat (&buffer, &tmp);
 
         tmp = [] .. ",x=";
-        call R_Vec_Cat (&stub.stub.wbuffer, &tmp);
+        call R_Vec_Cat (&buffer, &tmp);
 
         tmp = [] .. [[ tostring(@x) ]];
-        call R_Vec_Cat (&stub.stub.wbuffer, &tmp);
+        call R_Vec_Cat (&buffer, &tmp);
 
         tmp = [] .. ",y=";
-        call R_Vec_Cat (&stub.stub.wbuffer, &tmp);
+        call R_Vec_Cat (&buffer, &tmp);
 
         tmp = [] .. [[ tostring(@y) ]];
-        call R_Vec_Cat (&stub.stub.wbuffer, &tmp);
+        call R_Vec_Cat (&buffer, &tmp);
 
         tmp = [] .. ",button=";
-        call R_Vec_Cat (&stub.stub.wbuffer, &tmp);
+        call R_Vec_Cat (&buffer, &tmp);
 
         tmp = [] .. [[ tostring(@button) ]];
-        call R_Vec_Cat (&stub.stub.wbuffer, &tmp);
+        call R_Vec_Cat (&buffer, &tmp);
 
         tmp = [] .. ",press=";
-        call R_Vec_Cat (&stub.stub.wbuffer, &tmp);
+        call R_Vec_Cat (&buffer, &tmp);
 
         tmp = [] .. [[ tostring(@press) ]];
-        call R_Vec_Cat (&stub.stub.wbuffer, &tmp);
+        call R_Vec_Cat (&buffer, &tmp);
 
         tmp = [] .. "}";
-        call R_Vec_Cat (&stub.stub.wbuffer, &tmp);
+        call R_Vec_Cat (&buffer, &tmp);
 
-        spawn Stub_Send_Message (&stub.stub) in send_message_pool;
+        spawn Client_Send_Message (&client.stub, &buffer) in send_message_pool;
       end
     end
   end

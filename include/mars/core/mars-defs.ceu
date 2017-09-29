@@ -59,5 +59,33 @@ native/nohold
    end
 ]]
 
+#include "uv/tcp.ceu"
+var uint seq_num = 0;
+var bool is_sending_message = false;
+event (uint) message_sent;
+
+code/await Send (var& UV_Stream client, var&[] byte buffer) -> none
+do
+  var[] byte priv_buffer = [] .. buffer;
+  var uint my_seq_num = outer.seq_num;
+  outer.seq_num = outer.seq_num + 1;
+
+  if outer.is_sending_message then
+    var uint seq = await outer.message_sent until seq == my_seq_num - 1;
+  end
+
+  client.buffer = [] .. priv_buffer .. "\n";
+
+  outer.is_sending_message = true;
+
+  _log ("sending: %s", &&priv_buffer[0]);
+  await UV_Stream_Write_N (&client, _);
+  call R_Clear_Vec (&client.buffer);
+
+  outer.is_sending_message = false;
+  emit outer.message_sent (my_seq_num);
+end
+
+
 #endif
 

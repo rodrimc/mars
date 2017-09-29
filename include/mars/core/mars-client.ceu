@@ -1,133 +1,160 @@
 #ifndef _CEU_MARS_CLIENT
 #define _CEU_MARS_CLIENT
 
-#include "uv/uv.ceu"
-#include "uv/tcp.ceu"
-
 #include "mars-defs.ceu"
+#include "uv/uv.ceu"
 
 /*** CLIENT API ***/
-data IStub with
-  var& UV_Stream tcp;
+data IClient with
+  var& UV_Stream w_stream;
+  var& UV_Stream r_stream;
   var uint id;
   var&[] byte wbuffer;
   var&[] byte rbuffer;
   var&[] byte message;
+
+  event (none) all_set_up;
+
   event (uint, usize) joined;
   event (uint, usize) new_peer;
   event (none) incoming_message;
+
+  event& (none) send_message;
 end
 
-code/await Stub_Send_Message (var& IStub stub) -> none
+code/await Client_Send_Message (var& IClient stub, var&[] byte buffer) -> none
 do
   var[] byte buf = [] .. "return {type=";
 
-  var[] byte tmp = [] .. [[ tostring (@P_REGULAR_SEND) ]];
+  var[] byte tmp = [] .. [[ tostring (@P_REGULAR_SEND) .. '\0']];
   call R_Vec_Cat (&buf, &tmp);
 
   tmp = [] .. ",payload=";
   call R_Vec_Cat (&buf, &tmp);
 
-  tmp = [] .. stub.wbuffer;
+  tmp = [] .. buffer;
   call R_Vec_Cat (&buf, &tmp);
 
   tmp = [] .. ",from=";
   call R_Vec_Cat (&buf, &tmp);
 
-  tmp = [] .. [[ tostring (@stub.id) ]];
+  tmp = [] .. [[ tostring (@stub.id) .. '\0']];
   call R_Vec_Cat (&buf, &tmp);
 
   tmp = [] .. ",timestamp=";
   call R_Vec_Cat (&buf, &tmp);
 
   var u64 ts = _now();
-  tmp = [] .. [[ tostring (@ts) ]];
+  tmp = [] .. [[ tostring (@ts) .. '\0']];
   call R_Vec_Cat (&buf, &tmp);
 
   tmp = [] .. "}";
   call R_Vec_Cat (&buf, &tmp);
 
-  stub.tcp.wBuffer = [] .. buf .. "\n";
+  stub.wbuffer = [] .. buf .. "\n";
 
-  _log ("[Stub (%d)] sending: %s\n", stub.id, &&stub.tcp.wBuffer[0]);
-  await UV_Stream_Write_N(&stub.tcp, _);
+  emit stub.send_message;
 end
 
-code/await Handle_Message (var&[] byte buffer, var& IStub ref_) -> none
+code/await Handle_Message (var& IClient stub) -> none
 do
   var usize i;
   var int type = _;
 
   /* parse message */
-  [[ TABLE =  load (@buffer)()]]
+  [[ TABLE =  load (@stub.rbuffer)()]]
   type = [[ TABLE.type ]];
 
-  _log ("type: %d\n", type);
-
   if type == S_JOINED then
-    ref_.id = [[ TABLE.id ]];
+    stub.id = [[ TABLE.id ]];
     var int peers = [[ TABLE.peers ]];
-    emit ref_.joined (ref_.id, peers);
+    emit stub.joined (stub.id, peers);
 
   else/if type == S_NEW_PEER then
     var int new_peer = [[ TABLE.peers ]];
     var int peers = [[ TABLE.peers ]];
-    emit ref_.new_peer (new_peer, peers);
+    emit stub.new_peer (new_peer, peers);
 
   else/if type == S_BROADCAST then
-    ref_.message= [] .. "return";
+    stub.message= [] .. "return";
     var[] byte buf = [] .. [[serialize (TABLE.payload)]];
 
-    call R_Vec_Cat (&ref_.message, &buf);
-    emit ref_.incoming_message;
+    call R_Vec_Cat (&stub.message, &buf);
+    emit stub.incoming_message;
   else
-    _log ("[Stub (%d) Unknow message type.\n", ref_.id);
+    _log ("[Client (%d) Unknow message type.\n", stub.id);
   end
 
-  ref_.message = [] .. "";
-  $ref_.tcp.rBuffer = 0;
+  call R_Clear_Vec (&stub.message);
 end
 
-code/await Stub (var _char&& ip, var int port, var int session)
-                          -> (var& IStub stub)
+code/await Client (var _char&& ip, var int session)
+                          -> (var& IClient stub)
                             -> none
 do
-  var&? UV_TCP_Connect connection = spawn UV_TCP_Connect(ip, port, _);
-  watching connection do
-    var[] byte rbuffer;
-    var[] byte wbuffer;
-    var[] byte message;
-    var IStub ref_ = val IStub (&connection.stream, 0, &rbuffer, &wbuffer,
-                                &message, _, _, _);
+  var&? UV_TCP_Connect r_conn = spawn UV_TCP_Connect(ip, W_PORT, _);
+  var&? UV_TCP_Connect w_conn = spawn UV_TCP_Connect(ip, R_PORT, _);
+
+  event (none) stream_ready;
+  event (none) send_message;
+
+  var[] byte rbuffer = _;
+  var[] byte wbuffer = _;
+  var[] byte message = _;
+
+  watching r_conn, w_conn do
+    var IClient ref_ = val IClient (&w_conn.stream, &r_conn.stream, 0,
+            &rbuffer, &wbuffer, &message, _, _, _, _, &send_message);
     stub = &ref_;
 
-    await connection.ok;
-
     par do
-      var[] byte buf = [] .. "return {type=";
-      var[] byte tmp = [] .. [[ tostring(@P_JOIN) ]];
+      /* read trail */
+      await r_conn.ok;
 
-      call R_Vec_Cat (&buf, &tmp);
+      par do
+        pool [] Handle_Message pool_handle_message;
+        loop do
+          call R_Clear_Vec (&r_conn.stream.buffer);
+          call R_Clear_Vec (&stub.rbuffer);
+          await UV_Stream_Read_Line (&r_conn.stream, &stub.rbuffer);
 
-      tmp = [] .. "}";
-      call R_Vec_Cat (&buf, &tmp);
-
-      ref_.tcp.wBuffer = [] .. buf .. "\n";
-
-      /* send P_JOIN message */
-      _log ("[Stub (%d)] sending %s\n", ref_.id, &&ref_.tcp.wBuffer[0]);
-      await UV_Stream_Write_N(&ref_.tcp, _);
-    with
-      /* await message */
-      pool [] Handle_Message pool_handle_message;
-      loop do
-        var [] byte buffer;
-        call R_Clear_Vec (&ref_.tcp.rBuffer);
-        await UV_Stream_Read_Line(&ref_.tcp, &buffer);
-
-        _log ("[Stub (%d)] received: %s\n", ref_.id, &&buffer[0]);
-        spawn Handle_Message (&buffer, &ref_) in pool_handle_message;
+          _log ("[Client (%d)] received: %s\n", stub.id, &&stub.rbuffer[0]);
+          spawn Handle_Message (&stub) in pool_handle_message;
+        end
+      with
+        emit stream_ready;
       end
+    with
+      /* write trail */
+      await w_conn.ok;
+
+      par do
+        pool [] Send pool_send;
+        every stub.send_message do
+          _log ("[Client (%d)] sending: %s\n", stub.id, &&stub.wbuffer[0]);
+          spawn Send (&w_conn.stream, &stub.wbuffer) in pool_send;
+        end
+      with
+        emit stream_ready;
+      end
+    with
+      var usize i;
+      loop i in [0 -> 1] do
+        await stream_ready;
+      end
+
+      emit stub.all_set_up;
+
+      var[] byte buf = [] .. "return {type=";
+      var[] byte tmp = [] .. [[ tostring(@P_JOIN) .. '\0']];
+      call R_Vec_Cat (&buf, &tmp);
+
+      tmp = [] .. "}\n";
+      call R_Vec_Cat (&buf, &tmp);
+
+      stub.wbuffer = [] .. buf;
+      /* send P_JOIN message */
+      emit stub.send_message;
     end
   end
 end
