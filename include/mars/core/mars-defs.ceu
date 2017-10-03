@@ -17,6 +17,7 @@
 #define S_JOINED              20
 #define S_NEW_PEER            21
 #define S_BROADCAST           22
+#define S_TICK                23
 
 /* event codes */
 #define EVT_KEY                0
@@ -66,7 +67,7 @@ event (uint) message_sent;
 
 code/await Send (var& UV_Stream client, var&[] byte buffer) -> none
 do
-  var[] byte priv_buffer = [] .. buffer;
+  var[] byte priv_buffer = [] .. buffer .. "\0";
   var uint my_seq_num = outer.seq_num;
   outer.seq_num = outer.seq_num + 1;
 
@@ -74,12 +75,12 @@ do
     var uint seq = await outer.message_sent until seq == my_seq_num - 1;
   end
 
-  client.buffer = [] .. priv_buffer .. "\n";
+  client.buffer = [] .. priv_buffer;
 
   outer.is_sending_message = true;
 
   _log ("sending: %s", &&priv_buffer[0]);
-  await UV_Stream_Write_N (&client, _);
+  await UV_Stream_Write_N (&client, $priv_buffer);
   call R_Clear_Vec (&client.buffer);
 
   outer.is_sending_message = false;

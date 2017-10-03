@@ -112,13 +112,29 @@ do
   tmp = [] .. [[ tostring (@ts) .. '\0']];
   call R_Vec_Cat (&buf, &tmp);
 
-  tmp = [] .. "}";
+  tmp = [] .. "}\n";
   call R_Vec_Cat (&buf, &tmp);
 
-  buf = buf .. "\n";
+  await Send (&client, &buf);
+end
+
+code/await Send_Tick_Message (var& UV_Stream client, var uint freq) -> none
+do
+  var[] byte buf = [] .. "return {type=";
+  var[] byte tmp = [] .. [[ tostring (@S_TICK) .. '\0']];
+
+  call R_Vec_Cat (&buf, &tmp);
+
+  tmp = [] .. ",freq=";
+  call R_Vec_Cat (&buf, &tmp);
+
+  tmp = [] .. [[ tostring (@freq) .. '\n']];
+  call R_Vec_Cat (&buf, &tmp);
+
+  tmp = [] .. "}\n";
+  call R_Vec_Cat (&buf, &tmp);
 
   await Send (&client, &buf);
-
 end
 
 code/await Reading_Handler (var& UV_Stream client) -> NEVER
@@ -160,6 +176,7 @@ do
   pool[] Send_Join_Reply        pool_join_reply;
   pool[] Send_Broadcast_Join    pool_broadcast_join;
   pool[] Send_Broadcast_Message pool_broadcast_message;
+  pool[] Send_Tick_Message      pool_tick_message;
 
   par do
     every outer.send_join_reply do

@@ -6,8 +6,6 @@
 
 /*** CLIENT API ***/
 data IClient with
-  var& UV_Stream w_stream;
-  var& UV_Stream r_stream;
   var uint id;
   var&[] byte wbuffer;
   var&[] byte rbuffer;
@@ -48,10 +46,10 @@ do
   tmp = [] .. [[ tostring (@ts) .. '\0']];
   call R_Vec_Cat (&buf, &tmp);
 
-  tmp = [] .. "}";
+  tmp = [] .. "}\n";
   call R_Vec_Cat (&buf, &tmp);
 
-  stub.wbuffer = [] .. buf .. "\n";
+  stub.wbuffer = [] .. buf;
 
   emit stub.send_message;
 end
@@ -62,7 +60,11 @@ do
   var int type = _;
 
   /* parse message */
-  [[ TABLE =  load (@stub.rbuffer)()]]
+  [[
+    str = @stub.rbuffer or 'return {type=-1}'
+    print ('str: '.. str)
+    TABLE =  load (str)()
+  ]]
   type = [[ TABLE.type ]];
 
   if type == S_JOINED then
@@ -103,8 +105,8 @@ do
   var[] byte message = _;
 
   watching r_conn, w_conn do
-    var IClient ref_ = val IClient (&w_conn.stream, &r_conn.stream, 0,
-            &rbuffer, &wbuffer, &message, _, _, _, _, &send_message);
+    var IClient ref_ = val IClient (0, &rbuffer, &wbuffer, &message, _, _, _,
+                                  _, &send_message);
     stub = &ref_;
 
     par do
@@ -119,7 +121,10 @@ do
           await UV_Stream_Read_Line (&r_conn.stream, &stub.rbuffer);
 
           _log ("[Client (%d)] received: %s\n", stub.id, &&stub.rbuffer[0]);
-          spawn Handle_Message (&stub) in pool_handle_message;
+
+          if ($stub.rbuffer > 0) then
+            spawn Handle_Message (&stub) in pool_handle_message;
+          end
         end
       with
         emit stream_ready;
