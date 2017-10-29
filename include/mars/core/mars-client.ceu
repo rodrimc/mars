@@ -2,164 +2,142 @@
 #define _CEU_MARS_CLIENT
 
 #include "mars-defs.ceu"
-#include "uv/uv.ceu"
 
 /*** CLIENT API ***/
-data IClient with
-  var uint id;
-  var&[] byte wbuffer;
-  var&[] byte rbuffer;
-  var&[] byte message;
 
-  event (none) all_set_up;
-
-  event (uint, usize) joined;
-  event (uint, usize) new_peer;
-  event (none) incoming_message;
-
-  event& (none) send_message;
-end
-
-code/await Client_Send_Message (var& IClient stub, var&[] byte buffer) -> none
+code/await Client_Send_Message (var& Stub stub, var&[] byte buffer) -> none
 do
-  var[] byte buf = [] .. "return {type=";
+  var Exception.Lua? e;
+  catch e do
+    var u64 ts = _now();
+    [[
+      luabuff = 'type='      .. tostring(@P_REGULAR_SEND)    .. ',' ..
+                'from='      .. tostring(@stub.id)           .. ',' ..
+                'payload='   .. tostring(@buffer)            .. ',' ..
+                'timestamp=' .. tostring(@ts)
+    ]]
 
-  var[] byte tmp = [] .. [[ tostring (@P_REGULAR_SEND) .. '\0']];
-  call R_Vec_Cat (&buf, &tmp);
-
-  tmp = [] .. ",payload=";
-  call R_Vec_Cat (&buf, &tmp);
-
-  tmp = [] .. buffer;
-  call R_Vec_Cat (&buf, &tmp);
-
-  tmp = [] .. ",from=";
-  call R_Vec_Cat (&buf, &tmp);
-
-  tmp = [] .. [[ tostring (@stub.id) .. '\0']];
-  call R_Vec_Cat (&buf, &tmp);
-
-  tmp = [] .. ",timestamp=";
-  call R_Vec_Cat (&buf, &tmp);
-
-  var u64 ts = _now();
-  tmp = [] .. [[ tostring (@ts) .. '\0']];
-  call R_Vec_Cat (&buf, &tmp);
-
-  tmp = [] .. "}\n";
-  call R_Vec_Cat (&buf, &tmp);
-
-  stub.wbuffer = [] .. buf;
-
-  emit stub.send_message;
-end
-
-code/await Handle_Message (var& IClient stub) -> none
-do
-  var usize i;
-  var int type = _;
-
-  /* parse message */
-  [[
-    str = @stub.rbuffer or 'return {type=-1}'
-    print ('str: '.. str)
-    TABLE =  load (str)()
-  ]]
-  type = [[ TABLE.type ]];
-
-  if type == S_JOINED then
-    stub.id = [[ TABLE.id ]];
-    var int peers = [[ TABLE.peers ]];
-    emit stub.joined (stub.id, peers);
-
-  else/if type == S_NEW_PEER then
-    var int new_peer = [[ TABLE.peers ]];
-    var int peers = [[ TABLE.peers ]];
-    emit stub.new_peer (new_peer, peers);
-
-  else/if type == S_BROADCAST then
-    stub.message= [] .. "return";
-    var[] byte buf = [] .. [[serialize (TABLE.payload)]];
-
-    call R_Vec_Cat (&stub.message, &buf);
-    emit stub.incoming_message;
-  else
-    _log ("[Client (%d) Unknow message type.\n", stub.id);
+    stub.wbuffer = [] .. [[ luabuff ]];
+    emit stub.send_message;
   end
+  if e? then
+    _fprintf (_stderr, "[Client_Send_Message error]: %s\n", e!.message);
+  end
+end
 
-  call R_Clear_Vec (&stub.message);
+code/await Handle_Message (var& Stub stub) -> none
+do
+  var Exception.Lua? e;
+  catch e do
+
+    var int type = _;
+
+    /* parse message */
+    [[
+      TABLE =  load ('return{' .. @stub.rbuffer .. '}')()
+    ]]
+    type = [[ TABLE.type ]];
+
+    if type == S_JOINED then
+      stub.id = [[ TABLE.id ]];
+      _printf ("S_JOINED: %d\n", stub.id);
+      var uint peers = [[ TABLE.peers ]];
+      emit stub.joined (stub.id, peers);
+
+    else/if type == S_NEW_PEER then
+      var uint new_peer = [[ TABLE.peers ]];
+      var uint peers = [[ TABLE.peers ]];
+
+      _printf ("S_NEW_PEER: %d (count %d)\n", new_peer, peers);
+      emit stub.new_peer (new_peer, peers);
+    else/if type == S_BROADCAST then
+      [[
+        payload = 'return' .. serialize(TABLE.payload)
+      ]]
+
+      stub.message= [] .. [[ payload ]];
+      _printf ("S_BROADCAST: %s\n", &&stub.message[0]);
+
+      emit stub.incoming_message;
+      $stub.message = 0;
+    else/if type == S_TICK then
+      var uint tick = [[ TABLE.freq ]];
+      /* _printf ("S_TICK: %d\n", tick); */
+    else
+      _printf ("[Client (%d) Unknow message type.\n", stub.id);
+    end
+  end
+  if e? then
+    _fprintf (_stderr, "[Handle_Message error]: %s\n", e!.message);
+  end
 end
 
 code/await Client (var _char&& ip, var int session)
-                          -> (var& IClient stub)
+                          -> (var& Stub stub)
                             -> none
+                  throws Exception.Uv
 do
   var&? UV_TCP_Connect r_conn = spawn UV_TCP_Connect(ip, W_PORT, _);
   var&? UV_TCP_Connect w_conn = spawn UV_TCP_Connect(ip, R_PORT, _);
 
   event (none) stream_ready;
-  event (none) send_message;
 
-  var[] byte rbuffer = _;
-  var[] byte wbuffer = _;
-  var[] byte message = _;
+  var[] byte rbuffer;
+  var[] byte wbuffer;
+  var[] byte message;
 
   watching r_conn, w_conn do
-    var IClient ref_ = val IClient (0, &rbuffer, &wbuffer, &message, _, _, _,
-                                  _, &send_message);
+    var Stub ref_ = val Stub (0, &wbuffer, &rbuffer, &message,  _, _, _, _, _);
     stub = &ref_;
 
     par do
       /* read trail */
-      await r_conn.ok;
-
-      par do
+      par/and do
         pool [] Handle_Message pool_handle_message;
         loop do
-          call R_Clear_Vec (&r_conn.stream.buffer);
-          call R_Clear_Vec (&stub.rbuffer);
-          await UV_Stream_Read_Line (&r_conn.stream, &stub.rbuffer);
-
-          _log ("[Client (%d)] received: %s\n", stub.id, &&stub.rbuffer[0]);
-
-          if ($stub.rbuffer > 0) then
+          var[] byte buff;
+          var bool success = await Receive (&r_conn.stream, &buff);
+          if success then
+            stub.rbuffer = [] .. buff;
             spawn Handle_Message (&stub) in pool_handle_message;
           end
         end
       with
+        await r_conn.ok;
         emit stream_ready;
       end
     with
       /* write trail */
-      await w_conn.ok;
-
-      par do
+      par/and do
         pool [] Send pool_send;
         every stub.send_message do
-          _log ("[Client (%d)] sending: %s\n", stub.id, &&stub.wbuffer[0]);
-          spawn Send (&w_conn.stream, &stub.wbuffer) in pool_send;
+          spawn Send (stub.id, &w_conn.stream, &stub.wbuffer) in pool_send;
         end
       with
+        await w_conn.ok;
         emit stream_ready;
       end
     with
       var usize i;
-      loop i in [0 -> 1] do
+      loop i in [1 -> 2] do
         await stream_ready;
       end
-
       emit stub.all_set_up;
 
-      var[] byte buf = [] .. "return {type=";
-      var[] byte tmp = [] .. [[ tostring(@P_JOIN) .. '\0']];
-      call R_Vec_Cat (&buf, &tmp);
+      var Exception? e;
+      catch e do
+        [[
+          luabuff = 'type=' .. tostring(@P_JOIN)
+        ]]
+        stub.wbuffer = [] .. [[ luabuff ]];
 
-      tmp = [] .. "}\n";
-      call R_Vec_Cat (&buf, &tmp);
+        /* send P_JOIN message */
+        await Send (stub.id, &r_conn.stream, &stub.wbuffer);
+      end
 
-      stub.wbuffer = [] .. buf;
-      /* send P_JOIN message */
-      emit stub.send_message;
+      if e? then
+        _fprintf (_stderr, "[error]: %s\n", e!.message);
+      end
     end
   end
 end

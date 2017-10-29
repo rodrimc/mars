@@ -3,8 +3,6 @@
 
 #include "mars-defs.ceu"
 
-#include "uv/tcp.ceu"
-
 data UV_TCP_Server_Data with
   var bool isReading;
 end
@@ -27,149 +25,132 @@ spawn do
   end
 end
 
-code/await Send_Join_Reply (var& UV_Stream client, var uint id) -> none
+code/await Send_Join_Reply (var uint handle_id,
+                            var& UV_Stream stub,
+                            var uint id) -> none
 do
-  var[] byte buf = [] .. "return {type=";
-  var[] byte tmp = [] .. [[ tostring (@S_JOINED) .. '\0']];
-
-  call R_Vec_Cat (&buf, &tmp);
-
-  tmp = [] .. ",id=";
-  call R_Vec_Cat (&buf, &tmp);
-
-  tmp = [] .. [[ tostring (@id) .. '\0']];
-  call R_Vec_Cat (&buf, &tmp);
-
-  tmp = [] .. ",peers=";
-  call R_Vec_Cat (&buf, &tmp);
-
-  tmp = [] .. [[ tostring (@outer.peers_count) .. '\0']];
-  call R_Vec_Cat (&buf, &tmp);
-
-  tmp = [] .. "}\n";
-  call R_Vec_Cat (&buf, &tmp);
-
-  await Send (&client, &buf);
+  var Exception.Lua? e;
+  catch e do
+    [[
+      luabuff = 'type='  .. tostring(@S_JOINED)          .. ',' ..
+                'id='    .. tostring(@id)                .. ',' ..
+                'peers=' .. tostring(@outer.peers_count)
+    ]]
+    var[] byte buff = [] .. [[ luabuff ]];
+    await Send (handle_id, &stub, &buff);
+  end
+  if e? then
+    _fprintf (_stderr, "[Send_Join_Reply error]: %s\n", e!.message);
+  end
 end
 
-code/await Send_Broadcast_Join (var& UV_Stream client, var uint id) -> none
+code/await Send_Broadcast_Join (var uint handle_id,
+                                var& UV_Stream stream,
+                                var uint id) -> none
 do
-  var[] byte buf = [] .. "return {type=";
-  var[] byte tmp = [] .. [[ tostring (@S_NEW_PEER) .. '\0']];
-
-  call R_Vec_Cat (&buf, &tmp);
-
-  tmp = [] .. ",new_peer=";
-  call R_Vec_Cat (&buf, &tmp);
-
-  tmp = [] .. [[ tostring (@id) .. '\0']];
-  call R_Vec_Cat (&buf, &tmp);
-
-  tmp = [] .. ",peers=";
-  call R_Vec_Cat (&buf, &tmp);
-
-  tmp = [] .. [[ tostring (@outer.peers_count) .. '\0']];
-  call R_Vec_Cat (&buf, &tmp);
-
-  tmp = [] .. ",timestamp=";
-  call R_Vec_Cat (&buf, &tmp);
-
-  var u64 ts = _now ();
-
-  tmp = [] .. [[ tostring (@ts) .. '\0']];
-  call R_Vec_Cat (&buf, &tmp);
-
-  tmp = [] .. "}\n";
-  call R_Vec_Cat (&buf, &tmp);
-
-  await Send (&client, &buf);
+  var Exception.Lua? e;
+  catch e do
+    var u64 ts = _now ();
+    [[
+      luabuff = 'type='      .. tostring(@S_NEW_PEER)        .. ',' ..
+                'new_peer='  .. tostring(@id)                .. ',' ..
+                'peers='     .. tostring(@outer.peers_count) .. ',' ..
+                '' -- 'timestamp=' .. tostring(@ts)
+    ]]
+    var[] byte buff = [] .. [[ luabuff ]];
+    await Send (handle_id, &stream, &buff);
+  end
+  if e? then
+    _fprintf (_stderr, "[Send_Broadcast_Join error]: %s\n", e!.message);
+  end
 end
 
-code/await Send_Broadcast_Message (var& UV_Stream client, var uint from,
+code/await Send_Broadcast_Message (var uint handle_id,
+                                   var& UV_Stream stream,
+                                   var uint from,
                                    var& []byte payload) -> none
 do
-  var[] byte buf = [] .. "return {type=";
-  var[] byte tmp = [] .. [[ tostring (@S_BROADCAST) .. '\0']];
-
-  call R_Vec_Cat (&buf, &tmp);
-
-  tmp = [] .. ",from=";
-  call R_Vec_Cat (&buf, &tmp);
-
-  tmp = [] .. [[ tostring (@from) .. '\0']];
-  call R_Vec_Cat (&buf, &tmp);
-
-  tmp = [] .. ",payload=";
-  call R_Vec_Cat (&buf, &tmp);
-
-  tmp = [] .. payload;
-  call R_Vec_Cat (&buf, &tmp);
-
-  tmp = [] .. ",timestamp=";
-  call R_Vec_Cat (&buf, &tmp);
-
-  var u64 ts = _now ();
-  tmp = [] .. [[ tostring (@ts) .. '\0']];
-  call R_Vec_Cat (&buf, &tmp);
-
-  tmp = [] .. "}\n";
-  call R_Vec_Cat (&buf, &tmp);
-
-  await Send (&client, &buf);
+  var Exception.Lua? e;
+  catch e do
+    var u64 ts = _now ();
+    [[
+      luabuff = 'type='      .. tostring(@S_BROADCAST)       .. ',' ..
+                'from='      .. tostring(@from)              .. ',' ..
+                'payload='   .. tostring(@payload)           .. ',' ..
+                'peers='     .. tostring(@outer.peers_count) .. ',' ..
+                '' -- 'timestamp=' .. tostring(@ts)
+    ]]
+    var[] byte buff = [] .. [[ luabuff ]];
+    await Send (handle_id, &stream, &buff);
+  end
+  if e? then
+    _fprintf (_stderr, "[Send_Broadcast_Message error]: %s\n", e!.message);
+  end
 end
 
-code/await Send_Tick_Message (var& UV_Stream client, var uint freq) -> none
+code/await Send_Tick_Message (var uint handle_id,
+                              var& UV_Stream stream,
+                              var uint freq) -> none
 do
-  var[] byte buf = [] .. "return {type=";
-  var[] byte tmp = [] .. [[ tostring (@S_TICK) .. '\0']];
+  var Exception.Lua? e;
+  catch e do
+    var[] byte buff = _;
+      [[
+        luabuff = 'type=' .. tostring(@S_TICK)               .. ',' ..
+                  'freq=' .. tostring(@freq)
+      ]]
 
-  call R_Vec_Cat (&buf, &tmp);
+      buff = [] .. [[ luabuff ]];
+    await Send (handle_id, &stream, &buff);
+  end
 
-  tmp = [] .. ",freq=";
-  call R_Vec_Cat (&buf, &tmp);
-
-  tmp = [] .. [[ tostring (@freq) .. '\n']];
-  call R_Vec_Cat (&buf, &tmp);
-
-  tmp = [] .. "}\n";
-  call R_Vec_Cat (&buf, &tmp);
-
-  await Send (&client, &buf);
+  if e? then
+      _fprintf(_stderr, "[Send_Tick_Message error]: %s\n", e!.message);
+  end
 end
 
-code/await Reading_Handler (var& UV_Stream client) -> NEVER
+code/await Reading_Handler (var& UV_Stream stream) -> NEVER
 do
   loop do
-    var [] byte buffer;
-    call R_Clear_Vec (&client.buffer);
+    var[] byte buffer;
+    var bool success = await Receive (&stream, &buffer);
 
-    await UV_Stream_Read_Line (&client, &buffer);
-    _log ("[server] received: %s\n", &&buffer[0]);
+    if not success then
+      continue;
+    end
+    _printf ("received: %s\n", &&buffer[0]);
 
-    var int type = _;
+    var Exception.Lua? e;
+    catch e do
+      [[
+        TABLE = load ('return{' .. @buffer .. '}')()
+      ]]
 
-    [[ TABLE = load (@buffer)() ]]
-    type = [[ TABLE.type ]];
+      var int type = [[ TABLE.type ]];
 
-    if type == P_JOIN then
-      emit outer.send_join_reply;
-    else/if type == P_REGULAR_SEND then
-      var int from = [[ TABLE.from ]];
-      var [] byte payload = [] .. [[ serialize(TABLE.payload) ]];
+      if  type == P_REGULAR_SEND then
+        var int from = [[ TABLE.from ]];
+        var [] byte payload = [] .. [[ serialize(TABLE.payload) ]];
 
-      outer.cur_payload = [] .. payload;
-      emit outer.send_broadcast_message (from);
+        outer.cur_payload = [] .. payload;
+        emit outer.send_broadcast_message (from);
+      end
+    end
+    if e? then
+      _printf ("[error]: %s\n", e!.message);
     end
   end
 end
 
-code/await Writing_Handler (var& UV_Stream client) -> NEVER
+code/await Writing_Handler (var& UV_Stream stream) -> NEVER
+                            throws Exception.Uv
 do
-  var uint id = outer.id_ref;
+  var uint handle_id = outer.id_ref;
   outer.id_ref = outer.id_ref + 1;
 
   outer.peers_count = outer.peers_count + 1;
   do finalize with
+    _printf ("finalize\n");
     outer.peers_count = outer.peers_count - 1;
   end
 
@@ -179,42 +160,62 @@ do
   pool[] Send_Tick_Message      pool_tick_message;
 
   par do
-    every outer.send_join_reply do
-      spawn Send_Join_Reply (&client, id) in pool_join_reply;
-      emit outer.send_broadcast_join (id);
+    var uint freq;
+    every freq in outer.send_tick_message do
+      spawn Send_Tick_Message (handle_id, &stream, 50) in pool_tick_message;
+    end
+  with
+    loop do
+      var[] byte buff;
+      var bool success = await Receive (&stream, &buff);
+
+      var Exception.Lua? e;
+      catch e do
+        [[ MESSAGE = load ('return {' .. @buff .. '}')() ]]
+        var int type = [[ MESSAGE.type ]];
+
+        if (type == P_JOIN) then
+          spawn Send_Join_Reply (handle_id, &stream, handle_id)
+                                                      in pool_join_reply;
+          emit outer.send_broadcast_join (handle_id);
+          break;
+        end
+      end
+      if e? then
+        _fprintf (_stderr, "[error]: %s\n", e!.message);
+      end
     end
   with
     var uint new_id;
     every new_id in outer.send_broadcast_join do
-      spawn Send_Broadcast_Join (&client, new_id)
-            in pool_broadcast_join;
+      spawn Send_Broadcast_Join (handle_id, &stream, new_id)
+                                                      in pool_broadcast_join;
     end
   with
     var uint from;
     every from in outer.send_broadcast_message do
-      spawn Send_Broadcast_Message (&client, from, &outer.cur_payload)
-            in pool_broadcast_message;
+      spawn Send_Broadcast_Message (handle_id, &stream, from, &outer.cur_payload)
+                                                      in pool_broadcast_message;
     end
-  with
-#if 0
-    var uint freq;
-    every freq in outer.send_tick_message do
-      spawn Send_Tick_Message (&client, freq) in pool_tick_message;
-    end
-#endif
   end
 end
 
 /* Handler for each client */
-code/await UV_TCP_Server_Handler (var& UV_Stream client,
+code/await UV_TCP_Server_Handler (var& UV_Stream stream,
                                   var& UV_TCP_Server_Data shared) -> int
 do
-  if (shared.isReading) then
-    await Reading_Handler (&client);
-  else
-    await Writing_Handler (&client);
+  var Exception.Uv? e;
+  catch e do
+    if (shared.isReading) then
+      await Reading_Handler (&stream);
+    else
+      await Writing_Handler (&stream);
+    end
   end
 
+  if e? then
+    _fprintf(_stderr, "[error]: %s\n", e!.message);
+  end
 end
 
 /* We must include tcp-server after we've defined UV_TCP_Server_Handler */

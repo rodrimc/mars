@@ -17,7 +17,7 @@ server: SRC_NAME= $(notdir $(SRC))
 
 #both targets
 server all: override CFLAGS := $(shell pkg-config $(MODULES) --libs --cflags)\
-																-lpthread $(CFLAGS) -lm
+																-lpthread $(CFLAGS) -lm -DDEBUG -g
 
 #variables
 BIN					= $(SRC_NAME:%.ceu=%)
@@ -32,13 +32,14 @@ all:
 						-I$(CEU_UV_DIR)/include -I$(CEU_LIB_DIR) -I./include"  	 				 \
 	          --pre-input=$(TEMP)																							 \
 	    --ceu --ceu-err-unused=pass --ceu-err-uninitialized=pass							 \
+						--ceu-features-exception=true --ceu-features-thread=true				 \
+						--ceu-features-lua=true																					 \
 	    --env --env-types=$(CEU_DIR)/env/types.h															 \
 	          --env-threads=$(CEU_DIR)/env/threads.h													 \
 	          --env-main=$(CEU_DIR)/env/main.c																 \
 	          --env-output=/tmp/x.c																						 \
 	    --cc --cc-args="$(CFLAGS)"																						 \
-	         --cc-output=build/$(BIN)																					 \
-					 --ceu --ceu-features-lua=true --ceu-features-thread=true
+	         --cc-output=build/$(BIN)
 	rm $(TEMP)
 	$(BUILD_PATH)/$(BIN)
 
@@ -48,13 +49,14 @@ server:
 						-I$(CEU_UV_DIR)/include -I$(CEU_LIB_DIR) -I./include"					\
 	          --pre-input=$(SRC)																						\
 	    --ceu --ceu-err-unused=pass --ceu-err-uninitialized=pass						\
+						--ceu-features-exception=true --ceu-features-thread=true			\
+						--ceu-features-lua=true																				\
 	    --env --env-types=$(CEU_DIR)/env/types.h														\
 	          --env-threads=$(CEU_DIR)/env/threads.h												\
 	          --env-main=$(CEU_DIR)/env/main.c															\
 	          --env-output=/tmp/x.c																					\
 	    --cc --cc-args="$(CFLAGS)"																					\
-	         --cc-output=build/$(BIN)																				\
-					 --ceu --ceu-features-lua=true --ceu-features-thread=true
+	         --cc-output=build/$(BIN)
 	$(BUILD_PATH)/$(BIN)
 
 clean:

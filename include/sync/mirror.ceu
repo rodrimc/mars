@@ -7,7 +7,8 @@ event (none) mirror_ok;
 par/or do
   var int min_peers = _;
 
-  code/tight Load_Sync_Config (none) -> none do
+  var Exception.Lua? e;
+  catch e do
     [[
       CONFIG = {}
       min_peers = 2
@@ -18,11 +19,11 @@ par/or do
         min_peers = CONFIG.MIN_PEERS or min_peers
       end
     ]]
-    outer.min_peers = [[ min_peers ]];
+    min_peers = [[ min_peers ]];
   end
-
-  call Load_Sync_Config ();
-
+  if e? then
+    _fprintf (_stderr, "[Load_Sync_Config error]: %s\n", e!.message);
+  end
 
   var&? Client client = spawn Client (LOCALHOST, 0);
   watching client do
@@ -90,37 +91,18 @@ par/or do
       var[] byte tmp;
       var[] byte buffer;
       every (obj, key, press) in mars_scene_key do
-        buffer = [] .. "{device=";
 
-        tmp = [] .. [[ tostring(@client.stub.id) ]];
-        call R_Vec_Cat (&buffer, &tmp);
-
-        tmp = [] .. ",object=";
-        call R_Vec_Cat (&buffer, &tmp);
-
-        tmp = [] .. [[ tostring(@obj) ]];
-        call R_Vec_Cat (&buffer, &tmp);
-
-        tmp = [] .. ",type=";
-        call R_Vec_Cat (&buffer, &tmp);
-
-        tmp = [] .. [[ tostring(@EVT_KEY) ]];
-        call R_Vec_Cat (&buffer, &tmp);
-
-        tmp = [] .. ",key=\'";
-        call R_Vec_Cat (&buffer, &tmp);
-
-        tmp = [] .. (_PTR(key) as _char&&);
-        call R_Vec_Cat (&buffer, &tmp);
-
-        tmp = [] .. "\',press=";
-        call R_Vec_Cat (&buffer, &tmp);
-
-        tmp = [] .. [[ tostring(@press) ]];
-        call R_Vec_Cat (&buffer, &tmp);
-
-        tmp = [] .. "}";
-        call R_Vec_Cat (&buffer, &tmp);
+        var[] byte key_buff = [] .. (_PTR(key) as _char&&);
+        [[
+          luabuff = '{' ..
+                    'device=' .. tostring(@client.stub.id)   .. ',' ..
+                    'object=' .. tostring(@obj)              .. ',' ..
+                    'type='   .. tostring(@EVT_KEY)          .. ',' ..
+                    "key='"   .. tostring(@key_buff)         .. "'," ..
+                    'press='  .. tostring(@press)            ..
+                    '}'
+        ]]
+        buffer = [] .. [[ luabuff ]];
 
         spawn Client_Send_Message (&client.stub, &buffer) in send_message_pool;
       end
@@ -134,49 +116,18 @@ par/or do
       var[] byte tmp;
       var[] byte buffer;
       every (obj, x, y, button, press) in mars_scene_mouse_clicked do
-        buffer = [] .. "{device=";
-
-        tmp = [] .. [[ tostring(@client.stub.id) ]];
-        call R_Vec_Cat (&buffer, &tmp);
-
-        tmp = [] .. ",object=";
-        call R_Vec_Cat (&buffer, &tmp);
-
-        tmp = [] .. [[ tostring(@obj) ]];
-        call R_Vec_Cat (&buffer, &tmp);
-
-        tmp = [] .. ",type=";
-        call R_Vec_Cat (&buffer, &tmp);
-
-        tmp = [] .. [[ tostring(@EVT_SCENE_CLICK) ]];
-        call R_Vec_Cat (&buffer, &tmp);
-
-        tmp = [] .. ",x=";
-        call R_Vec_Cat (&buffer, &tmp);
-
-        tmp = [] .. [[ tostring(@x) ]];
-        call R_Vec_Cat (&buffer, &tmp);
-
-        tmp = [] .. ",y=";
-        call R_Vec_Cat (&buffer, &tmp);
-
-        tmp = [] .. [[ tostring(@y) ]];
-        call R_Vec_Cat (&buffer, &tmp);
-
-        tmp = [] .. ",button=";
-        call R_Vec_Cat (&buffer, &tmp);
-
-        tmp = [] .. [[ tostring(@button) ]];
-        call R_Vec_Cat (&buffer, &tmp);
-
-        tmp = [] .. ",press=";
-        call R_Vec_Cat (&buffer, &tmp);
-
-        tmp = [] .. [[ tostring(@press) ]];
-        call R_Vec_Cat (&buffer, &tmp);
-
-        tmp = [] .. "}";
-        call R_Vec_Cat (&buffer, &tmp);
+        [[
+          luabuff = '{' ..
+                    'device=' .. tostring(@client.stub.id)   .. ',' ..
+                    'object=' .. tostring(@obj)              .. ',' ..
+                    'type='   .. tostring(@EVT_SCENE_CLICK)  .. ',' ..
+                    'x='      .. tostring(@x)                .. ',' ..
+                    'y='      .. tostring(@y)                .. ',' ..
+                    'button=' .. tostring(@button)           .. ',' ..
+                    'press='  .. tostring(@press)            ..
+                    '}'
+        ]]
+        buffer = [] .. [[ luabuff ]];
 
         spawn Client_Send_Message (&client.stub, &buffer) in send_message_pool;
       end
@@ -191,50 +142,18 @@ par/or do
       var[] byte tmp;
       var[] byte buffer;
       every (obj, x, y, button, press) in mars_player_mouse_clicked do
-        buffer = [] .. "{device=";
-
-        tmp = [] .. [[ tostring(@client.stub.id) ]];
-        call R_Vec_Cat (&buffer, &tmp);
-
-        tmp = [] .. ",object=";
-        call R_Vec_Cat (&buffer, &tmp);
-
-        tmp = [] .. [[ tostring(@obj) ]];
-        call R_Vec_Cat (&buffer, &tmp);
-
-        tmp = [] .. ",type=";
-        call R_Vec_Cat (&buffer, &tmp);
-
-        tmp = [] .. [[ tostring(@EVT_PLAYER_CLICK) ]];
-        call R_Vec_Cat (&buffer, &tmp);
-
-        tmp = [] .. ",x=";
-        call R_Vec_Cat (&buffer, &tmp);
-
-        tmp = [] .. [[ tostring(@x) ]];
-        call R_Vec_Cat (&buffer, &tmp);
-
-        tmp = [] .. ",y=";
-        call R_Vec_Cat (&buffer, &tmp);
-
-        tmp = [] .. [[ tostring(@y) ]];
-        call R_Vec_Cat (&buffer, &tmp);
-
-        tmp = [] .. ",button=";
-        call R_Vec_Cat (&buffer, &tmp);
-
-        tmp = [] .. [[ tostring(@button) ]];
-        call R_Vec_Cat (&buffer, &tmp);
-
-        tmp = [] .. ",press=";
-        call R_Vec_Cat (&buffer, &tmp);
-
-        tmp = [] .. [[ tostring(@press) ]];
-        call R_Vec_Cat (&buffer, &tmp);
-
-        tmp = [] .. "}";
-        call R_Vec_Cat (&buffer, &tmp);
-
+        [[
+          luabuff = '{' ..
+                    'device=' .. tostring(@client.stub.id)  .. ',' ..
+                    'object=' .. tostring(@obj)              .. ',' ..
+                    'type='   .. tostring(@EVT_PLAYER_CLICK) .. ',' ..
+                    'x='      .. tostring(@x)                .. ',' ..
+                    'y='      .. tostring(@y)                .. ',' ..
+                    'button=' .. tostring(@button)           .. ',' ..
+                    'press='  .. tostring(@press)            ..
+                    '}'
+        ]]
+        buffer = [] .. [[ luabuff ]];
         spawn Client_Send_Message (&client.stub, &buffer) in send_message_pool;
       end
     end

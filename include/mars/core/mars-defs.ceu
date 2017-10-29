@@ -5,6 +5,7 @@
 #define R_PORT 8888
 #define W_PORT 8889
 #define BACKLOG 128
+#define BYTE sizeof(byte)
 
 /**** MESSAGE CODES ****/
 /* peers -> server */
@@ -60,33 +61,105 @@ native/nohold
    end
 ]]
 
-#include "uv/tcp.ceu"
-var uint seq_num = 0;
-var bool is_sending_message = false;
-event (uint) message_sent;
+data Stub with
+  var uint id;
+  var&[] byte wbuffer;
+  var&[] byte rbuffer;
+  var&[] byte message;
 
-code/await Send (var& UV_Stream client, var&[] byte buffer) -> none
-do
-  var[] byte priv_buffer = [] .. buffer .. "\0";
-  var uint my_seq_num = outer.seq_num;
-  outer.seq_num = outer.seq_num + 1;
+  event (none) all_set_up;
 
-  if outer.is_sending_message then
-    var uint seq = await outer.message_sent until seq == my_seq_num - 1;
-  end
+  event (uint, usize) joined;
+  event (uint, usize) new_peer;
+  event (none) incoming_message;
 
-  client.buffer = [] .. priv_buffer;
-
-  outer.is_sending_message = true;
-
-  _log ("sending: %s", &&priv_buffer[0]);
-  await UV_Stream_Write_N (&client, $priv_buffer);
-  call R_Clear_Vec (&client.buffer);
-
-  outer.is_sending_message = false;
-  emit outer.message_sent (my_seq_num);
+  event (none) send_message;
 end
 
+#include "uv/tcp.ceu"
+
+event (uint) stream_released;
+
+code/await Send (var uint id,
+                 var& UV_Stream stream,
+                 var&[] byte buffer) -> bool
+do
+  var bool success = true;
+
+  var Exception? e;
+  catch e do
+    [[
+      SEND_TABLE = SEND_TABLE or {}
+      if SEND_TABLE[@id] == nil then
+        SEND_TABLE[@id] = false
+      end
+    ]]
+
+    var bool stream_is_busy = [[ SEND_TABLE[@id] ]];
+    if (stream_is_busy) then
+      var uint stream_id = await outer.stream_released until stream_id == id;
+    end
+
+    [[ SEND_TABLE[@id] = true ]]
+
+    var[] byte buff = [] .. buffer;
+    stream.buffer = [] .. [[ string.char (@$buff) .. @buff ]];
+    var ssize n = $stream.buffer;
+    var ssize len = await UV_Stream_Write_N (&stream, n as usize);
+    if len != n  then
+      success = false;
+    end
+
+    [[ SEND_TABLE[@id] = false ]]
+  end
+
+  if e? then
+    _fprintf(_stderr, "[error]: %s\n", e!.message);
+    success = false;
+
+    catch e do
+      [[ SEND_TABLE[@id] = false ]]
+    end
+  end
+
+  emit outer.stream_released (id);
+
+  escape success;
+end
+
+code/await Receive (var& UV_Stream stream,
+                    var&[] byte buff) -> bool
+do
+  var bool success = true;
+
+  var Exception? e;
+  catch e do
+    var ssize len = await UV_Stream_Read_N (&stream, BYTE);
+
+    buff = [] .. stream.buffer;
+    $stream.buffer = $stream.buffer - (len as usize);
+
+    if len == 1 then
+      var byte b_len = [[ tonumber (string.byte(@buff)) ]];
+      len = await UV_Stream_Read_N (&stream, b_len as usize);
+      buff = [] .. stream.buffer;
+      $stream.buffer = $stream.buffer - (len as usize);
+
+      if len != (b_len as ssize) then
+        $buff = 0;
+        success = false;
+      end
+    else
+      $buff = 0;
+      success = false;
+    end
+  end
+  if e? then
+    $buff = 0;
+    success = false;
+  end
+
+  escape success;
+end
 
 #endif
-
