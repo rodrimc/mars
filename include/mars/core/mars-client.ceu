@@ -40,7 +40,6 @@ do
 
     if type == S_JOINED then
       stub.id = [[ TABLE.id ]];
-      _printf ("S_JOINED: %d\n", stub.id);
       var uint peers = [[ TABLE.peers ]];
       emit stub.joined (stub.id, peers);
 
@@ -48,7 +47,6 @@ do
       var uint new_peer = [[ TABLE.peers ]];
       var uint peers = [[ TABLE.peers ]];
 
-      _printf ("S_NEW_PEER: %d (count %d)\n", new_peer, peers);
       emit stub.new_peer (new_peer, peers);
     else/if type == S_BROADCAST then
       [[
@@ -56,13 +54,12 @@ do
       ]]
 
       stub.message= [] .. [[ payload ]];
-      _printf ("S_BROADCAST: %s\n", &&stub.message[0]);
 
       emit stub.incoming_message;
       $stub.message = 0;
     else/if type == S_TICK then
       var uint tick = [[ TABLE.freq ]];
-      /* _printf ("S_TICK: %d\n", tick); */
+      /* TODO */
     else
       _printf ("[Client (%d) Unknow message type.\n", stub.id);
     end

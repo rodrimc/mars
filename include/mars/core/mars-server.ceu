@@ -150,7 +150,6 @@ do
 
   outer.peers_count = outer.peers_count + 1;
   do finalize with
-    _printf ("finalize\n");
     outer.peers_count = outer.peers_count - 1;
   end
 
