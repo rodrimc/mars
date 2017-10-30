@@ -1,4 +1,3 @@
-
 #include "mars/mars-media.ceu"
 
 var int width = 300;
@@ -11,22 +10,24 @@ var Media.Video m = val Media.Video (
                           1.0
                         );
 
-var& IScene scene;
-var& IPlayer p;
-watching Scene(Size(width,height)) -> (&scene),
-         Play(&scene, &m) -> (&p),
-         CM_SCENE_KEY
+var&? Scene scene = spawn Scene (Size (width, height));
+watching scene, CM_SCENE_KEY
 do
-  var uint device_id = call Get_Device_Id();
-  await CM_PLAYER_START
-    until (device_id == call Get_Event_Device_Id());
+  var&? Play p = spawn Play (&scene.scene, &m);
+  watching p do
+    var uint device_id = call Get_Device_Id();
+    await CM_PLAYER_START
+      until (device_id == call Get_Event_Device_Id());
 
-  width = call Player_Get_Int (&p, "width");
+    width = call Player_Get_Int (&p.player, "width");
 
-  if (device_id % 2 == 1) then
-    call Player_Set_Double (&p, "crop-left",  0.5);
-  else
-    call Player_Set_Double (&p, "crop-right",  0.5);
+    if (device_id % 2 == 1) then
+      call Player_Set_Double (&p.player, "crop-left",  0.5);
+    else
+      call Player_Set_Double (&p.player, "crop-right",  0.5);
+    end
+    await FOREVER;
   end
-  await FOREVER;
 end
+
+escape 0;
