@@ -53,6 +53,45 @@ input (_char&&, int) JOINED;
 /* internal */
 event (none) mirror_ok;
 
+code/await Handle_Incoming_Message (var& []byte message) -> none
+do
+  var Exception.Lua? e;
+  catch e do
+    [[ TABLE = load (@message)() ]]
+    var uint device = [[ TABLE.device ]];
+    var uint obj = [[ TABLE.object ]];
+    var int type = [[ TABLE.type ]];
+
+    if type == EVT_KEY then
+      var[] byte key = [] .. [[ TABLE.key ]];
+      var bool press = [[ TABLE.press ]];
+
+      emit outer.create_evt_scene_key (device, obj, &&key[0], press);
+    else/if type == EVT_SCENE_CLICK then
+      var int x = [[ TABLE.x ]];
+      var int y = [[ TABLE.y ]];
+      var int button = [[ TABLE.button ]];
+      var bool press = [[ TABLE.press ]];
+
+      emit outer.create_evt_scene_mouse_clicked (device, obj, x, y,
+                                                  button, press);
+
+    else/if type == EVT_PLAYER_CLICK then
+      var int x = [[ TABLE.x ]];
+      var int y = [[ TABLE.y ]];
+      var int button = [[ TABLE.button ]];
+      var bool press = [[ TABLE.press ]];
+
+      emit outer.create_evt_player_mouse_clicked (device, obj, x, y,
+                                                   button, press);
+    end
+  end
+  if e? then
+    _fprintf (_stderr, "[Handle_Incoming_Message error]: %s\n", e!.message);
+  end
+end
+
+
 par/or do
   var int min_peers = _;
 
@@ -101,34 +140,7 @@ par/or do
         await client.stub.incoming_message;
         _log ("[APP(%u)] Message: %s\n", client.stub.id, &&client.stub.message[0]);
 
-        [[ TABLE = load (@client.stub.message)() ]]
-        var uint device = [[ TABLE.device ]];
-        var uint obj = [[ TABLE.object ]];
-        var int type = [[ TABLE.type ]];
-
-        if type == EVT_KEY then
-          var[] byte key = [] .. [[ TABLE.key ]];
-          var bool press = [[ TABLE.press ]];
-
-          emit create_evt_scene_key (device, obj, &&key[0], press);
-        else/if type == EVT_SCENE_CLICK then
-          var int x = [[ TABLE.x ]];
-          var int y = [[ TABLE.y ]];
-          var int button = [[ TABLE.button ]];
-          var bool press = [[ TABLE.press ]];
-
-          emit create_evt_scene_mouse_clicked (device, obj, x, y,
-                                                button, press);
-
-        else/if type == EVT_PLAYER_CLICK then
-          var int x = [[ TABLE.x ]];
-          var int y = [[ TABLE.y ]];
-          var int button = [[ TABLE.button ]];
-          var bool press = [[ TABLE.press ]];
-
-          emit create_evt_player_mouse_clicked (device, obj, x, y,
-                                                 button, press);
-        end
+        await Handle_Incoming_Message(&client.stub.message);
       end
     with
       /* SCENE */
