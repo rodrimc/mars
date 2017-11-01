@@ -1,6 +1,55 @@
 #include "mars/mars-media.ceu"
 #include "mars/core/mars-client.ceu"
 
+native/pos do
+  int MIRROR_OK = 0;
+  char *ROLE_NAME = NULL;
+  int ROLE_INDEX = -1;
+
+	tceu_callback_ret evt_cb (int cmd,
+														tceu_callback_arg p1,
+														tceu_callback_arg p2,
+														const char* filename,
+														u32 line)
+	{
+    tceu_callback_ret ret = { .is_handled=0 };
+    if (MIRROR_OK == 1 && cmd == CEU_CALLBACK_STEP)
+    {
+      tceu_input_JOINED p = {ROLE_NAME, ROLE_INDEX};
+      ceu_input (CEU_INPUT_JOINED, &p);
+
+      MIRROR_OK = 0;
+      ret.is_handled = 1;
+    }
+    if (cmd == CEU_CALLBACK_STOP)
+    {
+      if (ROLE_NAME)
+        free (ROLE_NAME);
+    }
+    return ret;
+  }
+
+  void alloc_role_name (size_t size)
+  {
+    ROLE_NAME = malloc (size);
+  }
+
+  tceu_callback cb = { &evt_cb, NULL };
+end
+
+native/nohold
+  _cb,
+  _ceu_callback_register,
+  _alloc_role_name,
+  _MIRROR_OK,
+  _ROLE_NAME,
+  _ROLE_INDEX
+;
+
+_ceu_callback_register (&&_cb);
+
+input (_char&&, int) JOINED;
+
 /* internal */
 event (none) mirror_ok;
 
@@ -144,7 +193,7 @@ par/or do
       every (obj, x, y, button, press) in mars_player_mouse_clicked do
         [[
           luabuff = '{' ..
-                    'device=' .. tostring(@client.stub.id)  .. ',' ..
+                    'device=' .. tostring(@client.stub.id)   .. ',' ..
                     'object=' .. tostring(@obj)              .. ',' ..
                     'type='   .. tostring(@EVT_PLAYER_CLICK) .. ',' ..
                     'x='      .. tostring(@x)                .. ',' ..
@@ -160,7 +209,28 @@ par/or do
   end
 with
   await mirror_ok;
-  #include PROG
+  par/and do
+    #include PROG
+  with
+    var[] byte role_name = [] .. "";
+    var Exception.Lua? e;
+    catch e do
+      var ssize len = [[ CLIENT.role.name:len() ]];
+      _alloc_role_name(len + 1);
+
+      var ssize i;
+      loop i in [1->len] do
+        var byte c = [[ string.byte(CLIENT.role.name:sub(@i, @i)) ]];
+        _ROLE_NAME[i - 1] = c;
+      end
+      _ROLE_NAME [len] = {'\0'};
+      _ROLE_INDEX = [[ CLIENT.role.index ]];
+      _MIRROR_OK = 1;
+    end
+    if e? then
+      _fprintf (_stderr, "[JOINED error]: %s\n", e!.message);
+    end
+  end
 end
 
 escape 0;

@@ -26,6 +26,7 @@
 #define EVT_PLAYER_CLICK       2
 /* more? */
 
+#include "c.ceu"
 #include <r-util.ceu>
 
 native/pre do

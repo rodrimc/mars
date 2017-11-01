@@ -1,6 +1,18 @@
 #ifndef _CEU_MARS_CLIENT
 #define _CEU_MARS_CLIENT
 
+/* Client Lua global */
+[[
+  CLIENT =
+    {
+      role =
+      {
+        name = nil,
+        index = nil
+      }
+    }
+]]
+
 #include "mars-defs.ceu"
 
 /*** CLIENT API ***/
@@ -41,6 +53,12 @@ do
     if type == S_JOINED then
       stub.id = [[ TABLE.id ]];
       var uint peers = [[ TABLE.peers ]];
+
+      [[
+        CLIENT.role.name = TABLE.role or  ''
+        CLIENT.role.index = TABLE.index or  -1
+      ]]
+
       emit stub.joined (stub.id, peers);
 
     else/if type == S_NEW_PEER then

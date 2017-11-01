@@ -1,7 +1,66 @@
 #ifndef _CEU_MARS_SERVER
 #define _CEU_MARS_SERVER
 
+/* Server Lua global */
+[[
+  SERVER =
+    {
+      naming = nil
+    }
+]]
+
 #include "mars-defs.ceu"
+
+native/pos do
+	tceu_callback_ret evt_cb (int cmd,
+														tceu_callback_arg p1,
+														tceu_callback_arg p2,
+														const char* filename,
+														u32 line)
+	{
+    static int flag = 0;
+    tceu_callback_ret ret = { .is_handled=0 };
+    if (flag == 0 && cmd == CEU_CALLBACK_STEP)
+    {
+      if (CEU_APP.argc > 1)
+      {
+        char *str = strdup (CEU_APP.argv[1]);
+        ceu_input (CEU_INPUT_INIT, &str);
+        free (str);
+      }
+
+      flag = 1;
+      ret.is_handled = 1;
+    }
+    return ret;
+  }
+
+  tceu_callback cb = { &evt_cb, NULL };
+end
+
+native/nohold
+  _ceu_callback_register,
+  _cb,
+;
+
+_ceu_callback_register (&&_cb);
+
+input (_char&&) INIT;
+
+spawn do
+  var _char&& script = await INIT;
+  var Exception? e;
+  catch e do
+    _printf ("[server] init script: %s\n", script);
+    [[
+      dofile (@script)
+    ]]
+  end
+  if e? then
+    _fprintf (_stderr, "[INIT error:] %s\n", e!.message);
+  end
+end
+
 
 data UV_TCP_Server_Data with
   var bool isReading;
@@ -27,14 +86,18 @@ end
 
 code/await Send_Join_Reply (var uint handle_id,
                             var& UV_Stream stub,
-                            var uint id) -> none
+                            var uint id,
+                            var& []byte role,
+                            var int index) -> none
 do
   var Exception.Lua? e;
   catch e do
     [[
       luabuff = 'type='  .. tostring(@S_JOINED)          .. ',' ..
                 'id='    .. tostring(@id)                .. ',' ..
-                'peers=' .. tostring(@outer.peers_count)
+                'peers=' .. tostring(@outer.peers_count) .. ',' ..
+                'role="' .. tostring(@role)              .. '",' ..
+                'index=' .. tostring(@index)
     ]]
     var[] byte buff = [] .. [[ luabuff ]];
     await Send (handle_id, &stub, &buff);
@@ -158,6 +221,7 @@ do
   pool[] Send_Broadcast_Message pool_broadcast_message;
   pool[] Send_Tick_Message      pool_tick_message;
 
+  var[] byte role = [] .. "";
   par do
     var uint freq;
     every freq in outer.send_tick_message do
@@ -172,9 +236,22 @@ do
       catch e do
         [[ MESSAGE = load ('return {' .. @buff .. '}')() ]]
         var int type = [[ MESSAGE.type ]];
+        var int index = _;
 
         if (type == P_JOIN) then
-          spawn Send_Join_Reply (handle_id, &stream, handle_id)
+          [[
+            if SERVER.naming and type(SERVER.naming) == 'function' then
+              role, index = SERVER.naming (@handle_id)
+
+              role = role or ''
+              index = index or -1
+            end
+          ]]
+
+          role = [] .. [[ role ]];
+          index = [[ index ]];
+
+          spawn Send_Join_Reply (handle_id, &stream, handle_id, &role, index)
                                                       in pool_join_reply;
           emit outer.send_broadcast_join (handle_id);
           break;
