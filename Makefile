@@ -5,11 +5,11 @@ CEU_UV_DIR 		= $(error set CEU_UV_DIR to Céu-libuv directory)
 CEU_LIB_DIR		= $(error set CEU_LIB_DIR to Céu-r-util installation)
 
 #all target
-all: PROG 					= $(error set PROG to a CÉU program)
-all: PROG_SED 			= $(PROG://=\/)
+all: SRC 						= $(error set SRC to a CÉU program)
+all: SRC_SED 				= $(SRC://=\/)
 all: MODULES 				= play lua5.3 libuv
-all: SRC_NAME				= $(notdir $(PROG))
-all: override SYNC := include/sync/mirror.ceu
+all: SRC_NAME				= $(notdir $(SRC))
+all: MAESTRO 				= include/sync/maestro.ceu
 
 #server target
 server: MODULES = lua5.3 libuv
@@ -26,8 +26,8 @@ TEMP 				:= $(BUILD_PATH)/temp-$(shell date --iso=ns).ceu
 
 all:
 	mkdir -p $(BUILD_PATH)
-	cp $(SYNC) $(TEMP)
-	sed s:PROG:"\"$(PROG_SED)\"":g -i $(TEMP)
+	cp $(MAESTRO) $(TEMP)
+	sed s:SRC:"\"$(SRC_SED)\"":g -i $(TEMP)
 	ceu --pre --pre-args="-I$(CEU_DIR)/include -I$(CEU_MEDIA_DIR)/include	-I./ \
 						-I$(CEU_UV_DIR)/include -I$(CEU_LIB_DIR) -I./include"  	 				 \
 	          --pre-input=$(TEMP)																							 \

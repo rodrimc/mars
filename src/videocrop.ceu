@@ -5,13 +5,8 @@ var int height = 400;
 
 var _char&& name;
 (name, _) = await JOINED;
-
-var int len = _strlen (&&name[0]);
-var[len] byte role = [];
-var ssize i;
-loop i in [0->len[ do
-  role = role .. [name[i]];
-end
+var[] byte role = [] .. name;
+_printf ("%s\n", &&role[0]);
 
 var Media.Video m = val Media.Video (
                           [].."resources/clock.ogv",

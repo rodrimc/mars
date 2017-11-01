@@ -3,7 +3,7 @@
 
 #include "c.ceu"
 #include "media/raw.ceu"
-#include "mars/mars-media-aux.ceu"
+#include "mars/core/mars-events.ceu"
 
 /* SCENE */
 data IScene with
@@ -85,42 +85,8 @@ do
       await ref_.quit;
       emit scene_raw.scene.quit;
 
-    /* REMOTE EVENTS */
     with
-      /* KEY */
-      var uint device;
-      var uint id;
-      var _char_ptr_ext key;
-      var bool press;
-      pool [] Emit_Scene_Key_Event scene_key_event_pool;
-      every (device, id, key, press) in outer.remote_mars_scene_key do
-        spawn Emit_Scene_Key_Event (device, id, key, press)
-                                    in scene_key_event_pool;
-      end
-    with
-      /* MOUSE CLICKED */
-      var uint device = 0;
-      var uint id = 0;
-      var int x = 0;
-      var int y = 0;
-      var int button = 0;
-      var bool press = false;
-
-      par do
-        pool [] Emit_Scene_Mouse_Click_Event scene_mouse_click_event_pool;
-        every (device, id, x, y, button, press)
-                                     in outer.remote_mars_scene_mouse_clicked do
-          spawn Emit_Scene_Mouse_Click_Event (device, id, x, y, button, press)
-                                              in scene_mouse_click_event_pool;
-        end
-      with
-        pool [] Emit_Player_Mouse_Click_Event player_mouse_click_event_pool;
-        every (device, id, x, y, button, press)
-                                     in outer.remote_mars_player_mouse_clicked do
-          spawn Emit_Player_Mouse_Click_Event (device, id, x, y, button, press)
-                                              in player_mouse_click_event_pool;
-        end
-      end
+      await Input_Events_Manager ();
     end
   end
 end

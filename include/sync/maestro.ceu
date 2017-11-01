@@ -110,14 +110,14 @@ par/or do
           var[] byte key = [] .. [[ TABLE.key ]];
           var bool press = [[ TABLE.press ]];
 
-          emit remote_mars_scene_key (device, obj, &&key[0], press);
+          emit create_evt_scene_key (device, obj, &&key[0], press);
         else/if type == EVT_SCENE_CLICK then
           var int x = [[ TABLE.x ]];
           var int y = [[ TABLE.y ]];
           var int button = [[ TABLE.button ]];
           var bool press = [[ TABLE.press ]];
 
-          emit remote_mars_scene_mouse_clicked (device, obj, x, y,
+          emit create_evt_scene_mouse_clicked (device, obj, x, y,
                                                 button, press);
 
         else/if type == EVT_PLAYER_CLICK then
@@ -126,7 +126,7 @@ par/or do
           var int button = [[ TABLE.button ]];
           var bool press = [[ TABLE.press ]];
 
-          emit remote_mars_player_mouse_clicked (device, obj, x, y,
+          emit create_evt_player_mouse_clicked (device, obj, x, y,
                                                  button, press);
         end
       end
@@ -210,7 +210,7 @@ par/or do
 with
   await mirror_ok;
   par/and do
-    #include PROG
+    #include SRC 
   with
     var[] byte role_name = [] .. "";
     var Exception.Lua? e;
