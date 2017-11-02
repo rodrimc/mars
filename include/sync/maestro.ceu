@@ -12,20 +12,48 @@ native/pos do
 														const char* filename,
 														u32 line)
 	{
-    tceu_callback_ret ret = { .is_handled=0 };
-    if (MIRROR_OK == 1 && cmd == CEU_CALLBACK_STEP)
+    static int flag = 0;
+    tceu_callback_ret ret = { .is_handled = 1 };
+    switch (cmd)
     {
-      tceu_input_JOINED p = {ROLE_NAME, ROLE_INDEX};
-      ceu_input (CEU_INPUT_JOINED, &p);
+      case CEU_CALLBACK_STEP:
+      {
+        if (flag == 0)
+        {
+          char *str = NULL;
+          if (CEU_APP.argc > 1)
+            str = strdup (CEU_APP.argv[1]);
 
-      MIRROR_OK = 0;
-      ret.is_handled = 1;
+          ceu_input (CEU_INPUT_INIT, &str);
+
+          if (str)
+            free (str);
+
+          flag = 1;
+        }
+
+        if (MIRROR_OK == 1)
+        {
+          tceu_input_JOINED p = {ROLE_NAME, ROLE_INDEX};
+          ceu_input (CEU_INPUT_JOINED, &p);
+
+          MIRROR_OK = 0;
+        }
+        else
+          ret.is_handled = 0;
+
+        break;
+      }
+      case CEU_CALLBACK_STOP:
+      {
+        if (ROLE_NAME)
+          free (ROLE_NAME);
+        break;
+      }
+      default:
+        ret.is_handled = 0;
     }
-    if (cmd == CEU_CALLBACK_STOP)
-    {
-      if (ROLE_NAME)
-        free (ROLE_NAME);
-    }
+
     return ret;
   }
 
@@ -48,7 +76,25 @@ native/nohold
 
 _ceu_callback_register (&&_cb);
 
+input (_char&&) INIT;
 input (_char&&, int) JOINED;
+
+spawn do
+  var _char&& script = await INIT;
+  var Exception? e;
+  catch e do
+    _printf ("[client] init script: %s\n", script);
+    if not (script == null) then
+      [[
+        dofile (@script)
+        print (serialize(CLIENT.evts.mapping))
+      ]]
+    end
+  end
+  if e? then
+    _fprintf (_stderr, "[INIT error:] %s\n", e!.message);
+  end
+end
 
 /* internal */
 event (none) mirror_ok;
@@ -222,7 +268,7 @@ par/or do
 with
   await mirror_ok;
   par/and do
-    #include SRC 
+    #include SRC
   with
     var[] byte role_name = [] .. "";
     var Exception.Lua? e;
