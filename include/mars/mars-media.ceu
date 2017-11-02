@@ -36,9 +36,17 @@ do
       var int y;
       var int button;
       var bool press;
+      pool [] Emit_Scene_Mouse_Click_Event scene_clicked_event_pool;
       every (source, x, y, button, press) in CM_SCENE_RAW_MOUSE_CLICK do
         if _LP_SCENE(source) == &&scene_raw.scene.ref then
-          emit outer.mars_scene_mouse_clicked (ref_.self, x, y, button, press);
+          var bool to_forward = call Has_Mapping ("CM_SCENE_MOUSE_CLICK");
+          if to_forward then
+            emit outer.mars_scene_mouse_clicked (ref_.self, x, y, button, press);
+          else
+            spawn Emit_Scene_Mouse_Click_Event (outer.device_id, ref_.self,
+                                                 x, y, button, press)
+                                                in scene_clicked_event_pool;
+          end
         end
       end
     with
@@ -129,7 +137,7 @@ do
     var IPlayer ref_ = val IPlayer (&player_raw.player, &self);
     player = &ref_;
     par do
-      var _GObject&& source;
+      var _GObject&& source = _;
       pool [] Emit_Player_Start_Event player_start_event_pool;
       every (source) in CM_PLAYER_RAW_START do
         if _LP_MEDIA(source) == &&player_raw.player.ref then
@@ -161,9 +169,18 @@ do
       var int y;
       var int button;
       var bool press;
+      var bool to_forward = _;
+      pool [] Emit_Player_Mouse_Click_Event player_clicked_event_pool;
       every (source, x, y, button, press) in CM_PLAYER_RAW_MOUSE_CLICK do
         if _LP_MEDIA(source) == &&player_raw.player.ref then
-          emit outer.mars_player_mouse_clicked (ref_.self, x, y, button, press);
+          to_forward = call Has_Mapping ("CM_PLAYER_MOUSE_CLICK");
+          if to_forward then
+            emit outer.mars_player_mouse_clicked (ref_.self, x, y, button, press);
+          else
+            spawn Emit_Player_Mouse_Click_Event (outer.device_id, ref_.self,
+                                                 x, y, button, press)
+                                                in player_clicked_event_pool;
+          end
         end
       end
     end

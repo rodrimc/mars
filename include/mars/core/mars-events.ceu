@@ -183,3 +183,11 @@ do
     end
   end
 end
+
+code/tight Has_Mapping (var _char&& evt) -> bool
+do
+  var bool has_mapping = false;
+  has_mapping = [[ CLIENT.evts.has_mapping (@evt) ]];
+
+  escape has_mapping;
+end

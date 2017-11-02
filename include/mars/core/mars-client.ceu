@@ -9,6 +9,20 @@
       {
         name = nil,
         index = nil
+      },
+      evts =
+      {
+        mapping = nil,
+        has_mapping = function (evt)
+                        if type(CLIENT.evts.mapping) == 'table' then
+                          for k,v in pairs (CLIENT.evts.mapping) do
+                            if v[1] == evt then
+                              return true
+                            end
+                          end
+                        end
+                        return false
+                      end
       }
     }
 ]]
