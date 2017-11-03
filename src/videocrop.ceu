@@ -20,8 +20,7 @@ watching scene, CM_SCENE_KEY
 do
   var&? Play p = spawn Play (&scene.scene, &m);
   watching p do
-    var uint device_id = call Get_Device_Id();
-    await CM_PLAYER_START until (device_id == call Get_Event_Device_Id());
+    await CM_PLAYER_START;
 
     width = call Player_Get_Int (&p.player, "width");
 

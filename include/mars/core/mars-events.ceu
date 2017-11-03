@@ -10,20 +10,8 @@ event (uint, int, int, int, bool) mars_player_mouse_clicked;
 
 event (uint, uint, int, int, int, bool) create_evt_player_mouse_clicked;
 
-var uint device_id     = 0;
+var uint device_id  = 0;
 var uint evt_dev_id = 0;
-
-code/tight
-Get_Device_Id (none) -> uint
-do
-  escape outer.device_id;
-end
-
-code/tight
-Get_Event_Device_Id (none) -> uint
-do
-  escape outer.evt_dev_id;
-end
 
 /* SCENE INPUT EVENTS */
 input (uint, int, int, int, bool)   CM_SCENE_MOUSE_CLICK;

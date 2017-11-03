@@ -44,7 +44,7 @@ do
             emit outer.mars_scene_mouse_clicked (ref_.self, x, y, button, press);
           else
             spawn Emit_Scene_Mouse_Click_Event (outer.device_id, ref_.self,
-                                                 x, y, button, press)
+                                                x, y, button, press)
                                                 in scene_clicked_event_pool;
           end
         end
