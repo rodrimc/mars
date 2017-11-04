@@ -85,10 +85,7 @@ spawn do
   catch e do
     _printf ("[client] init script: %s\n", script);
     if not (script == null) then
-      [[
-        dofile (@script)
-        print (serialize(CLIENT.evts.mapping))
-      ]]
+      [[ dofile (@script) ]]
     end
   end
   if e? then
@@ -294,5 +291,7 @@ with
     end
   end
 end
+
+__COMPILED_EVTS__
 
 escape 0;

@@ -1,8 +1,5 @@
 #Dependencies
-CEU_DIR    		= $(error set CEU_DIR to Céu directory)
-CEU_MEDIA_DIR	= $(error set CEU_MEDIA_DIR to Céu-Media directory)
-CEU_UV_DIR 		= $(error set CEU_UV_DIR to Céu-libuv directory)
-CEU_LIB_DIR		= $(error set CEU_LIB_DIR to Céu-r-util installation)
+LUA						= lua5.3
 
 #all target
 all: SRC 						= $(error set SRC to a CÉU program)
@@ -10,6 +7,7 @@ all: SRC_SED 				= $(SRC://=\/)
 all: MODULES 				= play lua5.3 libuv
 all: SRC_NAME				= $(notdir $(SRC))
 all: MAESTRO 				= include/sync/maestro.ceu
+all: EVTS  					= include/mars/core/mars-compile-evts.lua
 
 #server target
 server: MODULES = lua5.3 libuv
@@ -28,6 +26,7 @@ all:
 	mkdir -p $(BUILD_PATH)
 	cp $(MAESTRO) $(TEMP)
 	sed s:SRC:"\"$(SRC_SED)\"":g -i $(TEMP)
+	$(LUA) $(EVTS) $(TEMP) $(SRC)
 	ceu --pre --pre-args="-I$(CEU_DIR)/include -I$(CEU_MEDIA_DIR)/include	-I./ \
 						-I$(CEU_UV_DIR)/include -I$(CEU_LIB_DIR) -I./include"  	 				 \
 	          --pre-input=$(TEMP)																							 \
@@ -40,8 +39,8 @@ all:
 	          --env-output=/tmp/x.c																						 \
 	    --cc --cc-args="$(CFLAGS)"																						 \
 	         --cc-output=build/$(BIN)
-	rm $(TEMP)
 	$(BUILD_PATH)/$(BIN) $(ARGS)
+	rm $(TEMP)
 
 server:
 	echo ${}
