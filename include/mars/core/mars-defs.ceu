@@ -21,9 +21,9 @@
 #define S_TICK                23
 
 /* event codes */
-#define EVT_KEY                0
-#define EVT_SCENE_CLICK        1
-#define EVT_PLAYER_CLICK       2
+#define EVT_KEY               "CM_SCENE_KEY\0"
+#define EVT_SCENE_CLICK       "CM_SCENE_CLICK\0"
+#define EVT_PLAYER_CLICK      "CM_PLAYER_CLICK\0"
 /* more? */
 
 #include "c.ceu"

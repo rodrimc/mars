@@ -132,7 +132,7 @@ do
   end
 end
 
-code/await Input_Events_Manager (none) -> none 
+code/await Input_Events_Manager (none) -> none
 do
   par do
     /* KEY */
@@ -178,4 +178,11 @@ do
   has_mapping = [[ CLIENT.evts.has_mapping (@evt) ]];
 
   escape has_mapping;
+end
+
+code/tight Get_Mapping (var _char&& evt, var& []byte mapping) -> none
+do
+  [[ map = CLIENT.evts.get_mapping (@evt) ]]
+
+  mapping = [] .. [[ map == nil and "" or map[3] ]];
 end

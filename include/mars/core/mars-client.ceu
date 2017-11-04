@@ -13,15 +13,23 @@
       evts =
       {
         mapping = nil,
-        has_mapping = function (evt)
+        get_mapping = function (evt)
                         if type(CLIENT.evts.mapping) == 'table' then
                           for k,v in pairs (CLIENT.evts.mapping) do
                             if v[1] == evt then
-                              return true
+                              return v
                             end
                           end
                         end
-                        return false
+                        return nil
+                      end,
+        has_mapping = function (evt)
+                        map = CLIENT.evts.get_mapping (evt)
+                        if map == nil or map[2] ~= CLIENT.role.name then
+                          return false 
+                        else
+                          return true
+                        end
                       end
       }
     }
@@ -39,6 +47,7 @@ do
     [[
       luabuff = 'type='      .. tostring(@P_REGULAR_SEND)    .. ',' ..
                 'from='      .. tostring(@stub.id)           .. ',' ..
+                'role="'     .. CLIENT.role.name             .. '",' ..
                 'payload='   .. tostring(@buffer)            .. ',' ..
                 'timestamp=' .. tostring(@ts)
     ]]

@@ -106,14 +106,19 @@ do
     [[ TABLE = load (@message)() ]]
     var uint device = [[ TABLE.device ]];
     var uint obj = [[ TABLE.object ]];
-    var int type = [[ TABLE.type ]];
+    var[] byte type = [] .. [[ TABLE.type ]];
 
-    if type == EVT_KEY then
+    var[] byte mapping = _;
+
+    call Get_Mapping (&&type[0], &mapping);
+    _printf ("mapping: %s\n", &&mapping[0]);
+
+    if _strcmp (&&type[0], EVT_KEY) == 0 then
       var[] byte key = [] .. [[ TABLE.key ]];
       var bool press = [[ TABLE.press ]];
 
       emit outer.create_evt_scene_key (device, obj, &&key[0], press);
-    else/if type == EVT_SCENE_CLICK then
+    else/if _strcmp (&&type[0], EVT_SCENE_CLICK) == 0 then
       var int x = [[ TABLE.x ]];
       var int y = [[ TABLE.y ]];
       var int button = [[ TABLE.button ]];
@@ -121,8 +126,7 @@ do
 
       emit outer.create_evt_scene_mouse_clicked (device, obj, x, y,
                                                   button, press);
-
-    else/if type == EVT_PLAYER_CLICK then
+    else/if _strcmp(&&type[0], EVT_PLAYER_CLICK) == 0 then
       var int x = [[ TABLE.x ]];
       var int y = [[ TABLE.y ]];
       var int button = [[ TABLE.button ]];
@@ -145,7 +149,7 @@ par/or do
   catch e do
     [[
       CONFIG = {}
-      min_peers = 2
+      min_peers = 1
       chunk = loadfile ('config.lua')
       if chunk then
         CONFIG = chunk ()
@@ -204,7 +208,7 @@ par/or do
           luabuff = '{' ..
                     'device=' .. tostring(@client.stub.id)   .. ',' ..
                     'object=' .. tostring(@obj)              .. ',' ..
-                    'type='   .. tostring(@EVT_KEY)          .. ',' ..
+                    'type="'  .. EVT_KEY                     .. '",' ..
                     "key='"   .. tostring(@key_buff)         .. "'," ..
                     'press='  .. tostring(@press)            ..
                     '}'
@@ -227,7 +231,7 @@ par/or do
           luabuff = '{' ..
                     'device=' .. tostring(@client.stub.id)   .. ',' ..
                     'object=' .. tostring(@obj)              .. ',' ..
-                    'type='   .. tostring(@EVT_SCENE_CLICK)  .. ',' ..
+                    'type="'  .. EVT_SCENE_CLICK             .. '",' ..
                     'x='      .. tostring(@x)                .. ',' ..
                     'y='      .. tostring(@y)                .. ',' ..
                     'button=' .. tostring(@button)           .. ',' ..
@@ -253,7 +257,7 @@ par/or do
           luabuff = '{' ..
                     'device=' .. tostring(@client.stub.id)   .. ',' ..
                     'object=' .. tostring(@obj)              .. ',' ..
-                    'type='   .. tostring(@EVT_PLAYER_CLICK) .. ',' ..
+                    'type="   .. EVT_PLAYER_CLICK            .. '",' ..
                     'x='      .. tostring(@x)                .. ',' ..
                     'y='      .. tostring(@y)                .. ',' ..
                     'button=' .. tostring(@button)           .. ',' ..

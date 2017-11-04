@@ -1,7 +1,9 @@
-return {
+setup = {
   MIN_PEERS = 2,
   ROUTE = {
- -- { EVT_ORIG, FROM, EVT_DEST, TO }
-    {"EVT_A", nil, "EVT_B", nil},
-  } 
+    {"CM_PLAYER_MOUSE_CLICK", 0, "A"},
+    {"CM_SCENE_MOUSE_CLICK", 0, "A"}
+  }
 }
+
+CLIENT.evts.mapping = setup.ROUTE

@@ -1,0 +1,45 @@
+#include "mars/mars-media.ceu"
+
+var int width = 640;
+var int height = 480;
+
+var _char&& name;
+(name, _) = await JOINED;
+var[] byte role = [] .. name;
+
+var Media.Video class = val Media.Video (
+                          [].."resources/bunny.ogg",
+                          Region(0, 0, 0, 0, 1),
+                          1.0,
+                          1.0
+                        );
+
+input (none) CONTROL_REQUEST;
+
+code/await Handle_Student_Request (none) -> none
+do
+  _printf ("A student has requested the control of the class");
+end
+
+var&? Scene scene = spawn Scene (Size (width, height));
+watching scene
+do
+  var&? Play p = spawn Play (&scene.scene, &class);
+  watching p
+  do
+    if _strcmp (&&role[0], "TEACHER") == 0 then
+      _printf ("I'm the teacher\n");
+
+      pool[] Handle_Student_Request request_pool;
+      every CONTROL_REQUEST do 
+        spawn Handle_Student_Request () in request_pool;
+      end
+    else
+      _printf ("I'm a student\n");
+    end
+    await FOREVER;
+  end
+end
+
+escape 0;
+

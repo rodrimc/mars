@@ -53,9 +53,16 @@ do
       var _GObject&& source;
       var _char_ptr_ext key;
       var bool press;
+      pool [] Emit_Scene_Key_Event scene_key_event_pool;
       every (source, key, press) in CM_SCENE_RAW_KEY do
         if _LP_SCENE(source) == &&scene_raw.scene.ref then
-          emit outer.mars_scene_key (ref_.self, key, press);
+          var bool to_forward = call Has_Mapping ("CM_SCENE_KEY");
+          if to_forward then
+            emit outer.mars_scene_key (ref_.self, key, press);
+          else
+            spawn Emit_Scene_Key_Event (outer.device_id, ref_.self, key, press)
+                                        in scene_key_event_pool;
+          end
         end
       end
     with
