@@ -175,14 +175,14 @@ end
 code/tight Has_Mapping (var _char&& evt) -> bool
 do
   var bool has_mapping = false;
-  has_mapping = [[ CLIENT.evts.has_mapping (@evt) ]];
+  has_mapping = [[ has_mapping (@evt) ]];
 
   escape has_mapping;
 end
 
 code/tight Get_Mapping (var _char&& evt, var& []byte mapping) -> none
 do
-  [[ map = CLIENT.evts.get_mapping (@evt) ]]
+  [[ map = get_mapping (@evt) ]]
 
   mapping = [] .. [[ map == nil and "" or map[3] ]];
 end
