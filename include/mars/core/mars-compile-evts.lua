@@ -77,6 +77,6 @@ end
 
 maestro_src = maestro_src:gsub ('__COMPILED_EVTS__', TO_GEN)
 
-f = io.ocode_namepen (arg[1], 'w')
+f = io.open (arg[1], 'w')
   f:write (maestro_src)
 f:close()
