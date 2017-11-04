@@ -20,13 +20,13 @@ native/pos do
       {
         if (flag == 0)
         {
-          char *str = NULL;
+          char *str = "";
           if (CEU_APP.argc > 1)
             str = strdup (CEU_APP.argv[1]);
 
           ceu_input (CEU_INPUT_INIT, &str);
 
-          if (str)
+          if (CEU_APP.argc > 1)
             free (str);
 
           flag = 1;
