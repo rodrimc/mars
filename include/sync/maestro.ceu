@@ -144,16 +144,19 @@ par/or do
     with
       pool[] Handle_Mapping mapping_pool;
       var[] byte type = _;
+      var[] byte mapping = _;
       every client.stub.incoming_message do
+        [[ print ('[APP(' .. tostring(@client.stub.id) .. ')] Message: ' ..
+                                  @client.stub.message) ]]
         _log ("[APP(%u)] Message: %s\n", client.stub.id, &&client.stub.message[0]);
 
         [[ TABLE = load (@client.stub.message)() ]]
         var uint device = [[ TABLE.device ]];
         var uint obj = [[ TABLE.object ]];
+
         type = [] .. [[ TABLE.type ]];
 
-        if call Has_Mapping (&&type[0]) then
-          var[] byte mapping = _;
+        if call Has_Mapping (&&type[0], &evt_dev_role, false) then
           call Get_Mapping (&&type[0], &mapping);
           mapping = mapping .. [{'\0'}];
           spawn Handle_Mapping (&&mapping[0]) in mapping_pool;

@@ -15,26 +15,6 @@
         mapping = nil
       }
     }
-
-  function get_mapping (evt)
-    if type(CLIENT.evts.mapping) == 'table' then
-      for k,v in pairs (CLIENT.evts.mapping) do
-        if v[1] == evt then
-          return v
-        end
-      end
-    end
-    return nil
-  end
-
-  function has_mapping (evt)
-    map = get_mapping (evt)
-    if map == nil or map[2] ~= CLIENT.role.name then
-      return false
-    else
-      return true
-    end
-  end
 ]]
 
 #include "mars-defs.ceu"
@@ -70,9 +50,7 @@ do
     var int type = _;
 
     /* parse message */
-    [[
-      TABLE =  load ('return{' .. @stub.rbuffer .. '}')()
-    ]]
+    [[ TABLE =  load ('return{' .. @stub.rbuffer .. '}')() ]]
     type = [[ TABLE.type ]];
 
     if type == S_JOINED then
@@ -92,13 +70,14 @@ do
 
       emit stub.new_peer (new_peer, peers);
     else/if type == S_BROADCAST then
-      [[
-        payload = 'return' .. serialize(TABLE.payload)
-      ]]
+      [[ payload = 'return' .. serialize(TABLE.payload) ]]
 
+      outer.evt_dev_role = [] .. [[ TABLE.role or '' ]];
       stub.message= [] .. [[ payload ]];
 
       emit stub.incoming_message;
+
+      outer.evt_dev_role = _;
       $stub.message = 0;
     else/if type == S_TICK then
       var uint tick = [[ TABLE.freq ]];

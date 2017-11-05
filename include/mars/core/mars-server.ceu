@@ -73,6 +73,7 @@ event (uint) send_broadcast_message;
 event (uint) send_tick_message;
 
 var []byte cur_payload;
+var []byte cur_role;
 
 var uint id_ref = 1;
 var usize peers_count = 0;
@@ -131,6 +132,7 @@ end
 code/await Send_Broadcast_Message (var uint handle_id,
                                    var& UV_Stream stream,
                                    var uint from,
+                                   var& []byte role,
                                    var& []byte payload) -> none
 do
   var Exception.Lua? e;
@@ -140,6 +142,7 @@ do
       luabuff = 'type='      .. tostring(@S_BROADCAST)       .. ',' ..
                 'from='      .. tostring(@from)              .. ',' ..
                 'payload='   .. tostring(@payload)           .. ',' ..
+                'role="'     .. tostring(@role)              .. '",' ..
                 'peers='     .. tostring(@outer.peers_count) .. ',' ..
                 '' -- 'timestamp=' .. tostring(@ts)
     ]]
@@ -194,6 +197,7 @@ do
       if  type == P_REGULAR_SEND then
         var int from = [[ TABLE.from ]];
         var [] byte payload = [] .. [[ serialize(TABLE.payload) ]];
+        outer.cur_role = [] .. [[ TABLE.role ]];
 
         outer.cur_payload = [] .. payload;
         emit outer.send_broadcast_message (from);
@@ -270,8 +274,8 @@ do
   with
     var uint from;
     every from in outer.send_broadcast_message do
-      spawn Send_Broadcast_Message (handle_id, &stream, from, &outer.cur_payload)
-                                                      in pool_broadcast_message;
+      spawn Send_Broadcast_Message (handle_id, &stream, from, &outer.cur_role,
+                                &outer.cur_payload) in pool_broadcast_message;
     end
   end
 end

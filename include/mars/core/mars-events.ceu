@@ -1,3 +1,32 @@
+var uint device_id  = 0;
+var uint evt_dev_id = 0;
+var[] byte evt_dev_role = _;
+
+[[
+  function get_mapping (evt)
+    if type(CLIENT.evts.mapping) == 'table' then
+      for k,v in pairs (CLIENT.evts.mapping) do
+        if v[1] == evt then
+          return v
+        end
+      end
+    end
+    return nil
+  end
+
+  function has_mapping (evt, role, is_local)
+    map = get_mapping (evt)
+
+    if map == nil then
+      return false
+    elseif is_local then
+      return map[2] == role
+    else
+      return map[2] == role and map[3] == CLIENT.role.name
+    end
+  end
+]]
+
 /* Scene */
 event (uint, int, int, int, bool) mars_scene_mouse_clicked;
 event (uint, _char_ptr_ext, bool) mars_scene_key;
@@ -9,9 +38,6 @@ event (uint, uint, int, int, int, bool) create_evt_scene_mouse_clicked;
 event (uint, int, int, int, bool) mars_player_mouse_clicked;
 
 event (uint, uint, int, int, int, bool) create_evt_player_mouse_clicked;
-
-var uint device_id  = 0;
-var uint evt_dev_id = 0;
 
 /* SCENE INPUT EVENTS */
 input (uint, int, int, int, bool)   CM_SCENE_MOUSE_CLICK;
@@ -172,17 +198,26 @@ do
   end
 end
 
-code/tight Has_Mapping (var _char&& evt) -> bool
+code/tight Has_Mapping (var _char&& evt,
+                        var& []byte role,
+                        var bool is_local) -> bool
 do
   var bool has_mapping = false;
-  has_mapping = [[ has_mapping (@evt) ]];
+  has_mapping = [[ has_mapping (@evt, @role, @is_local) ]];
 
   escape has_mapping;
 end
 
 code/tight Get_Mapping (var _char&& evt, var& []byte mapping) -> none
 do
-  [[ map = get_mapping (@evt) ]]
+  [[
+    map = get_mapping (@evt)
+    if map ~= nil and map[3] == CLIENT.role.name then
+      map = map[4]
+    else
+      map = ''
+    end
+  ]]
 
-  mapping = [] .. [[ map == nil and "" or map[3] ]];
+  mapping = [] .. [[ map ]];
 end

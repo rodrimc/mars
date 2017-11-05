@@ -30,78 +30,91 @@ do
 
     var IScene ref_ = val IScene (&scene_raw.scene, &self, _);
     scene = &ref_;
-    par do
-      var _GObject&& source;
-      var int x;
-      var int y;
-      var int button;
-      var bool press;
-      pool [] Emit_Scene_Mouse_Click_Event scene_clicked_event_pool;
-      every (source, x, y, button, press) in CM_SCENE_RAW_MOUSE_CLICK do
-        if _LP_SCENE(source) == &&scene_raw.scene.ref then
-          var bool to_forward = call Has_Mapping ("CM_SCENE_MOUSE_CLICK");
-          if to_forward then
-            emit outer.mars_scene_mouse_clicked (ref_.self, x, y, button, press);
-          else
-            spawn Emit_Scene_Mouse_Click_Event (outer.device_id, ref_.self,
-                                                x, y, button, press)
-                                                in scene_clicked_event_pool;
-          end
-        end
-      end
-    with
-      var _GObject&& source;
-      var _char_ptr_ext key;
-      var bool press;
-      pool [] Emit_Scene_Key_Event scene_key_event_pool;
-      every (source, key, press) in CM_SCENE_RAW_KEY do
-        if _LP_SCENE(source) == &&scene_raw.scene.ref then
-          var bool to_forward = call Has_Mapping ("CM_SCENE_KEY");
-          if to_forward then
-            emit outer.mars_scene_key (ref_.self, key, press);
-          else
-            spawn Emit_Scene_Key_Event (outer.device_id, ref_.self, key, press)
-                                        in scene_key_event_pool;
-          end
-        end
-      end
-    with
-      var _GObject&& source;
-      var int x;
-      var int y;
-      pool [] Emit_Scene_Mouse_Move_Event scene_mouse_move_event_pool;
-      every (source, x, y) in CM_SCENE_RAW_MOUSE_MOVE do
-        if _LP_SCENE(source) == &&scene_raw.scene.ref then
-          spawn Emit_Scene_Mouse_Move_Event (outer.device_id, ref_.self, x, y)
-                                             in scene_mouse_move_event_pool;
-        end
-      end
-    with
-      var _GObject&& source;
-      var u64 tick;
-      pool [] Emit_Scene_Tick_Event scene_tick_event_pool;
-      every (source, tick) in CM_SCENE_RAW_TICK do
-        if _LP_SCENE(source) == &&scene_raw.scene.ref then
-          spawn Emit_Scene_Tick_Event (outer.device_id, ref_.self, tick)
-                                       in scene_tick_event_pool;
-        end
-      end
-    with
-      var _GObject&& source;
-      var _char_ptr_ext error;
-      pool [] Emit_Scene_Error_Event scene_error_event_pool;
-      every (source, error) in CM_SCENE_RAW_ERROR do
-        if _LP_SCENE(source) == &&scene_raw.scene.ref then
-          spawn Emit_Scene_Error_Event (outer.device_id, error)
-                                        in scene_error_event_pool;
-        end
-      end
-    with
-      await ref_.quit;
-      emit scene_raw.scene.quit;
 
-    with
-      await Input_Events_Manager ();
+    var[] byte my_role = _;
+
+    var Exception.Lua? e;
+    catch e do
+      par do
+        var _GObject&& source;
+        var int x;
+        var int y;
+        var int button;
+        var bool press;
+        pool [] Emit_Scene_Mouse_Click_Event scene_clicked_event_pool;
+        every (source, x, y, button, press) in CM_SCENE_RAW_MOUSE_CLICK do
+          if _LP_SCENE(source) == &&scene_raw.scene.ref then
+            my_role = [] .. [[ CLIENT.role.name ]];
+            var bool to_forward = call Has_Mapping ("CM_SCENE_MOUSE_CLICK",
+                                                    &my_role, true);
+            if to_forward then
+              emit outer.mars_scene_mouse_clicked (ref_.self, x, y, button, press);
+            else
+              spawn Emit_Scene_Mouse_Click_Event (outer.device_id, ref_.self,
+                                                  x, y, button, press)
+                                                  in scene_clicked_event_pool;
+            end
+          end
+        end
+      with
+        var _GObject&& source;
+        var _char_ptr_ext key;
+        var bool press;
+        pool [] Emit_Scene_Key_Event scene_key_event_pool;
+        every (source, key, press) in CM_SCENE_RAW_KEY do
+          if _LP_SCENE(source) == &&scene_raw.scene.ref then
+            my_role = [] .. [[ CLIENT.role.name ]];
+            var bool to_forward = call Has_Mapping ("CM_SCENE_KEY", &my_role,
+                                                    true);
+            if to_forward then
+              emit outer.mars_scene_key (ref_.self, key, press);
+            else
+              spawn Emit_Scene_Key_Event (outer.device_id, ref_.self, key, press)
+                                          in scene_key_event_pool;
+            end
+          end
+        end
+      with
+        var _GObject&& source;
+        var int x;
+        var int y;
+        pool [] Emit_Scene_Mouse_Move_Event scene_mouse_move_event_pool;
+        every (source, x, y) in CM_SCENE_RAW_MOUSE_MOVE do
+          if _LP_SCENE(source) == &&scene_raw.scene.ref then
+            spawn Emit_Scene_Mouse_Move_Event (outer.device_id, ref_.self, x, y)
+                                               in scene_mouse_move_event_pool;
+          end
+        end
+      with
+        var _GObject&& source;
+        var u64 tick;
+        pool [] Emit_Scene_Tick_Event scene_tick_event_pool;
+        every (source, tick) in CM_SCENE_RAW_TICK do
+          if _LP_SCENE(source) == &&scene_raw.scene.ref then
+            spawn Emit_Scene_Tick_Event (outer.device_id, ref_.self, tick)
+                                         in scene_tick_event_pool;
+          end
+        end
+      with
+        var _GObject&& source;
+        var _char_ptr_ext error;
+        pool [] Emit_Scene_Error_Event scene_error_event_pool;
+        every (source, error) in CM_SCENE_RAW_ERROR do
+          if _LP_SCENE(source) == &&scene_raw.scene.ref then
+            spawn Emit_Scene_Error_Event (outer.device_id, error)
+                                          in scene_error_event_pool;
+          end
+        end
+      with
+        await ref_.quit;
+        emit scene_raw.scene.quit;
+
+      with
+        await Input_Events_Manager ();
+      end
+    end
+    if e? then
+      _fprintf (_stderr, "[Scene error]: %s\n", e!.message);
     end
   end
 end
@@ -143,53 +156,63 @@ do
 
     var IPlayer ref_ = val IPlayer (&player_raw.player, &self);
     player = &ref_;
-    par do
-      var _GObject&& source = _;
-      pool [] Emit_Player_Start_Event player_start_event_pool;
-      every (source) in CM_PLAYER_RAW_START do
-        if _LP_MEDIA(source) == &&player_raw.player.ref then
-          spawn Emit_Player_Start_Event (outer.device_id, ref_.self)
-                                         in player_start_event_pool;
+
+    var[] byte my_role = _;
+    var Exception.Lua? e;
+    catch e do
+      par do
+        var _GObject&& source = _;
+        pool [] Emit_Player_Start_Event player_start_event_pool;
+
+        every (source) in CM_PLAYER_RAW_START do
+          if _LP_MEDIA(source) == &&player_raw.player.ref then
+            spawn Emit_Player_Start_Event (outer.device_id, ref_.self)
+                                           in player_start_event_pool;
+          end
         end
-      end
-    with
-      var _GObject&& source;
-      pool [] Emit_Player_Sought_Event player_sought_event_pool;
-      every (source) in CM_PLAYER_RAW_SOUGHT do
-        if _LP_MEDIA(source) == &&player_raw.player.ref then
-          spawn Emit_Player_Sought_Event (outer.device_id, ref_.self)
-                                         in player_sought_event_pool;
+      with
+        var _GObject&& source;
+        pool [] Emit_Player_Sought_Event player_sought_event_pool;
+        every (source) in CM_PLAYER_RAW_SOUGHT do
+          if _LP_MEDIA(source) == &&player_raw.player.ref then
+            spawn Emit_Player_Sought_Event (outer.device_id, ref_.self)
+                                           in player_sought_event_pool;
+          end
         end
-      end
-    with
-      var _GObject&& source;
-      pool [] Emit_Player_Stop_Event player_stop_event_pool;
-      every (source) in CM_PLAYER_RAW_STOP do
-        if _LP_MEDIA(source) == &&player_raw.player.ref then
-          spawn Emit_Player_Stop_Event (outer.device_id, ref_.self)
-                                         in player_stop_event_pool;
+      with
+        var _GObject&& source;
+        pool [] Emit_Player_Stop_Event player_stop_event_pool;
+        every (source) in CM_PLAYER_RAW_STOP do
+          if _LP_MEDIA(source) == &&player_raw.player.ref then
+            spawn Emit_Player_Stop_Event (outer.device_id, ref_.self)
+                                           in player_stop_event_pool;
+          end
         end
-      end
-    with
-      var _GObject&& source;
-      var int x;
-      var int y;
-      var int button;
-      var bool press;
-      var bool to_forward = _;
-      pool [] Emit_Player_Mouse_Click_Event player_clicked_event_pool;
-      every (source, x, y, button, press) in CM_PLAYER_RAW_MOUSE_CLICK do
-        if _LP_MEDIA(source) == &&player_raw.player.ref then
-          to_forward = call Has_Mapping ("CM_PLAYER_MOUSE_CLICK");
-          if to_forward then
-            emit outer.mars_player_mouse_clicked (ref_.self, x, y, button, press);
-          else
-            spawn Emit_Player_Mouse_Click_Event (outer.device_id, ref_.self,
-                                                 x, y, button, press)
-                                                in player_clicked_event_pool;
+      with
+        var _GObject&& source;
+        var int x;
+        var int y;
+        var int button;
+        var bool press;
+        pool [] Emit_Player_Mouse_Click_Event player_clicked_event_pool;
+        every (source, x, y, button, press) in CM_PLAYER_RAW_MOUSE_CLICK do
+          if _LP_MEDIA(source) == &&player_raw.player.ref then
+            my_role = [] .. [[ CLIENT.role.name ]];
+            var bool to_forward = call Has_Mapping ("CM_PLAYER_MOUSE_CLICK",
+                                                    &my_role, true);
+            if to_forward then
+              emit outer.mars_player_mouse_clicked (ref_.self, x, y, button, press);
+            else
+              spawn Emit_Player_Mouse_Click_Event (outer.device_id, ref_.self,
+                                                   x, y, button, press)
+                                                  in player_clicked_event_pool;
+            end
           end
         end
       end
+    end
+    if e? then
+      _fprintf (_stderr, "[Play error]: %s\n", e!.message);
     end
   end
 end
