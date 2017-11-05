@@ -143,15 +143,14 @@ par/or do
       end
     with
       pool[] Handle_Mapping mapping_pool;
-      loop do
-        await client.stub.incoming_message;
+      var[] byte type = _;
+      every client.stub.incoming_message do
         _log ("[APP(%u)] Message: %s\n", client.stub.id, &&client.stub.message[0]);
 
         [[ TABLE = load (@client.stub.message)() ]]
         var uint device = [[ TABLE.device ]];
         var uint obj = [[ TABLE.object ]];
-        var[] byte type = [] .. [[ TABLE.type ]];
-
+        type = [] .. [[ TABLE.type ]];
 
         if call Has_Mapping (&&type[0]) then
           var[] byte mapping = _;
