@@ -22,8 +22,8 @@
 
 /* event codes */
 #define EVT_KEY               "CM_SCENE_KEY\0"
-#define EVT_SCENE_CLICK       "CM_SCENE_CLICK\0"
-#define EVT_PLAYER_CLICK      "CM_PLAYER_CLICK\0"
+#define EVT_SCENE_CLICK       "CM_SCENE_MOUSE_CLICK\0"
+#define EVT_PLAYER_CLICK      "CM_PLAYER_MOUSE_CLICK\0"
 /* more? */
 
 #include "c.ceu"
