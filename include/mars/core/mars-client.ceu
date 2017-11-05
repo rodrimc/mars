@@ -10,9 +10,11 @@
         name = nil,
         index = nil
       },
-      evts =
+      mapping =
       {
-        mapping = nil
+        events = nil,
+        args = {},
+        apply = nil,
       }
     }
 ]]

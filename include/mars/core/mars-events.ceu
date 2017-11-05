@@ -4,8 +4,8 @@ var[] byte evt_dev_role = _;
 
 [[
   function get_mapping (evt)
-    if type(CLIENT.evts.mapping) == 'table' then
-      for k,v in pairs (CLIENT.evts.mapping) do
+    if type(CLIENT.mapping.events) == 'table' then
+      for k,v in pairs (CLIENT.mapping.events) do
         if v[1] == evt then
           return v
         end
@@ -23,6 +23,18 @@ var[] byte evt_dev_role = _;
       return map[2] == role
     else
       return map[2] == role and map[3] == CLIENT.role.name
+    end
+  end
+
+  function apply_mapping (evt)
+    local args = {}
+    for k, v in pairs (TABLE) do
+      args[k] = v
+    end
+
+    CLIENT.mapping.args = {}
+    if type (CLIENT.mapping.apply) == 'function' then
+      CLIENT.mapping.apply (evt, args)
     end
   end
 ]]

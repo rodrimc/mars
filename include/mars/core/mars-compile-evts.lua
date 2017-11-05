@@ -83,10 +83,16 @@ for i=1, #inputs_evt do
   TO_GEN = TO_GEN .. code .. '\n'
 end
 
-CODE_TEMPLATE = '\n'                                          ..
-  'code/await Handle_Mapping (var _char&& mapping) -> none\n' ..
-  'do\n'                                                      ..
-  '{#1}\n'                                                    ..
+CODE_TEMPLATE = '\n'                                                 ..
+  'code/await Handle_Mapping (var _char&& mapping) -> none\n'        ..
+  'do\n'                                                             ..
+  '\tvar Exception.Lua? e;\n'                                        ..
+  '\tcatch e do\n'                                                   ..
+  '\t{#1}\n'                                                         ..
+  '\tend\n'                                                          ..
+  '\tif e? then\n'                                                   ..
+  '\t\t_fprintf (_stderr, "[Mapping error:] %%s\\n", e!.message);\n' ..
+  '\tend\n'                                                          ..
   'end'
 
 code = ''
@@ -105,16 +111,30 @@ for i = 1, #inputs_evt do
 
   local body = ''
   local params = ''
+  local attrs = ''
+  local mapping_args = ''
+  local ident = '\t\t\t'
   for j = 1, #input.args do
-    body = body .. '\t\tvar ' .. input.args[j] .. ' arg' .. j .. ' = _;\n'
-    params = params .. 'arg' .. j .. ', '
+    local varname = 'arg' .. j
+    local vardecl = 'var ' .. input.args[j] .. ' ' .. varname
+    body = body .. ident .. vardecl .. ' = _;\n'
+    params = params .. varname .. ', '
+    mapping_args = mapping_args .. '@' .. varname .. ', '
+
+    attrs = attrs .. ident .. varname .. ' = [[ CLIENT.mapping.args[' .. j .. '] or @' .. varname .. ' ]];\n'
   end
+
   params = params:sub (1, -3)
-  body = body .. '\t\t' .. 'await ' .. input.emitter .. '(' .. params .. ');\n'
+  mapping_args = mapping_args:sub (1, -3)
+
+  body = body .. ident .. '[[ apply_mapping ("' .. input.evt ..'", ' .. mapping_args .. ') ]]\n'
+  body = body .. attrs
+
+  body = body .. '\t\t\t' .. 'await ' .. input.emitter .. '(' .. params .. ');\n'
   code = code .. body
 end
 
-code = code .. '\tend'
+code = code .. '\t\tend'
 
 TO_GEN = TO_GEN .. CODE_TEMPLATE:gsub('{#1}', code) .. '\n'
 
