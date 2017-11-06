@@ -5,7 +5,8 @@
 [[
   SERVER =
     {
-      naming = nil
+      naming = nil,
+      roles = {}
     }
 ]]
 
@@ -245,10 +246,16 @@ do
         if (type == P_JOIN) then
           [[
             if SERVER.naming and type(SERVER.naming) == 'function' then
-              role, index = SERVER.naming (@handle_id)
-
+              role = SERVER.naming (@handle_id)
               role = role or ''
-              index = index or -1
+
+              if SERVER.roles[role] == nil then
+                SERVER.roles[role] = 1
+              else
+                SERVER.roles[role] = SERVER.roles[role] + 1
+              end
+
+              index = SERVER.roles[role]
             end
           ]]
 
