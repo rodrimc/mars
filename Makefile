@@ -7,7 +7,7 @@ all: SRC_SED 				= $(SRC://=\/)
 all: MODULES 				= play lua5.3 libuv
 all: SRC_NAME				= $(notdir $(SRC))
 all: MAESTRO 				= include/sync/maestro.ceu
-all: EVTS  					= include/mars/core/mars-compile-evts.lua
+all: EVTS  					= include/mars/util/mars-compile-evts.lua
 
 #server target
 server: MODULES = lua5.3 libuv

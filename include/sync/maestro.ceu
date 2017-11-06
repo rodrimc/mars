@@ -1,5 +1,5 @@
-#include "mars/mars-media.ceu"
-#include "mars/core/mars-client.ceu"
+#include "mars/util/mars-media.ceu"
+#include "mars/client/mars-client.ceu"
 
 native/pos do
   int MIRROR_OK = 0;

@@ -19,7 +19,7 @@
     }
 ]]
 
-#include "mars-defs.ceu"
+#include "mars/util/mars-defs.ceu"
 
 /*** CLIENT API ***/
 

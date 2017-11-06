@@ -3,7 +3,7 @@
 
 #include "c.ceu"
 #include "media/raw.ceu"
-#include "mars/core/mars-events.ceu"
+#include "mars/client/mars-events.ceu"
 
 /* SCENE */
 data IScene with

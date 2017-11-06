@@ -1,4 +1,4 @@
-#include "mars/mars-media.ceu"
+#include "mars/util/mars-media.ceu"
 
 var int width = 640;
 var int height = 480;
@@ -14,11 +14,11 @@ var Media.Video class = val Media.Video (
                           1.0
                         );
 
-input (none) CONTROL_REQUEST;
+input (int) CONTROL_REQUEST;
 
-code/await Handle_Student_Request (none) -> none
+code/await Handle_Student_Request (var int arg) -> none
 do
-  _printf ("A student has requested the control of the class");
+  _printf ("Control_Request: %d\n", arg);
 end
 
 var&? Scene scene = spawn Scene (Size (width, height));
@@ -31,8 +31,9 @@ do
       _printf ("I'm the teacher\n");
 
       pool[] Handle_Student_Request request_pool;
-      every CONTROL_REQUEST do 
-        spawn Handle_Student_Request () in request_pool;
+      var int arg;
+      every arg in CONTROL_REQUEST do 
+        spawn Handle_Student_Request (arg) in request_pool;
       end
     else
       _printf ("I'm a student\n");

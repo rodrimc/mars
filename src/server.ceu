@@ -1,4 +1,4 @@
-#include "mars/core/mars-server.ceu"
+#include "mars/server/mars-server.ceu"
 
 _printf ("[server] Starting server...\n");
 par do

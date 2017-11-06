@@ -10,7 +10,7 @@
     }
 ]]
 
-#include "mars-defs.ceu"
+#include "mars/util/mars-defs.ceu"
 
 native/pos do
 	tceu_callback_ret evt_cb (int cmd,

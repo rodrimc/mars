@@ -1,4 +1,4 @@
-#include "mars/mars-media.ceu"
+#include "mars/util/mars-media.ceu"
 
 var int width = 300;
 var int height = 400;
