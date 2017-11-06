@@ -131,10 +131,10 @@ for i = 1, #inputs_evt do
   body = body .. attrs
 
   body = body .. '\t\t\t' .. 'await ' .. input.emitter .. '(' .. params .. ');\n'
-  code = code .. body
+  code = code .. body .. '\t\tend'
 end
 
-code = code .. '\t\tend'
+code = code
 
 TO_GEN = TO_GEN .. CODE_TEMPLATE:gsub('{#1}', code) .. '\n'
 
