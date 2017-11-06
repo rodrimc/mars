@@ -32,6 +32,7 @@ do
       luabuff = 'type='      .. tostring(@P_REGULAR_SEND)    .. ',' ..
                 'from='      .. tostring(@stub.id)           .. ',' ..
                 'role="'     .. CLIENT.role.name             .. '",' ..
+                'index='     .. CLIENT.role.index            .. ',' ..
                 'payload='   .. tostring(@buffer)            .. ',' ..
                 'timestamp=' .. tostring(@ts)
     ]]
