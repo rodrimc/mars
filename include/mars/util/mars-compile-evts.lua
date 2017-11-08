@@ -82,12 +82,18 @@ local UNION_TEMPLATE =
   '{#1}'               ..
   '\t} u_args;'
 
-local IF_TEMPLATE = 
+local IF_OUTPUT_CALLBACK_TEMPLATE = 
   '\t\t\t\tif (p1.num == CEU_OUTPUT_{#1})\n' ..
   '\t\t\t\t{\n'                              ..
   '\t\t\t\t\ttype = "{#1}";\n'               ..
   '\t\t\t\t\tp.{#2} = *({#1}*) p2.ptr;\n'    ..
   '\t\t\t\t}'
+
+local IF_OUTPUT_EVERY_TEMPLATE = 
+  '\tif call Has_Mapping ("{#1}", &role, true) then\n'                                    ..
+  '\t\t\t\t\t\tbuffer = [] .. [[ pack("{#1}",{#2}) ]];\n'                                 ..
+  '\t\t\t\t\t\tspawn Client_Send_Message (&client.stub, &buffer) in send_message_pool;\n' ..
+  '\t\t\t\t\tend'
 
 local if_indent = '\t\t\t\t'
 local every_indent = '\t\t\t'
@@ -113,8 +119,8 @@ for i = 1, #output_evts do
   local struct_body = ''
 
   --set 'type' and 'u_args' variables
-  IF_TO_GEN = IF_TO_GEN .. IF_TEMPLATE:gsub ('{#1}', evt):
-                                       gsub ('{#2}', evt:lower()) .. '\n'
+  IF_TO_GEN = IF_TO_GEN .. IF_OUTPUT_CALLBACK_TEMPLATE:gsub ('{#1}', evt):
+                                                       gsub ('{#2}', evt:lower()) .. '\n'
 
   --every
   local every_body
@@ -122,7 +128,8 @@ for i = 1, #output_evts do
   local if_statement
   local if_vars = ''
   local if_assignments = ''
-  local if_body = '\t[[print ('
+  local if_body = IF_OUTPUT_EVERY_TEMPLATE:gsub ('{#1}', evt)
+  local if_luavarlist = ''
   
 
   if i == 1 then
@@ -147,12 +154,12 @@ for i = 1, #output_evts do
     local assignment = indent .. '\t' .. varname .. ' = ' .. 'args.' .. evt:lower() .. '.arg' .. j 
     if_assignments = if_assignments  .. assignment .. ';\n' 
 
-    --do something with variables
-    --TODO: check if we should forward to server
-    if_body = if_body .. '@' .. varname .. ' .. " " .. '
+    --arguments to the 'pack' function
+    if_luavarlist = if_luavarlist .. '@' .. varname .. ','
   end
+  if_luavarlist = if_luavarlist:sub(1, -2)
+  if_body = if_body:gsub ('{#2}', if_luavarlist)
 
-  if_body = if_body:sub (1, -12) .. ')]]'
   every_body = every_body .. if_vars .. if_assignments .. indent .. if_body .. '\n'
 
   local struct = STRUCT_TEMPLATE:gsub ('{#1}', struct_body):gsub('{#2}', evt)

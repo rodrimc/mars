@@ -278,7 +278,10 @@ par/or do
       input (_char&&, _u_args) IN;
       var _char&& type;
       var _u_args args;
+      var[] byte role;
+      var[] byte buffer;
       every (type, args) in IN do
+        role = [] .. [[ CLIENT.role.name ]];
 __OUTPUT_HANDLE__
       end
     end
