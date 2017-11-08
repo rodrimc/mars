@@ -135,7 +135,10 @@ for i = 1, #inputs_evt do
   body = body .. attrs
 
   body = body .. '\t\t\t' .. 'await ' .. input.emitter .. '(' .. params .. ');\n'
-  code = code .. body .. '\t\tend'
+
+  if (i == #inputs_evt) then
+    code = code .. body .. '\t\tend'
+  end
 end
 
 code = code
