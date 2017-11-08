@@ -38,6 +38,21 @@ var int evt_dev_role_index = -1;
       CLIENT.mapping.apply (evt, args)
     end
   end
+
+  function pack (evt, ...)
+    local args = {...}
+    local packed = '{arg0="' .. evt .. '",'
+    for i = 1, #args do
+      packed = packed .. 'arg' .. i .. '='
+      if type (args[i]) == 'string' then
+        packed = packed .. "'" .. args[i] .. "',"
+      else
+        packed = packed .. tostring(args[i]) .. ','
+      end
+    end
+    packed = packed:sub (1, -2) .. '}'
+    return packed
+  end
 ]]
 
 /* Scene */
