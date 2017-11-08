@@ -1,6 +1,7 @@
 var uint device_id  = 0;
 var uint evt_dev_id = 0;
 var[] byte evt_dev_role = _;
+var int evt_dev_role_index = -1;
 
 [[
   function get_mapping (evt)

@@ -76,11 +76,13 @@ do
       [[ payload = 'return' .. serialize(TABLE.payload) ]]
 
       outer.evt_dev_role = [] .. [[ TABLE.role or '' ]];
+      outer.evt_dev_role_index = [[ TABLE.index or -1 ]];
       stub.message= [] .. [[ payload ]];
 
       emit stub.incoming_message;
 
       outer.evt_dev_role = _;
+      outer.evt_dev_role_index = -1;
       $stub.message = 0;
     else/if type == S_TICK then
       var uint tick = [[ TABLE.freq ]];

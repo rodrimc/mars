@@ -70,7 +70,7 @@ end
 /*** SERVER SIDE ***/
 event (none) send_join_reply;
 event (uint) send_broadcast_join;
-event (uint) send_broadcast_message;
+event (uint, int) send_broadcast_message;
 event (uint) send_tick_message;
 
 var []byte cur_payload;
@@ -119,8 +119,7 @@ do
     [[
       luabuff = 'type='      .. tostring(@S_NEW_PEER)        .. ',' ..
                 'new_peer='  .. tostring(@id)                .. ',' ..
-                'peers='     .. tostring(@outer.peers_count) .. ',' ..
-                '' -- 'timestamp=' .. tostring(@ts)
+                'peers='     .. tostring(@outer.peers_count)
     ]]
     var[] byte buff = [] .. [[ luabuff ]];
     await Send (handle_id, &stream, &buff);
@@ -134,6 +133,7 @@ code/await Send_Broadcast_Message (var uint handle_id,
                                    var& UV_Stream stream,
                                    var uint from,
                                    var& []byte role,
+                                   var int index,
                                    var& []byte payload) -> none
 do
   var Exception.Lua? e;
@@ -144,8 +144,8 @@ do
                 'from='      .. tostring(@from)              .. ',' ..
                 'payload='   .. tostring(@payload)           .. ',' ..
                 'role="'     .. tostring(@role)              .. '",' ..
-                'peers='     .. tostring(@outer.peers_count) .. ',' ..
-                '' -- 'timestamp=' .. tostring(@ts)
+                'index='     .. tostring(@index)             .. ',' ..
+                'peers='     .. tostring(@outer.peers_count)
     ]]
     var[] byte buff = [] .. [[ luabuff ]];
     await Send (handle_id, &stream, &buff);
@@ -196,12 +196,13 @@ do
       var int type = [[ TABLE.type ]];
 
       if  type == P_REGULAR_SEND then
-        var int from = [[ TABLE.from ]];
+        var uint from = [[ TABLE.from ]];
+        var int index = [[ TABLE.index or -1 ]];
         var [] byte payload = [] .. [[ serialize(TABLE.payload) ]];
         outer.cur_role = [] .. [[ TABLE.role ]];
 
         outer.cur_payload = [] .. payload;
-        emit outer.send_broadcast_message (from);
+        emit outer.send_broadcast_message (from, index);
       end
     end
     if e? then
@@ -280,9 +281,11 @@ do
     end
   with
     var uint from;
-    every from in outer.send_broadcast_message do
+    var int index;
+    every (from, index) in outer.send_broadcast_message do
       spawn Send_Broadcast_Message (handle_id, &stream, from, &outer.cur_role,
-                                &outer.cur_payload) in pool_broadcast_message;
+                                    index, &outer.cur_payload)
+                                    in pool_broadcast_message;
     end
   end
 end
