@@ -105,51 +105,57 @@ for i = 1, #output_evts do
   local output = output_evts[i].line
   output = output:sub (7):gsub("^%s*(.-)%s*$", "%1")
 
-
   local args = get_args(output)
   local evt  = get_evt(output)
   local params = get_params (args, output_evts[i].args)
 
+  --struct
+  local struct_body = ''
+
+  --set 'type' and 'u_args' variables
   IF_TO_GEN = IF_TO_GEN .. IF_TEMPLATE:gsub ('{#1}', evt):
                                        gsub ('{#2}', evt:lower()) .. '\n'
 
-  print (IF_TO_GEN)
-
-  local struct_body = ''
-
+  --every
+  local every_body
+  local indent = '\t\t\t\t'
   local if_statement
+  local if_vars = ''
+  local if_assignments = ''
+  local if_body = '\t[[print ('
+  
+
   if i == 1 then
     if_statement = '\t\tif '
   else
     if_statement = '\t\telse/if '
   end
-
-  local every_body = '\t\t' .. if_statement .. cond:gsub ('{#1}', evt)
-
-  local if_vars = ''
-  local if_assignments = ''
-  local if_body = '\t[[print ('
-  local indent = '\t\t\t\t'
+  every_body = '\t\t' .. if_statement .. cond:gsub ('{#1}', evt)
 
   for j = 1, #output_evts[i].args do
     local varname = 'arg' .. j
     local decl = '\t\t'  .. output_evts[i].args[j] .. ' ' .. varname .. ';\n'
+    
+    --body of structures (each per output event)
     struct_body = struct_body .. decl
 
+    --body of ifs within the `every` handle (each per output event)
     decl = indent .. '\tvar ' .. output_evts[i].args[j] .. ' ' .. varname .. ';\n'
     if_vars = if_vars .. decl
 
+    --assign the value passed in the event to each variable
     local assignment = indent .. '\t' .. varname .. ' = ' .. 'args.' .. evt:lower() .. '.arg' .. j 
     if_assignments = if_assignments  .. assignment .. ';\n' 
 
+    --do something with variables
+    --TODO: check if we should forward to server
     if_body = if_body .. '@' .. varname .. ' .. " " .. '
   end
-  if_body = if_body:sub (1, -12) .. ')]]'
 
+  if_body = if_body:sub (1, -12) .. ')]]'
   every_body = every_body .. if_vars .. if_assignments .. indent .. if_body .. '\n'
 
   local struct = STRUCT_TEMPLATE:gsub ('{#1}', struct_body):gsub('{#2}', evt)
-
   union_fields = union_fields .. '\t\t' .. evt .. ' ' .. evt:lower() .. ';\n' 
 
   OUTPUT_TO_GEN = OUTPUT_TO_GEN .. struct .. '\n\n'
@@ -218,7 +224,6 @@ cond = '_strcmp(mapping, "{#1}") == 0'
 for i = 1, #input_evts do
   input = input_evts[i]
 
-
   local statement
   if i == 1 then
     statement = '\tif '
@@ -243,6 +248,7 @@ for i = 1, #input_evts do
     attrs = attrs .. ident .. varname .. ' = [[ CLIENT.mapping.args[' .. j .. '] or @' .. varname .. ' ]];\n'
   end
 
+
   params = params:sub (1, -3)
   mapping_args = mapping_args:sub (1, -3)
 
@@ -251,8 +257,9 @@ for i = 1, #input_evts do
 
   body = body .. '\t\t\t' .. 'await ' .. input.emitter .. '(' .. params .. ');\n'
 
+  code = code .. body
   if (i == #input_evts) then
-    code = code .. body .. '\t\tend'
+    code = code .. '\t\tend'
   end
 end
 
