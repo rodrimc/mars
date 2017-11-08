@@ -1,6 +1,10 @@
 #include "mars/util/mars-media.ceu"
 #include "mars/client/mars-client.ceu"
 
+native/pre do
+__OUTPUT_TYPES__
+end
+
 native/pos do
   int MIRROR_OK = 0;
   char *ROLE_NAME = NULL;
@@ -44,6 +48,15 @@ native/pos do
 
         break;
       }
+      case CEU_CALLBACK_OUTPUT:
+      {
+        char *type;
+        u_args p;
+__CALLBACK_OUTPUT_COND__
+        tceu_input_IN input_p = {type, p};
+        ceu_input (CEU_INPUT_IN, &input_p);
+        break;
+      }
       case CEU_CALLBACK_STOP:
       {
         if (ROLE_NAME)
@@ -67,6 +80,7 @@ end
 
 native/nohold
   _cb,
+  _u_args,
   _ceu_callback_register,
   _alloc_role_name,
   _MIRROR_OK,
@@ -152,7 +166,7 @@ par/or do
 
         [[ TABLE = load (@client.stub.message)() ]]
         var uint device = [[ TABLE.device ]];
-        var uint obj = [[ TABLE.object ]];
+        var uint obj = [[ TABLE.object or -1]];
 
         evt = [] .. [[ TABLE.evt ]];
 
@@ -259,6 +273,13 @@ par/or do
         ]]
         buffer = [] .. [[ luabuff ]];
         spawn Client_Send_Message (&client.stub, &buffer) in send_message_pool;
+      end
+    with
+      input (_char&&, _u_args) IN;
+      var _char&& type;
+      var _u_args args;
+      every (type, args) in IN do
+__OUTPUT_HANDLE__
       end
     end
   end
