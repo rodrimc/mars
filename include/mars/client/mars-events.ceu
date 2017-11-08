@@ -41,7 +41,7 @@ var int evt_dev_role_index = -1;
 
   function pack (evt, ...)
     local args = {...}
-    local packed = '{arg0="' .. evt .. '",'
+    local packed = '{evt="' .. evt .. '",'
     for i = 1, #args do
       packed = packed .. 'arg' .. i .. '='
       if type (args[i]) == 'string' then
