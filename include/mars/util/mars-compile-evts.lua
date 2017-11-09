@@ -259,9 +259,13 @@ for i = 1, #input_evts do
     attrs = attrs .. ident .. varname .. ' = [[ CLIENT.mapping.args[' .. j .. '] or @' .. varname .. ' ]];\n'
   end
 
-
   params = params:sub (1, -3)
-  mapping_args = mapping_args:sub (1, -3)
+  
+  if mapping_args == '' then
+    mapping_args = '{}'
+  else
+    mapping_args = mapping_args:sub (1, -3)
+  end
 
   body = body .. ident .. '[[ apply_mapping ("' .. input.evt ..'", ' .. mapping_args .. ') ]]\n'
   body = body .. attrs
