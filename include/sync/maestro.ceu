@@ -170,7 +170,6 @@ par/or do
         if call Has_Mapping (&&evt[0], &evt_dev_role, false) then
           call Get_Mapping (&&evt[0], &mapping);
           mapping = mapping .. [{'\0'}];
-          _printf ("has_mapping: %s\n", &&mapping[0]);
           spawn Handle_Mapping (&&mapping[0]) in mapping_pool;
         end
       end
