@@ -1,6 +1,6 @@
 CLIENT.mapping.events =
   {
-    {"SPACE", "CONTROL", "TV", "PLAY"},
+    {"SPACE", "CONTROL",  "PLAY", "TV"},
   }
 
 --CLIENT.mapping.apply = apply

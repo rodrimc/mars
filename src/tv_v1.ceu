@@ -1,5 +1,9 @@
 #include "mars/util/mars-media.ceu"
 
+/*
+ * Mapping: scripts/tv_mappings_v1.lua
+ */
+
 var _char&& name;
 (name, _) = await JOINED;
 var bool im_tv = _strcmp (name, "TV") == 0;
