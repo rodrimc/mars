@@ -50,9 +50,13 @@ native/nohold
    function serialize (o)
      local result = '{'
      for k,v in pairs(o) do
-       result = result ..  k .. '='
+       print (k .. ' ' .. type(k))
+       local index = type(k) == 'number' and ('[' .. k .. ']') or k
+       result = result .. index .. '='
        if type (v) == 'string' then
          result = result .. "'" .. v .. "',"
+       elseif type(v) == 'table' then
+         result = result .. serialize (v) .. ','
        else
          result = result .. tostring(v) .. ','
        end
