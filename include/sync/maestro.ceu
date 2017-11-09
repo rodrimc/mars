@@ -165,39 +165,13 @@ par/or do
         _log ("[APP(%u)] Message: %s\n", client.stub.id, &&client.stub.message[0]);
 
         [[ TABLE = load (@client.stub.message)() ]]
-        var uint device = [[ TABLE.device or -1]];
-        var uint obj = [[ TABLE.object or -1]];
 
-        evt = [] .. [[ TABLE.evt ]];
-
-
+        evt = [] .. [[ TABLE.evt ]] .. [{'\0'}];
         if call Has_Mapping (&&evt[0], &evt_dev_role, false) then
           call Get_Mapping (&&evt[0], &mapping);
           mapping = mapping .. [{'\0'}];
+          _printf ("has_mapping: %s\n", &&mapping[0]);
           spawn Handle_Mapping (&&mapping[0]) in mapping_pool;
-        else
-          if _strcmp (&&evt[0], EVT_KEY) == 0 then
-            var[] byte key = [] .. [[ TABLE.key ]];
-            var bool press = [[ TABLE.press ]];
-
-            emit create_evt_scene_key (device, obj, &&key[0], press);
-          else/if _strcmp (&&evt[0], EVT_SCENE_CLICK) == 0 then
-            var int x = [[ TABLE.x ]];
-            var int y = [[ TABLE.y ]];
-            var int button = [[ TABLE.button ]];
-            var bool press = [[ TABLE.press ]];
-
-            emit create_evt_scene_mouse_clicked (device, obj, x, y,
-                                                        button, press);
-          else/if _strcmp(&&evt[0], EVT_PLAYER_CLICK) == 0 then
-            var int x = [[ TABLE.x ]];
-            var int y = [[ TABLE.y ]];
-            var int button = [[ TABLE.button ]];
-            var bool press = [[ TABLE.press ]];
-
-            emit create_evt_player_mouse_clicked (device, obj, x, y,
-                                                         button, press);
-          end
         end
       end
     with

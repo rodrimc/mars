@@ -14,7 +14,7 @@
       {
         events = nil,
         args = {},
-        apply = nil,
+        apply = nil
       }
     }
 ]]

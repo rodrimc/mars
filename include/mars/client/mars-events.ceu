@@ -29,11 +29,11 @@ var int evt_dev_role_index = -1;
 
   function apply_mapping (evt)
     local args = {}
-    for k, v in pairs (TABLE) do
+    for k, v in pairs (TABLE.args) do
       args[k] = v
     end
 
-    CLIENT.mapping.args = {}
+    CLIENT.mapping.args = args
     if type (CLIENT.mapping.apply) == 'function' then
       CLIENT.mapping.apply (evt, args)
     end
@@ -41,18 +41,14 @@ var int evt_dev_role_index = -1;
 
   function pack (evt, ...)
     local args = {...}
-    local packed = '{evt="' .. evt .. '",'
+    local packed = {evt = evt, args = {}}
     for i = 1, #args do
-      packed = packed .. 'arg' .. i .. '='
-      if type (args[i]) == 'string' then
-        packed = packed .. "'" .. args[i] .. "',"
-      else
-        packed = packed .. tostring(args[i]) .. ','
-      end
+      table.insert (packed.args, args[i])
     end
-    packed = packed:sub (1, -2) .. '}'
-    return packed
+    local serialized = serialize (packed)
+    return serialized
   end
+
 ]]
 
 /* Scene */
