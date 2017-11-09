@@ -23,7 +23,7 @@ var int evt_dev_role_index = -1;
     elseif is_local then
       return map[2] == role
     else
-      return map[2] == role and map[3] == CLIENT.role.name
+      return map[2] == role and map[4] == CLIENT.role.name
     end
   end
 
@@ -236,8 +236,8 @@ code/tight Get_Mapping (var _char&& evt, var& []byte mapping) -> none
 do
   [[
     map = get_mapping (@evt)
-    if map ~= nil and map[3] == CLIENT.role.name then
-      map = map[4]
+    if map ~= nil and map[4] == CLIENT.role.name then
+      map = map[3]
     else
       map = ''
     end
