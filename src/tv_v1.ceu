@@ -10,7 +10,6 @@ par do
   if im_tv then
     /* tv.ceu */
     input (int) CONTROL_KEY;
-    input (int) RODRIGO;
 
     var Size size = val Size (720, 480);
     var Media.Video video = val Media.Video (
@@ -32,7 +31,7 @@ par do
 with
   if not im_tv then
     /* control.ceu */
-    output (int) KEY_PRESSED;
+    output (int) PLAY_PAUSE;
 
     var Size size = val Size (300, 200);
     var&? Scene scene = spawn Scene(size);
@@ -42,7 +41,7 @@ with
       var _char_ptr_ext key;
       every (_, key, press) in CM_SCENE_KEY do
         if press and  _strcmp(key, "space") == 0 then
-          emit KEY_PRESSED (0);
+          emit PLAY_PAUSE (0);
         end
       end
     end
