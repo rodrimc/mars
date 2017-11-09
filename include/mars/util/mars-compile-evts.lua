@@ -131,7 +131,6 @@ for i = 1, #output_evts do
   local if_body = IF_OUTPUT_EVERY_TEMPLATE:gsub ('{#1}', evt)
   local if_luavarlist = ''
   
-
   if i == 1 then
     if_statement = '\t\tif '
   else
@@ -157,7 +156,12 @@ for i = 1, #output_evts do
     --arguments to the 'pack' function
     if_luavarlist = if_luavarlist .. '@' .. varname .. ','
   end
-  if_luavarlist = if_luavarlist:sub(1, -2)
+  if if_luavarlist == '' then
+    if_luavarlist = '{}'
+  else
+    if_luavarlist = if_luavarlist:sub(1, -2)
+  end
+
   if_body = if_body:gsub ('{#2}', if_luavarlist)
 
   every_body = every_body .. if_vars .. if_assignments .. indent .. if_body .. '\n'
