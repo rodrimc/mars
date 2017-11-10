@@ -1,0 +1,165 @@
+#include "mars/util/mars-media.ceu"
+
+/*
+ * Mapping: scripts/tv_mappings_v2.lua
+ */
+
+var _char&& name;
+(name, _) = await JOINED;
+var bool im_tv = _strcmp (name, "TV") == 0;
+
+_printf ("im_tv: %d\n", im_tv);
+
+var Media.Video video = val Media.Video (
+                [] .. "resources/bunny.ogg",
+                Region (0, 0, 720, 480, 1),
+                1.0, 1.0);
+
+var Media.Image control = val Media.Image (
+                [] .. "resources/remote_control.png",
+                Region (0, 0, 400, 400, 1),
+                1.0);
+
+#define SECONDS * 1000000000
+
+par do
+  if im_tv then
+    /* tv.ceu */
+    input (none) PLAY;
+    input (none) PAUSE;
+    input (none) SEEK_FORWARD;
+    input (none) SEEK_BACKWARD;
+    input (none) VOLUME_UP;
+    input (none) VOLUME_DOWN;
+    input (none) TURN_ON;
+    input (none) TURN_OFF;
+
+    loop do
+      await TURN_ON;
+      watching TURN_OFF do
+        var Size size = val Size (720, 480);
+        var&? Scene scene = spawn Scene(size);
+        watching scene do
+          var&? Play p = spawn Play (&scene.scene, &video);
+
+          event (r64) set_volume;
+          watching p do
+            par do
+              every PLAY do
+                call Scene_Resume (&scene.scene);
+              end
+            with
+              every PAUSE do
+                call Scene_Pause (&scene.scene);
+              end
+            with
+              every SEEK_FORWARD do
+                call Player_Seek (&p.player, 10 SECONDS , true);
+              end
+            with
+              every SEEK_BACKWARD do
+                call Player_Seek (&p.player, -10 SECONDS, true);
+              end
+            with
+              every VOLUME_UP do
+                var r64 vol_level = call Player_Get_Double (&p.player, "volume");
+                if vol_level < 1.0 then
+                  vol_level = vol_level + 0.2;
+                end
+                emit set_volume (vol_level);
+              end
+            with
+              every VOLUME_DOWN do
+                var r64 vol_level = call Player_Get_Double (&p.player, "volume");
+                if vol_level > 0.0 then
+                  vol_level = vol_level - 0.2;
+                end
+                emit set_volume (vol_level);
+              end
+            with 
+              event (none) draw;
+              par do
+                loop do
+                  await draw;
+                  watching set_volume, 2s do
+                    var int vol_level = (call Player_Get_Double (&p.player, "volume") * 10) as int;
+
+                    var[] byte vol_bar = _;
+                    if vol_level == 0 then
+                      vol_bar = [] .. "resources/vol_0.png";
+                    else/if vol_level == 2 then
+                      vol_bar = [] .. "resources/vol_1.png";
+                    else/if vol_level == 4 then
+                      vol_bar = [] .. "resources/vol_2.png";
+                    else/if vol_level == 6 then
+                      vol_bar = [] .. "resources/vol_3.png";
+                    else/if vol_level == 8 then
+                      vol_bar = [] .. "resources/vol_4.png";
+                    else/if vol_level == 10 then
+                      vol_bar = [] .. "resources/vol_5.png";
+                    end
+
+                    var Media.Image volume = val Media.Image (
+                                    [] .. vol_bar, Region (0, 0, 232, 119, 2), 1.0);
+
+                    await Play (&scene.scene, &volume);
+                  end
+                end
+              with
+                var r64 vol_level = _;
+                every vol_level in set_volume do 
+                  call Player_Set_Double (&p.player, "volume", vol_level);
+                  emit draw;
+                end
+              end
+            end
+          end
+        end
+      end
+    end
+  end
+with
+  if not im_tv then
+    /* control.ceu */
+    output (int) KEY_PRESSED;
+    output (none) RETURN_;
+    output (none) SPACE;
+    output (none) P;
+    output (none) UP;
+    output (none) DOWN;
+    output (none) RIGHT;
+    output (none) LEFT;
+    output (none) ESC;
+
+    var Size size = val Size (400, 400);
+    var&? Scene scene = spawn Scene(size);
+
+    watching scene do
+      spawn Play (&scene.scene, &control);
+      var bool press;
+      var _char_ptr_ext key;
+      every (_, key, press) in CM_SCENE_KEY do
+        _printf ("%s\n", key);
+        if press then
+          if _strcmp(key, "Return") == 0 then
+            emit KEY_PRESSED (0);
+          else/if _strcmp(key, "space") == 0 then
+            emit KEY_PRESSED (1);
+          else/if _strcmp (key, "p") == 0 then
+            emit KEY_PRESSED (2);
+          else/if _strcmp (key, "Right") == 0 then
+            emit KEY_PRESSED (3);
+          else/if _strcmp (key, "Left") == 0 then
+            emit KEY_PRESSED (4);
+          else/if _strcmp (key, "Up") == 0 then
+            emit KEY_PRESSED (5);
+          else/if _strcmp (key, "Down") == 0 then
+            emit KEY_PRESSED (6);
+          else/if _strcmp (key, "Escape") == 0 then
+            emit KEY_PRESSED (7);
+          end
+        end
+      end
+    end
+  end
+end
