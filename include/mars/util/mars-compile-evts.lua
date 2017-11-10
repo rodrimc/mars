@@ -268,7 +268,7 @@ for i = 1, #input_evts do
     mapping_args = mapping_args:sub (1, -3)
   end
 
-  local mapping_test = ident .. 'var bool toEmit = [[ apply_mapping (@evt,"' .. input.evt ..'", ' .. mapping_args .. ') ]];\n'
+  local mapping_test = ident .. 'var bool toEmit = [[ apply_mapping (@evt,"' .. input.evt ..'") ]];\n'
 
   body = body .. mapping_test
   body = body .. attrs 
