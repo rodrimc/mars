@@ -275,6 +275,7 @@ do
   ]]
   var int len = [[ #indices ]];
   var ssize i;
+  $mapping = 0;
   loop i in [1 -> len] do
     var int index = [[ indices[@i] ]];
     mapping = mapping .. [ index ];
