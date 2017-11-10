@@ -5,38 +5,74 @@ var int evt_dev_role_index = -1;
 
 [[
   function get_mapping (evt)
+    local map = {} 
     if type(CLIENT.mapping.events) == 'table' then
       for k,v in pairs (CLIENT.mapping.events) do
         if v[1] == evt then
-          return v
+          table.insert(map, v)
         end
       end
     end
-    return nil
+    return map
+  end
+
+  function get_mapping_indices (evt)
+    local indices = {} 
+    if type(CLIENT.mapping.events) == 'table' then
+      for i=1, #CLIENT.mapping.events do
+        if CLIENT.mapping.events[i][1] == evt then
+          table.insert(indices, i)
+        end
+      end
+    end
+    return indices
   end
 
   function has_mapping (evt, role, is_local)
     map = get_mapping (evt)
 
-    if map == nil then
-      return false
-    elseif is_local then
-      return map[2] == role
-    else
-      return map[2] == role and map[4] == CLIENT.role.name
+    for i=1, #map do
+      if is_local then
+        if map[i][2] == role then
+          return true
+        end
+      else
+        if map[i][2] == role and map[i][4] == CLIENT.role.name then
+          return true
+        end
+      end
     end
+    return false
   end
 
-  function apply_mapping (evt)
-    local args = {}
-    for k, v in pairs (TABLE.args) do
-      args[k] = v
+  function apply_mapping (evtFrom, evtTo)
+    local toEmit = true
+    local args = CLIENT.remote.args
+
+    local map = get_mapping (evtFrom)
+    local m
+    for i=1, #map do
+      if map[i][3] == evtTo then
+        m = map[i]
+        break
+      end
     end
 
-    CLIENT.mapping.args = args
-    if type (CLIENT.mapping.apply) == 'function' then
-      CLIENT.mapping.apply (evt, args)
+    if m == nil then
+      print ("you're not supposed to get here")
+      return false 
     end
+
+    local func = m[5] or nil
+
+    CLIENT.mapping.args = args
+    if type (func) == 'function' then
+      toEmit, mapped = func (args)
+      if toEmit then
+        CLIENT.mapping.args = mapped or args
+      end
+    end
+    return toEmit
   end
 
   function pack (evt, ...)
@@ -232,16 +268,15 @@ do
   escape has_mapping;
 end
 
-code/tight Get_Mapping (var _char&& evt, var& []byte mapping) -> none
+code/tight Get_Mapping_Indices (var _char&& evt, var& []int mapping) -> none
 do
   [[
-    map = get_mapping (@evt)
-    if map ~= nil and map[4] == CLIENT.role.name then
-      map = map[3]
-    else
-      map = ''
-    end
+    indices = get_mapping_indices (@evt)
   ]]
-
-  mapping = [] .. [[ map ]];
+  var int len = [[ #indices ]];
+  var ssize i;
+  loop i in [1 -> len] do
+    var int index = [[ indices[@i] ]];
+    mapping = mapping .. [ index ];
+  end
 end

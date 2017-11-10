@@ -110,7 +110,7 @@ end
 /* internal */
 event (none) mirror_ok;
 
-code/await Handle_Mapping (var _char&& mapping) -> none;
+code/await Handle_Mapping (var _char&& evt, var _char&& mapping) -> none;
 
 par/or do
   var int min_peers = _;
@@ -158,19 +158,30 @@ par/or do
     with
       pool[] Handle_Mapping mapping_pool;
       var[] byte evt = _;
-      var[] byte mapping = _;
+      var[] int mapped = _;
+      var[] int mapping = _;
       every client.stub.incoming_message do
         [[ print ('[APP(' .. tostring(@client.stub.id) .. ')] Message: ' ..
                                   @client.stub.message) ]]
         _log ("[APP(%u)] Message: %s\n", client.stub.id, &&client.stub.message[0]);
 
-        [[ TABLE = load (@client.stub.message)() ]]
+        [[ 
+          TABLE = load (@client.stub.message)() 
+          CLIENT.remote.args = TABLE.args or {}
+        ]]
 
         evt = [] .. [[ TABLE.evt ]] .. [{'\0'}];
         if call Has_Mapping (&&evt[0], &evt_dev_role, false) then
-          call Get_Mapping (&&evt[0], &mapping);
-          mapping = mapping .. [{'\0'}];
-          spawn Handle_Mapping (&&mapping[0]) in mapping_pool;
+          call Get_Mapping_Indices (&&evt[0], &mapping);
+          var ssize len = $mapping;
+          var ssize i;
+          loop i in [0 -> len[ do
+            $mapped = 0;
+
+            var int index = mapping[i];
+            mapped = [] .. [[ CLIENT.mapping.events[@index ][3] .. '\0']];
+            spawn Handle_Mapping (&&evt[0], &&mapped[0]) in mapping_pool;
+          end
         end
       end
     with

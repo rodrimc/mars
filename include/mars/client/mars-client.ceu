@@ -15,6 +15,10 @@
         events = nil,
         args = {},
         apply = nil
+      },
+      remote =
+      {
+        args = nil,
       }
     }
 ]]
