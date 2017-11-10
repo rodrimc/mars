@@ -62,7 +62,6 @@ spawn do
   end
 end
 
-
 data UV_TCP_Server_Data with
   var bool isReading;
 end
@@ -257,6 +256,9 @@ do
               end
 
               index = SERVER.roles[role]
+            else
+              role = ''
+              index = 0
             end
           ]]
 
