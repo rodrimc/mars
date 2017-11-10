@@ -278,6 +278,18 @@ do
 end
 
 code/tight
+Player_Set_Real (var& IPlayer player, var _char&& name, var real value) -> none
+do
+  call Player_Raw_Set_Real (&player.raw, name, value);
+end
+
+code/tight
+Player_Get_Real (var& IPlayer player, var _char&& name) -> real
+do
+  escape call Player_Raw_Get_Real (&player.raw, name);
+end
+
+code/tight
 Player_Set_Bool (var& IPlayer player, var _char&& name, var bool value) -> none
 do
   call Player_Raw_Set_Bool (&player.raw, name, value);
