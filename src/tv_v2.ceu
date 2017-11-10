@@ -1,5 +1,9 @@
 #include "mars/util/mars-media.ceu"
 
+/*
+ * Mapping: scripts/tv_mappings_v2.lua
+ */
+
 var _char&& name;
 (name, _) = await JOINED;
 var bool im_tv = _strcmp (name, "TV") == 0;
@@ -25,30 +29,90 @@ par do
     input (none) PAUSE;
     input (none) SEEK_FORWARD;
     input (none) SEEK_BACKWARD;
+    input (none) VOLUME_UP;
+    input (none) VOLUME_DOWN;
+    input (none) TURN_ON;
     input (none) TURN_OFF;
 
-    watching TURN_OFF do
-      var Size size = val Size (720, 480);
-      var&? Scene scene = spawn Scene(size);
-      watching scene do
-        await PLAY;
-        var&? Play p = spawn Play (&scene.scene, &video);
+    loop do
+      await TURN_ON;
+      watching TURN_OFF do
+        var Size size = val Size (720, 480);
+        var&? Scene scene = spawn Scene(size);
+        watching scene do
+          var&? Play p = spawn Play (&scene.scene, &video);
 
-        par do
-          every PLAY do
-            call Scene_Resume (&scene.scene);
-          end
-        with
-          every PAUSE do
-            call Scene_Pause (&scene.scene);
-          end
-        with
-          every SEEK_FORWARD do
-            call Player_Seek (&p!.player, 10 SECONDS , true);
-          end
-        with
-          every SEEK_BACKWARD do
-            call Player_Seek (&p!.player, -10 SECONDS, true);
+          event (r64) set_volume;
+          watching p do
+            par do
+              every PLAY do
+                call Scene_Resume (&scene.scene);
+              end
+            with
+              every PAUSE do
+                call Scene_Pause (&scene.scene);
+              end
+            with
+              every SEEK_FORWARD do
+                call Player_Seek (&p.player, 10 SECONDS , true);
+              end
+            with
+              every SEEK_BACKWARD do
+                call Player_Seek (&p.player, -10 SECONDS, true);
+              end
+            with
+              every VOLUME_UP do
+                var r64 vol_level = call Player_Get_Double (&p.player, "volume");
+                if vol_level < 1.0 then
+                  vol_level = vol_level + 0.2;
+                end
+                emit set_volume (vol_level);
+              end
+            with
+              every VOLUME_DOWN do
+                var r64 vol_level = call Player_Get_Double (&p.player, "volume");
+                if vol_level > 0.0 then
+                  vol_level = vol_level - 0.2;
+                end
+                emit set_volume (vol_level);
+              end
+            with 
+              event (none) draw;
+              par do
+                loop do
+                  await draw;
+                  watching set_volume, 2s do
+                    var int vol_level = (call Player_Get_Double (&p.player, "volume") * 10) as int;
+
+                    var[] byte vol_bar = _;
+                    if vol_level == 0 then
+                      vol_bar = [] .. "resources/vol_0.png";
+                    else/if vol_level == 2 then
+                      vol_bar = [] .. "resources/vol_1.png";
+                    else/if vol_level == 4 then
+                      vol_bar = [] .. "resources/vol_2.png";
+                    else/if vol_level == 6 then
+                      vol_bar = [] .. "resources/vol_3.png";
+                    else/if vol_level == 8 then
+                      vol_bar = [] .. "resources/vol_4.png";
+                    else/if vol_level == 10 then
+                      vol_bar = [] .. "resources/vol_5.png";
+                    end
+
+                    var Media.Image volume = val Media.Image (
+                                    [] .. vol_bar, Region (0, 0, 232, 119, 2), 1.0);
+
+                    await Play (&scene.scene, &volume);
+                  end
+                end
+              with
+                var r64 vol_level = _;
+                every vol_level in set_volume do 
+                  call Player_Set_Double (&p.player, "volume", vol_level);
+                  emit draw;
+                end
+              end
+            end
           end
         end
       end
@@ -57,8 +121,11 @@ par do
 with
   if not im_tv then
     /* control.ceu */
+    output (none) RETURN_;
     output (none) SPACE;
     output (none) P;
+    output (none) UP;
+    output (none) DOWN;
     output (none) RIGHT;
     output (none) LEFT;
     output (none) ESC;
@@ -73,7 +140,9 @@ with
       every (_, key, press) in CM_SCENE_KEY do
         _printf ("%s\n", key);
         if press then
-          if _strcmp(key, "space") == 0 then
+          if _strcmp(key, "Return") == 0 then
+            emit RETURN_ ();
+          else/if _strcmp(key, "space") == 0 then
             emit SPACE ();
           else/if _strcmp (key, "p") == 0 then
             emit P ();
@@ -81,6 +150,10 @@ with
             emit RIGHT ();
           else/if _strcmp (key, "Left") == 0 then
             emit LEFT ();
+          else/if _strcmp (key, "Up") == 0 then
+            emit UP ();
+          else/if _strcmp (key, "Down") == 0 then
+            emit DOWN ();
           else/if _strcmp (key, "Escape") == 0 then
             emit ESC ();
           end
