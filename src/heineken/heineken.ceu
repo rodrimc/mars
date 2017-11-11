@@ -9,7 +9,8 @@ var int height = 576;
 
 par do
   if im_tv then
-    input (int) CHOSEN_OPTION; 
+    input (none) ACCEPTED;
+    input (int) CHOSEN_OPTION;
 
     output (none) QUESTION;
     output (none) END_;
@@ -19,27 +20,62 @@ par do
                     Region (0, 0, width, height, 1),
                     1.0, 1.0);
 
-    var Media.Image interatividade = val Media.Image (
-                    [] .. "resources/priv/interatividade_1.png",
-                    Region (0, 0, width, height, 2),
-                    1.0);
     var&? Scene s = spawn Scene (Size(width, height));
     watching s do
+      var bool accepted = false;
       var int option = 1;
       par/or do
         await Play (&s.scene, &video);
       with
-        await 43s;
-        par/or do
-          emit QUESTION;
-          await Play (&s.scene, &interatividade);
-        with
-          await 15s;
-        with
-          option = await CHOSEN_OPTION;
-          _printf ("option: %d\n", option);
+        watching 43s
+        do
+          await ACCEPTED;
+          accepted = true;
+          await FOREVER;
+        end
+        if accepted then
+          par/or do
+            emit QUESTION;
+            var Media.Image interatividade = val Media.Image (
+                [] .. "resources/priv/interatividade_1.png",
+                    Region (0, 0, width, height, 2),
+                    1.0);
+
+            await Play (&s.scene, &interatividade);
+          with
+            await 15s;
+          with
+            option = await CHOSEN_OPTION;
+          end
+        else
+          var Media.Image interatividade = val Media.Image (
+              [] .. "resources/priv/interatividade_2.png",
+                  Region (0, 0, width, height, 2),
+                  1.0);
+          watching 15s
+          do
+            par/or do
+              await Play (&s.scene, &interatividade);
+            with
+              loop do
+                var _char_ptr_ext key;
+                (_, key, _) = await CM_SCENE_KEY;
+                if _strcmp (key, "F1") == 0 then
+                  option = 1;
+                  break;
+                else/if _strcmp (key, "F2") == 0 then
+                  option = 2;
+                  break;
+                else/if _strcmp (key, "F3") == 0 then
+                  option = 3;
+                  break;
+                end
+              end
+            end
+          end
         end
       end
+      _printf ("option: %d\n", option);
       var []byte end_;
       if option == 1 then
         end_ = [] .. "resources/priv/final_1.mp4";
@@ -76,7 +112,7 @@ with
         await Play (&s.scene, &init);
       with
         var _char_ptr_ext key;
-        (_, key, _) = await CM_SCENE_KEY until _strcmp (key, "F1") == 0; 
+        (_, key, _) = await CM_SCENE_KEY until _strcmp (key, "F1") == 0;
         emit ACCEPT ();
       end
 
@@ -113,9 +149,9 @@ with
         with
           loop do
             var _char_ptr_ext key;
-            (_, key, _) = await CM_SCENE_KEY; 
+            (_, key, _) = await CM_SCENE_KEY;
             if _strcmp (key, "F1") == 0 then
-              emit CHOICE (1); 
+              emit CHOICE (1);
               emit go_to_end;
               break;
             else/if _strcmp (key, "F2") == 0 then
