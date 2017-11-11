@@ -1,0 +1,139 @@
+#include "mars/util/mars-media.ceu"
+
+var _char&& name;
+(name, _) = await JOINED;
+var bool im_tv = _strcmp (name, "TV") == 0;
+
+var int width = 1024;
+var int height = 576;
+
+par do
+  if im_tv then
+    input (int) CHOSEN_OPTION; 
+
+    output (none) QUESTION;
+    output (none) END_;
+
+    var Media.Video video = val Media.Video (
+                    [] .. "resources/priv/video_principal.mp4",
+                    Region (0, 0, width, height, 1),
+                    1.0, 1.0);
+
+    var Media.Image interatividade = val Media.Image (
+                    [] .. "resources/priv/interatividade_1.png",
+                    Region (0, 0, width, height, 2),
+                    1.0);
+    var&? Scene s = spawn Scene (Size(width, height));
+    watching s do
+      var int option = 1;
+      par/or do
+        await Play (&s.scene, &video);
+      with
+        await 43s;
+        par/or do
+          emit QUESTION;
+          await Play (&s.scene, &interatividade);
+        with
+          await 15s;
+        with
+          option = await CHOSEN_OPTION;
+          _printf ("option: %d\n", option);
+        end
+      end
+      var []byte end_;
+      if option == 1 then
+        end_ = [] .. "resources/priv/final_1.mp4";
+      else/if option == 2 then
+        end_ = [] .. "resources/priv/final_2.mp4";
+      else
+        end_ = [] .. "resources/priv/final_3.mp4";
+      end
+
+      var Media.Video final = val Media.Video (
+                    [] .. end_,
+                    Region (0, 0, width, height, 1),
+                    1.0, 1.0);
+
+      await Play (&s.scene, &final);
+      emit END_ ();
+    end
+  end
+with
+  if not im_tv then
+    input (none) SHOW_OPTIONS;
+    input (none) KILL_APP;
+
+    output (none) ACCEPT;
+    output (int) CHOICE;
+
+    var Media.Image init = val Media.Image (
+                    [] .. "resources/priv/app01_tela_v2.png",
+                    Region (0, 0, width, height, 2),
+                    1.0);
+    var&? Scene s = spawn Scene (Size(width, height));
+    watching s, KILL_APP do
+      par/or do
+        await Play (&s.scene, &init);
+      with
+        var _char_ptr_ext key;
+        (_, key, _) = await CM_SCENE_KEY until _strcmp (key, "F1") == 0; 
+        emit ACCEPT ();
+      end
+
+      watching SHOW_OPTIONS do
+        var Media.Image background = val Media.Image (
+                        [] .. "resources/priv/app_espera.png",
+                        Region (0, 0, width, height, 2), 1.0);
+        await Play (&s.scene, &background);
+      end
+      var Media.Image question = val Media.Image (
+                        [] .. "resources/priv/app02_tela_v2.png",
+                        Region (0, 0, width, height, 1), 1.0);
+      var Media.Image op1 = val Media.Image (
+                        [] .. "resources/priv/app02_option1_v2.png",
+                        Region (0, 270, width, 55, 2), 1.0);
+      var Media.Image op2 = val Media.Image (
+                        [] .. "resources/priv/app02_option2_v2.png",
+                        Region (0, 330, width, 55, 2), 1.0);
+      var Media.Image op3 = val Media.Image (
+                        [] .. "resources/priv/app02_option3_v2.png",
+                        Region (0, 390, width, 55, 2), 1.0);
+
+      event (none) go_to_end;
+      watching go_to_end
+      do
+        par do
+          await Play (&s.scene, &question);
+        with
+          await Play (&s.scene, &op1);
+        with
+          await Play (&s.scene, &op2);
+        with
+          await Play (&s.scene, &op3);
+        with
+          loop do
+            var _char_ptr_ext key;
+            (_, key, _) = await CM_SCENE_KEY; 
+            if _strcmp (key, "F1") == 0 then
+              emit CHOICE (1); 
+              emit go_to_end;
+              break;
+            else/if _strcmp (key, "F2") == 0 then
+              emit CHOICE (2);
+              emit go_to_end;
+              break;
+            else/if _strcmp (key, "F3") == 0 then
+              emit CHOICE (3);
+              emit go_to_end;
+              break;
+            end
+          end
+        end
+      end
+      var Media.Image final_img = val Media.Image (
+                        [] .. "resources/priv/app03_tela_v2.png",
+                        Region (0, 0, width, height, 2), 1.0);
+      await Play (&s.scene, &final_img);
+    end
+  end
+end
