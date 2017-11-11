@@ -1,0 +1,119 @@
+var [] byte t1    = [] .. "resources/piano/type1.png";
+var [] byte t2    = [] .. "resources/piano/type2.png";
+var [] byte t3    = [] .. "resources/piano/type3.png";
+var [] byte sharp = [] .. "resources/piano/sharp.png";
+
+var [] byte t1_sel    = [] .. "resources/piano/type1_sel.png";
+var [] byte t2_sel    = [] .. "resources/piano/type2_sel.png";
+var [] byte t3_sel    = [] .. "resources/piano/type3_sel.png";
+var [] byte sharp_sel = [] .. "resources/piano/sharp_sel.png";
+
+/* KEYS */
+var Media.Image c = val Media.Image (
+    [] .. t1, Region (0, 0, key_width, key_height, 1), 1.0);
+
+var Media.Image cs = val Media.Image (
+    [] .. sharp, Region (key_width - sharp_width/2, 0, 
+                         sharp_width, sharp_height, 2), 1.0);
+
+var Media.Image d = val Media.Image (
+    [] .. t2, Region (key_width, 0, key_width, key_height, 1), 1.0);
+
+var Media.Image ds = val Media.Image (
+    [] .. sharp, Region (2 * key_width - sharp_width/2, 0, 
+                         sharp_width, sharp_height, 2), 1.0);
+
+var Media.Image e = val Media.Image (
+    [] .. t3, Region (2 * key_width, 0, key_width, key_height, 1), 1.0);
+
+var Media.Image f = val Media.Image (
+    [] .. t1, Region (3 * key_width, 0, key_width, key_height, 1), 1.0);
+
+var Media.Image fs = val Media.Image (
+    [] .. sharp, Region (4 * key_width - sharp_width/2, 0, 
+                         sharp_width, sharp_height, 2), 1.0);
+
+var Media.Image g = val Media.Image (
+    [] .. t2, Region (4 * key_width, 0, key_width, key_height, 1), 1.0);
+
+var Media.Image gs = val Media.Image (
+    [] .. sharp, Region (5 * key_width - sharp_width/2, 0, 
+                         sharp_width, sharp_height, 2), 1.0);
+
+var Media.Image a = val Media.Image (
+    [] .. t2, Region (5 * key_width, 0, key_width, key_height, 1), 1.0);
+
+var Media.Image as_ = val Media.Image (
+    [] .. sharp, Region (6 * key_width - sharp_width/2, 0, 
+                         sharp_width, sharp_height, 2), 1.0);
+
+var Media.Image b = val Media.Image (
+    [] .. t3, Region (6 * key_width, 0, key_width, key_height, 1), 1.0);
+
+var Media.Image c_sel = val Media.Image (
+    [] .. t1_sel, Region (0, 0, key_width, key_height, 3), 1.0);
+
+var Media.Image cs_sel = val Media.Image (
+    [] .. sharp_sel, Region (key_width - sharp_width/2, 0, 
+                         sharp_width, sharp_height, 3), 1.0);
+
+var Media.Image d_sel = val Media.Image (
+    [] .. t2_sel, Region (key_width, 0, key_width, key_height, 3), 1.0);
+
+var Media.Image ds_sel = val Media.Image (
+    [] .. sharp_sel, Region (2 * key_width - sharp_width/2, 0, 
+                         sharp_width, sharp_height, 3), 1.0);
+
+var Media.Image e_sel = val Media.Image (
+    [] .. t3_sel, Region (2 * key_width, 0, key_width, key_height, 3), 1.0);
+
+var Media.Image f_sel = val Media.Image (
+    [] .. t1_sel, Region (3 * key_width, 0, key_width, key_height, 3), 1.0);
+
+var Media.Image fs_sel = val Media.Image (
+    [] .. sharp_sel, Region (4 * key_width - sharp_width/2, 0, 
+                         sharp_width, sharp_height, 3), 1.0);
+
+var Media.Image g_sel = val Media.Image (
+    [] .. t2_sel, Region (4 * key_width, 0, key_width, key_height, 3), 1.0);
+
+var Media.Image gs_sel = val Media.Image (
+    [] .. sharp_sel, Region (5 * key_width - sharp_width/2, 0, 
+                         sharp_width, sharp_height, 3), 1.0);
+
+var Media.Image a_sel = val Media.Image (
+    [] .. t2_sel, Region (5 * key_width, 0, key_width, key_height, 3), 1.0);
+
+var Media.Image as_sel = val Media.Image (
+    [] .. sharp_sel, Region (6 * key_width - sharp_width/2, 0, 
+                         sharp_width, sharp_height, 3), 1.0);
+
+var Media.Image b_sel = val Media.Image (
+    [] .. t3_sel, Region (6 * key_width, 0, key_width, key_height, 3), 1.0);
+
+
+/* SOUNDS */
+var Media.Audio c_sound = val Media.Audio ([] .. "resources/piano/c1.wav", 1.0);
+
+var Media.Audio cs_sound = val Media.Audio ([] .. "resources/piano/c1s.wav", 1.0);
+
+var Media.Audio d_sound = val Media.Audio ([] .. "resources/piano/d1.wav", 1.0);
+
+var Media.Audio ds_sound = val Media.Audio ([] .. "resources/piano/d1s.wav", 1.0);
+
+var Media.Audio e_sound = val Media.Audio ([] .. "resources/piano/e1.wav", 1.0);
+
+var Media.Audio f_sound = val Media.Audio ([] .. "resources/piano/f1.wav", 1.0);
+
+var Media.Audio fs_sound = val Media.Audio ([] .. "resources/piano/f1s.wav", 1.0);
+
+var Media.Audio g_sound = val Media.Audio ([] .. "resources/piano/g1.wav", 1.0);
+
+var Media.Audio gs_sound = val Media.Audio ([] .. "resources/piano/g1s.wav", 1.0);
+
+var Media.Audio a_sound = val Media.Audio ([] .. "resources/piano/a1.wav", 1.0);
+
+var Media.Audio as_sound = val Media.Audio ([] .. "resources/piano/a1s.wav", 1.0);
+
+var Media.Audio b_sound = val Media.Audio ([] .. "resources/piano/b1.wav", 1.0);
+
