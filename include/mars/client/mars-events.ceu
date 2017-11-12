@@ -16,11 +16,12 @@ var int evt_dev_role_index = -1;
     return map
   end
 
-  function get_mapping_indices (evt)
+  function get_mapping_indices (evt, role_from)
     local indices = {} 
     if type(CLIENT.mapping.events) == 'table' then
       for i=1, #CLIENT.mapping.events do
-        if CLIENT.mapping.events[i][1] == evt then
+        if CLIENT.mapping.events[i][1] == evt and
+          CLIENT.mapping.events[i][2] == role_from then
           table.insert(indices, i)
         end
       end
@@ -268,10 +269,12 @@ do
   escape has_mapping;
 end
 
-code/tight Get_Mapping_Indices (var _char&& evt, var& []int mapping) -> none
+code/tight Get_Mapping_Indices (var _char&& evt,
+                                var&[] byte role_from,
+                                var& []int mapping) -> none
 do
   [[
-    indices = get_mapping_indices (@evt)
+    indices = get_mapping_indices (@evt, @role_from)
   ]]
   var int len = [[ #indices ]];
   var ssize i;

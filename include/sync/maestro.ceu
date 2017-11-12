@@ -172,7 +172,7 @@ par/or do
 
         evt = [] .. [[ TABLE.evt ]] .. [{'\0'}];
         if call Has_Mapping (&&evt[0], &evt_dev_role, false) then
-          call Get_Mapping_Indices (&&evt[0], &mapping);
+          call Get_Mapping_Indices (&&evt[0], &evt_dev_role, &mapping);
           var ssize len = $mapping;
           var ssize i;
           loop i in [0 -> len[ do
