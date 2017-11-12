@@ -9,5 +9,3 @@ CLIENT.mapping.events =
     {"KEY_PRESSED", "CONTROL", "VOLUME_DOWN", "TV", function (arg) return arg[1] == 6 end},
     {"KEY_PRESSED", "CONTROL", "TURN_OFF", "TV", function (arg) return arg[1] == 7 end},
   }
-
---CLIENT.mapping.apply = apply

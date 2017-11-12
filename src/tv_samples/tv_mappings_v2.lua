@@ -9,5 +9,3 @@ CLIENT.mapping.events =
     {"RETURN_", "CONTROL", "TURN_ON", "TV"},
     {"ESC", "CONTROL", "TURN_OFF", "TV"},
   }
-
---CLIENT.mapping.apply = apply

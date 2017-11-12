@@ -5,5 +5,3 @@ CLIENT.mapping.events =
     {"END_", "TV",  "KILL_APP", "TABLET"},
     {"QUESTION", "TV",  "SHOW_OPTIONS", "TABLET"},
   }
-
---CLIENT.mapping.apply = apply
