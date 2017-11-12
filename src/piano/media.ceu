@@ -86,7 +86,7 @@ var Media.Image a_sel = val Media.Image (
 
 var Media.Image as_sel = val Media.Image (
     [] .. sharp_sel, Region (6 * key_width - sharp_width/2, 0, 
-                         sharp_width, sharp_height, 3), 1.0);
+                         sharp_width, sharp_height, 2), 1.0);
 
 var Media.Image b_sel = val Media.Image (
     [] .. t3_sel, Region (6 * key_width, 0, key_width, key_height, 3), 1.0);
@@ -116,4 +116,105 @@ var Media.Audio a_sound = val Media.Audio ([] .. "resources/piano/a1.wav", 1.0);
 var Media.Audio as_sound = val Media.Audio ([] .. "resources/piano/a1s.wav", 1.0);
 
 var Media.Audio b_sound = val Media.Audio ([] .. "resources/piano/b1.wav", 1.0);
+
+code/await Play_Note (var int note, var& IScene s, pool& [] Play ps) -> none
+do
+  if note == C then
+    par/or do
+      await Play (&s, &outer.c_sound);
+    with
+      await Play (&s, &outer.c_sel);
+    with
+      await 1s;
+    end
+  else/if note == CS then
+    par/or do
+      await Play (&s, &outer.cs_sound);
+    with
+      await Play (&s, &outer.cs_sel);
+    with
+      await 1s;
+    end
+  else/if note == D then
+    par/or do
+      await Play (&s, &outer.d_sound);
+    with
+      await Play (&s, &outer.d_sel);
+    with
+      await 1s;
+    end
+  else/if note == DS then
+    par/or do
+      await Play (&s, &outer.ds_sound);
+    with
+      await Play (&s, &outer.ds_sel);
+    with
+      await 1s;
+    end
+  else/if note == E then
+    par/or do
+      await Play (&s, &outer.e_sound);
+    with
+      await Play (&s, &outer.e_sel);
+    with
+      await 1s;
+    end
+  else/if note == F then
+    par/or do
+      await Play (&s, &outer.f_sound);
+    with
+      await Play (&s, &outer.f_sel);
+    with
+      await 1s;
+    end
+  else/if note == FS then
+    par/or do
+      await Play (&s, &outer.fs_sound);
+    with
+      await Play (&s, &outer.fs_sel);
+    with
+      await 1s;
+    end
+  else/if note == G then
+    par/or do
+      await Play (&s, &outer.g_sound);
+    with
+      await Play (&s, &outer.g_sel);
+    with
+      await 1s;
+    end
+  else/if note == GS then
+    par/or do
+      await Play (&s, &outer.gs_sound);
+    with
+      await Play (&s, &outer.gs_sel);
+    with
+      await 1s;
+    end
+  else/if note == A then
+    par/or do
+      await Play (&s, &outer.a_sound);
+    with
+      await Play (&s, &outer.a_sel);
+    with
+      await 1s;
+    end
+  else/if note == AS then
+    par/or do
+      await Play (&s, &outer.as_sound);
+    with
+      await Play (&s, &outer.as_sel);
+    with
+      await 1s;
+    end
+  else/if note == B then
+    par/or do
+      await Play (&s, &outer.b_sound);
+    with
+      await Play (&s, &outer.b_sel);
+    with
+      await 1s;
+    end
+  end
+end
 
