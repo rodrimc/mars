@@ -218,7 +218,7 @@ for i=1, #input_evts do
 end
 
 CODE_TEMPLATE = '\n'                                                           ..
-  'code/await Handle_Mapping (var _char&& evt, var _char&& mapping) -> none\n' ..
+  'code/await Handle_Mapping (var _char&& evt, var&[] byte from, var _char&& mapping) -> none\n' ..
   'do\n'                                                                       ..
   '\tvar Exception.Lua? e;\n'                                                  ..
   '\tcatch e do\n'                                                             ..
@@ -268,7 +268,7 @@ for i = 1, #input_evts do
     mapping_args = mapping_args:sub (1, -3)
   end
 
-  local mapping_test = ident .. 'var bool toEmit = [[ apply_mapping (@evt,"' .. input.evt ..'") ]];\n'
+  local mapping_test = ident .. 'var bool toEmit = [[ apply_mapping (@evt,@from,"' .. input.evt ..'") ]];\n'
 
   body = body .. mapping_test
   body = body .. attrs 

@@ -21,7 +21,8 @@ var int evt_dev_role_index = -1;
     if type(CLIENT.mapping.events) == 'table' then
       for i=1, #CLIENT.mapping.events do
         if CLIENT.mapping.events[i][1] == evt and
-          CLIENT.mapping.events[i][2] == role_from then
+          (CLIENT.mapping.events[i][2] == role_from or
+           CLIENT.mapping.events[i][2] == nil) then
           table.insert(indices, i)
         end
       end
@@ -34,11 +35,12 @@ var int evt_dev_role_index = -1;
 
     for i=1, #map do
       if is_local then
-        if map[i][2] == role then
+        if map[i][2] == role or map[i][2] == nil then
           return true
         end
       else
-        if map[i][2] == role and map[i][4] == CLIENT.role.name then
+        if (map[i][2] == role or map[i][2] == nil) and 
+           (map[i][4] == CLIENT.role.name or map[i][4] == nil) then
           return true
         end
       end
@@ -46,7 +48,7 @@ var int evt_dev_role_index = -1;
     return false
   end
 
-  function apply_mapping (evtFrom, evtTo)
+  function apply_mapping (evtFrom, from, evtTo)
     local toEmit = true
     local args = CLIENT.remote.args
 
@@ -68,7 +70,7 @@ var int evt_dev_role_index = -1;
 
     CLIENT.mapping.args = args
     if type (func) == 'function' then
-      toEmit, mapped = func (args)
+      toEmit, mapped = func (args, from)
       if toEmit then
         CLIENT.mapping.args = mapped or args
       end
