@@ -1,0 +1,87 @@
+#include "mars/util/mars-media.ceu"
+
+input (none) SHOW_OPTIONS;
+input (int) USER_CHOICE;
+
+output (none) INTERACTIVITY;
+output (int) FINAL_;
+
+var _char&& name;
+(name, _) = await JOINED;
+var bool im_main = _strcmp (name, "MAIN") == 0;
+
+var int width = 1024;
+var int height = 576;
+
+var Media.Video video = val Media.Video (
+                          [] .. "resources/priv2/vid.mp4",
+                          Region (0, 0, width, height, 1),
+                          1.0, 1.0);
+
+var&? Scene s = spawn Scene (Size (width,height));
+
+watching s
+do
+  if im_main then
+    var int choice = 1;
+    par/or do
+      await Play (&s.scene, &video);
+    with
+      await 35s;
+      emit INTERACTIVITY ();
+      choice = await USER_CHOICE;
+    end
+
+    var[] byte path;
+    if choice == 1 then
+      path = [] .. "resources/priv2/let_him_in.mp4";
+    else
+      path = [] .. "resources/priv2/leave_him_behind.mp4";
+    end
+
+    var Media.Video vid_choice = val Media.Video (
+                                    [] ..path, Region (0, 0, width, height, 1),
+                                    1.0, 1.0);
+    watching 10s
+    do
+      await Play (&s.scene, &vid_choice);
+    end;
+  else
+    var Media.Image background = val Media.Image (
+                                    [] .. "resources/priv2/background.png",
+                                    Region (0, 0, width, height, 1), 1.0);
+    var Media.Image op1 = val Media.Image (
+                                    [] .. "resources/priv2/op1.png",
+                                    Region (143, 201, 256, 150, 2), 1.0);
+    var Media.Image op2 = val Media.Image (
+                                    [] .. "resources/priv2/op2.png",
+                                    Region (456, 201, 461, 173, 2), 1.0);
+    par/or do
+      await Play (&s.scene, &background);
+    with
+      await SHOW_OPTIONS;
+      var&? Play op1_p;
+      var&? Play op2_p;
+      par/or do
+        op1_p = spawn Play (&s.scene, &op1);
+        await FOREVER;
+      with
+        op2_p = spawn Play (&s.scene, &op2);
+        await FOREVER;
+      with
+        var uint obj;
+        (obj, _, _, _, _) = await CM_PLAYER_MOUSE_CLICK until
+                                  (obj == op1_p!.player.self or
+                                   obj == op2_p!.player.self);
+        if obj == op1_p!.player.self then
+          emit FINAL_ (1);
+        else
+          emit FINAL_ (2);
+        end
+      end
+    end
+  end
+end
+
+escape 0;
+
