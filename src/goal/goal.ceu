@@ -1,0 +1,135 @@
+#include "mars/util/mars-media.ceu"
+
+var _char&& name;
+(name, _) = await JOINED;
+var bool im_shooter = _strcmp (name, "SHOOTER") == 0;
+
+var int width   = 320;
+var int height = 420;
+
+var&? Scene s = spawn Scene (Size (width, height));
+var Region r = val Region (0, 0, width, height, 1);
+
+#define LEFT  1 
+#define RIGHT 2
+
+#define ANIM_DUR 1s
+
+code/await Draw_Anim (var int shoot_dir,
+                      var int goalkeeper_dir,
+                      var& IScene s) -> none
+do
+  var Media.Image b1;
+  var Media.Image b2;
+  var Media.Image b3;
+
+  var Media.Image gk1;
+  var Media.Image gk2;
+  var Media.Image gk3;
+
+  outer.r.z = 2;
+
+  if shoot_dir == RIGHT then
+    b1 = val Media.Image ([] .. "resources/goal/sdir1_ball.png", outer.r, 1.0);
+    b2 = val Media.Image ([] .. "resources/goal/sdir2_ball.png", outer.r, 1.0);
+    b3 = val Media.Image ([] .. "resources/goal/sdir3_ball.png", outer.r, 1.0);
+  else
+    b1 = val Media.Image ([] .. "resources/goal/sesq1_ball.png", outer.r, 1.0);
+    b2 = val Media.Image ([] .. "resources/goal/sesq2_ball.png", outer.r, 1.0);
+    b3 = val Media.Image ([] .. "resources/goal/sesq3_ball.png", outer.r, 1.0);
+  end
+
+  outer.r.z = 1;
+  if goalkeeper_dir == RIGHT then
+    gk1 = val Media.Image ([] .. "resources/goal/gdir1.png", outer.r, 1.0);
+    gk2 = val Media.Image ([] .. "resources/goal/gdir2.png", outer.r, 1.0);
+    gk3 = val Media.Image ([] .. "resources/goal/gdir3.png", outer.r, 1.0);
+  else
+    gk1 = val Media.Image ([] .. "resources/goal/gesq1.png", outer.r, 1.0);
+    gk2 = val Media.Image ([] .. "resources/goal/gesq2.png", outer.r, 1.0);
+    gk3 = val Media.Image ([] .. "resources/goal/gesq3.png", outer.r, 1.0);
+  end
+
+  watching ANIM_DUR 
+  do
+    par do
+      await Play (&s, &gk1);
+    with
+      await Play (&s, &b1);
+    end
+  end
+
+  watching ANIM_DUR 
+  do
+    par do
+      await Play (&s, &gk2);
+    with
+      await Play (&s, &b2);
+    end
+  end
+
+  watching ANIM_DUR 
+  do
+    par do
+      await Play (&s, &gk3);
+    with
+      await Play (&s, &b3);
+    end
+  end
+end
+
+output (int) CHOICE;
+input (int) OPPONENT_CHOICE;
+
+watching s
+do
+  var Media.Image intro = val Media.Image (
+                      [] .. "resources/goal/intro.png",
+                      r, 1.0);
+  par/or do
+    await Play (&s.scene, &intro);
+  with
+    await CM_PLAYER_MOUSE_CLICK;
+  end
+
+  var[] byte img;
+  if im_shooter then
+    img = [] .. "resources/goal/bgs.png";
+  else
+    img = [] .. "resources/goal/bgg.png";
+  end
+
+  var Media.Image sel = val Media.Image([] .. img, r, 1.0);
+
+  var int choice = _;
+  var int opponent_choice = _;
+
+  watching Play (&s.scene, &sel)
+  do
+    par/and do
+      var _char_ptr_ext key;
+      (_, key, _) = await CM_SCENE_KEY until 
+                                  (_strcmp (key, "Right") == 0 or
+                                   _strcmp (key, "Left") == 0);
+      if key[0] == {'R'} then
+        choice = RIGHT;
+      else
+        choice = LEFT;
+      end
+      _printf ("choice: %d\n", choice);
+      emit CHOICE (choice);
+    with
+      opponent_choice = await OPPONENT_CHOICE;
+      _printf ("opponent_choice: %d\n", opponent_choice);
+    end
+  end
+
+  if im_shooter then
+    await Draw_Anim (choice, opponent_choice, &s.scene);
+  else
+    await Draw_Anim (opponent_choice, choice, &s.scene);
+  end
+end
+
+escape 0;
+
