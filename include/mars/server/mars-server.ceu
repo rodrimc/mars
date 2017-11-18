@@ -5,9 +5,30 @@
 [[
   SERVER =
     {
-      naming = nil,
+      mapping = nil,
+      interface = nil,
       roles = {}
     }
+
+  function interface (T)
+    SERVER.interface = type(T) == 'table' and T or nil
+  end
+
+  function mapping (M)
+    SERVER.mapping = type(M) == 'table' and M or nil
+  end
+
+  function get_mapping (evt)
+    local map = {}
+    if type(SERVER.mapping) == 'table' then
+      for k,v in pairs (SERVER.mapping[1]) do
+        if v[1] == evt then
+          table.insert(map, v)
+        end
+      end
+    end
+    return map
+  end
 ]]
 
 #include "mars/util/mars-defs.ceu"
@@ -107,8 +128,10 @@ event (uint) send_broadcast_join;
 event (uint, int) send_broadcast_message;
 event (uint) send_tick_message;
 
-var []byte cur_payload;
-var []byte cur_role;
+var[] byte mapped_evt = _;
+var[] byte mapped_dest = _;
+var[] byte cur_payload;
+var[] byte cur_role;
 
 var uint id_ref = 1;
 var usize peers_count = 0;
@@ -245,17 +268,36 @@ do
       [[
         TABLE = load ('return{' .. @buffer .. '}')()
       ]]
-
       var int type = [[ TABLE.type ]];
 
       if  type == P_REGULAR_SEND then
         var uint from = [[ TABLE.from ]];
         var int index = [[ TABLE.index or -1 ]];
-        var [] byte payload = [] .. [[ serialize(TABLE.payload) ]];
+
         outer.cur_role = [] .. [[ TABLE.role ]];
 
-        outer.cur_payload = [] .. payload;
-        emit outer.send_broadcast_message (from, index);
+        [[ print (serialize(TABLE.payload)) ]]
+        [[ m = get_mapping (TABLE.payload.evt) ]]
+
+        var ssize len = [[ #m ]];
+        var ssize i;
+        loop i in [1 -> len] do
+          var bool flag = [[ m[@i][2] == TABLE.role ]];
+          if flag then
+            outer.mapped_evt = [] .. [[ m[@i][3] .. '\0']];
+            outer.mapped_dest = [] .. [[ (m[@i][4] or '') .. '\0' ]];
+
+            [[
+              --TODO: apply function to args
+              TABLE.payload.evt = m[@i][3]
+            ]]
+
+            outer.cur_payload = [] .. [[ serialize (TABLE.payload) ]];
+
+            emit outer.send_broadcast_message (from, index);
+          end
+        end
+
       end
     end
     if e? then
