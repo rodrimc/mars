@@ -103,7 +103,6 @@ data UV_TCP_Server_Data with
 end
 
 /*** SERVER SIDE ***/
-event (none) send_join_reply;
 event (uint) send_broadcast_join;
 event (uint, int) send_broadcast_message;
 event (uint) send_tick_message;
@@ -121,23 +120,42 @@ spawn do
   end
 end
 
-code/await Send_Join_Reply (var uint handle_id,
-                            var& UV_Stream stub,
-                            var uint id,
-                            var& []byte role,
-                            var int index) -> none
+code/await Send_Not_Joined_Reply (var uint handle_id,
+                                  var& UV_Stream stream) -> none
 do
   var Exception.Lua? e;
   catch e do
     [[
-      luabuff = 'type='  .. tostring(@S_JOINED)          .. ',' ..
-                'id='    .. tostring(@id)                .. ',' ..
-                'peers=' .. tostring(@outer.peers_count) .. ',' ..
-                'role="' .. tostring(@role)              .. '",' ..
-                'index=' .. tostring(@index)
+      luabuff = 'type='   .. tostring(@S_NOT_JOINED)
     ]]
     var[] byte buff = [] .. [[ luabuff ]];
-    await Send (handle_id, &stub, &buff);
+    await Send (handle_id, &stream, &buff);
+  end
+  if e? then
+    _fprintf (_stderr, "[Send_Not_Joined_Reply error]: %s\n", e!.message);
+  end
+end
+
+code/await Send_Join_Reply (var uint handle_id,
+                            var& UV_Stream stream,
+                            var uint id,
+                            var int status,
+                            var int index,
+                            var& []byte outputs) -> none
+do
+  var Exception.Lua? e;
+  catch e do
+    [[
+      luabuff = 'type='     .. tostring(@S_JOINED)          .. ',' ..
+                'id='       .. tostring(@id)                .. ',' ..
+                'peers='    .. tostring(@outer.peers_count) .. ',' ..
+                'status='   .. tostring(@status)            .. ',' ..
+                'outputs="' .. tostring(@outputs)           .. '",' ..
+                'index='    .. tostring(@index)
+      print (luabuff)
+    ]]
+    var[] byte buff = [] .. [[ luabuff ]];
+    await Send (handle_id, &stream, &buff);
   end
   if e? then
     _fprintf (_stderr, "[Send_Join_Reply error]: %s\n", e!.message);
@@ -257,18 +275,20 @@ do
     outer.peers_count = outer.peers_count - 1;
   end
 
+  pool[] Send_Not_Joined_Reply  pool_not_joined_reply;
   pool[] Send_Join_Reply        pool_join_reply;
   pool[] Send_Broadcast_Join    pool_broadcast_join;
   pool[] Send_Broadcast_Message pool_broadcast_message;
   pool[] Send_Tick_Message      pool_tick_message;
 
-  var[] byte role = [] .. "";
+  var[] byte myrole = [] .. "";
+  var[] byte outputs = [] .. "";
+  var int myindex = _;
+  var int status = _;
+
+  event (none) accepted;
+
   par do
-    var uint freq;
-    every freq in outer.send_tick_message do
-      spawn Send_Tick_Message (handle_id, &stream, 50) in pool_tick_message;
-    end
-  with
     loop do
       var[] byte buff;
       var bool success = await Receive (&stream, &buff);
@@ -277,33 +297,59 @@ do
       catch e do
         [[ MESSAGE = load ('return {' .. @buff .. '}')() ]]
         var int type = [[ MESSAGE.type ]];
-        var int index = _;
 
         if (type == P_JOIN) then
           [[
-            if SERVER.naming and type(SERVER.naming) == 'function' then
-              role = SERVER.naming (@handle_id)
-              role = role or ''
+            role = nil
+            status = NOT_ACCEPTED
+            outputs = ''
+            if MESSAGE.role and SERVER.interface and
+               type(SERVER.interface) == 'table' then
+              role = MESSAGE.role
 
-              if SERVER.roles[role] == nil then
-                SERVER.roles[role] = 1
-              else
-                SERVER.roles[role] = SERVER.roles[role] + 1
+              if SERVER.interface[role] ~= nil then
+                status = ACCEPTED
+
+                for k,v in pairs (SERVER.interface[role].outputs) do
+                  for k1,v1 in pairs (v) do
+                    outputs = outputs .. k1 .. ','
+                  end
+                end
+
+                if outputs ~= '' then
+                  outputs = outputs:sub (1, -2)
+                end
+                print (outputs)
+
+                if SERVER.roles[role] == nil then
+                  SERVER.roles[role] = 1
+                else
+                  SERVER.roles[role] = SERVER.roles[role] + 1
+                end
+
+                index = SERVER.roles[role]
               end
-
-              index = SERVER.roles[role]
             else
               role = ''
               index = 0
             end
           ]]
+          status = [[ status ]];
 
-          role = [] .. [[ role ]];
-          index = [[ index ]];
+          if status == ACCEPTED then
+            myrole = [] .. [[ role .. '\0' ]];
+            myindex = [[ index ]];
+            outputs = [] .. [[ outputs ]];
+            emit accepted ();
+            spawn Send_Join_Reply (handle_id, &stream, handle_id, status,
+                                   myindex, &outputs) in pool_join_reply;
+            emit outer.send_broadcast_join (handle_id);
+          else
+            spawn Send_Not_Joined_Reply (handle_id, &stream)
+                                                      in pool_not_joined_reply;
+          end
 
-          spawn Send_Join_Reply (handle_id, &stream, handle_id, &role, index)
-                                                      in pool_join_reply;
-          emit outer.send_broadcast_join (handle_id);
+
           break;
         end
       end
@@ -312,18 +358,30 @@ do
       end
     end
   with
-    var uint new_id;
-    every new_id in outer.send_broadcast_join do
-      spawn Send_Broadcast_Join (handle_id, &stream, new_id)
-                                                      in pool_broadcast_join;
-    end
-  with
-    var uint from;
-    var int index;
-    every (from, index) in outer.send_broadcast_message do
-      spawn Send_Broadcast_Message (handle_id, &stream, from, &outer.cur_role,
-                                    index, &outer.cur_payload)
-                                    in pool_broadcast_message;
+    await accepted;
+    par do
+      var uint freq;
+      every freq in outer.send_tick_message do
+        spawn Send_Tick_Message (handle_id, &stream, 50) in pool_tick_message;
+      end
+    with
+      var uint new_id;
+      every new_id in outer.send_broadcast_join do
+        spawn Send_Broadcast_Join (handle_id, &stream, new_id)
+                                                        in pool_broadcast_join;
+      end
+    with
+      var uint from;
+      var int index;
+      every (from, index) in outer.send_broadcast_message do
+        if _strcmp (&&myrole[0], &&outer.mapped_dest[0]) == 0 then
+          _printf ("payload: %s\n", &&outer.cur_payload[0]);
+
+          spawn Send_Broadcast_Message (handle_id, &stream, from, &outer.cur_role,
+                                        index, &outer.cur_payload)
+                                        in pool_broadcast_message;
+        end
+      end
     end
   end
 end
