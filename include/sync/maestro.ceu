@@ -94,13 +94,11 @@ input (_char&&) INIT;
 input (_char&&, int) JOINED;
 
 spawn do
-  var _char&& script = await INIT;
+  var _char&& role = await INIT;
   var Exception? e;
   catch e do
-    _printf ("[client] init script: %s\n", script);
-    if not (script == null) then
-      [[ dofile (@script) ]]
-    end
+    _printf ("[client] role: %s\n", role);
+    [[ CLIENT.role.name = @role ]]
   end
   if e? then
     _fprintf (_stderr, "[INIT error:] %s\n", e!.message);
