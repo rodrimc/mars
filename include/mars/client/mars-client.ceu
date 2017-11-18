@@ -12,7 +12,7 @@
       },
       mapping =
       {
-        events = nil,
+        events = {},
         args = {},
         apply = nil
       },
@@ -24,6 +24,8 @@
 ]]
 
 #include "mars/util/mars-defs.ceu"
+
+event (none) abort;
 
 /*** CLIENT API ***/
 
@@ -65,11 +67,17 @@ do
       var uint peers = [[ TABLE.peers ]];
 
       [[
-        CLIENT.role.name = TABLE.role or  ''
         CLIENT.role.index = TABLE.index or  -1
+        for evt in TABLE.outputs:gmatch ('([^,]+)') do
+          CLIENT.mapping.events[evt] = true
+        end
       ]]
 
       emit stub.joined (stub.id, peers);
+
+    else/if type == S_NOT_JOINED then
+      _fprintf (_stderr, "[Client:] server didn't accepted me!\n");
+      emit outer.abort;
 
     else/if type == S_NEW_PEER then
       var uint new_peer = [[ TABLE.peers ]];
@@ -114,7 +122,8 @@ do
   var[] byte wbuffer;
   var[] byte message;
 
-  watching r_conn, w_conn do
+  watching r_conn, w_conn, outer.abort
+  do
     var Stub ref_ = val Stub (0, &wbuffer, &rbuffer, &message,  _, _, _, _, _);
     stub = &ref_;
 
@@ -155,8 +164,10 @@ do
       var Exception? e;
       catch e do
         [[
-          luabuff = 'type=' .. tostring(@P_JOIN)
+          luabuff = 'type=' .. tostring(@P_JOIN) .. ',' ..
+                    'role="' .. CLIENT.role.name .. '"'
         ]]
+
         stub.wbuffer = [] .. [[ luabuff ]];
 
         /* send P_JOIN message */
