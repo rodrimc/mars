@@ -266,7 +266,7 @@ code/tight Has_Mapping (var _char&& evt,
                         var bool is_local) -> bool
 do
   var bool has_mapping = false;
-  has_mapping = [[ has_mapping (@evt, @role, @is_local) ]];
+  has_mapping = [[ CLIENT.mapping.events [@evt] == true ]];
 
   escape has_mapping;
 end
