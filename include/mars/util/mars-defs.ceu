@@ -16,15 +16,19 @@
 
 /* server -> peers */
 #define S_JOINED              20
-#define S_NEW_PEER            21
-#define S_BROADCAST           22
-#define S_TICK                23
+#define S_NOT_JOINED          21
+#define S_NEW_PEER            22
+#define S_BROADCAST           23
+#define S_TICK                24
 
 /* event codes */
 #define EVT_KEY               "CM_SCENE_KEY\0"
 #define EVT_SCENE_CLICK       "CM_SCENE_MOUSE_CLICK\0"
 #define EVT_PLAYER_CLICK      "CM_PLAYER_MOUSE_CLICK\0"
 /* more? */
+
+#define ACCEPTED               1
+#define NOT_ACCEPTED          -1
 
 #include "c.ceu"
 #include <r-util.ceu>
