@@ -13,6 +13,8 @@
 #include "mars/util/mars-defs.ceu"
 
 native/pos do
+  ##include <unistd.h>
+
 	tceu_callback_ret evt_cb (int cmd,
 														tceu_callback_arg p1,
 														tceu_callback_arg p2,
@@ -23,12 +25,30 @@ native/pos do
     tceu_callback_ret ret = { .is_handled=0 };
     if (flag == 0 && cmd == CEU_CALLBACK_STEP)
     {
-      if (CEU_APP.argc > 1)
+      char *interface_file = NULL;
+      char *mapping_file = NULL;
+      char c;
+
+      while ((c = getopt (CEU_APP.argc, CEU_APP.argv, "i:m:")) != -1)
       {
-        char *str = strdup (CEU_APP.argv[1]);
-        ceu_input (CEU_INPUT_INIT, &str);
-        free (str);
+        switch (c)
+        {
+          case 'i':
+          {
+            interface_file = optarg;
+            break;
+          }
+          case 'm':
+          {
+            mapping_file = optarg;
+            break;
+          }
+        }
       }
+
+      tceu_input_INIT p = {interface_file, mapping_file};
+
+      ceu_input (CEU_INPUT_INIT, &p);
 
       flag = 1;
       ret.is_handled = 1;
@@ -46,20 +66,36 @@ native/nohold
 
 _ceu_callback_register (&&_cb);
 
-input (_char&&) INIT;
+input (_char&&, _char&&) INIT;
 
-spawn do
-  var _char&& script = await INIT;
-  var Exception? e;
-  catch e do
-    _printf ("[server] init script: %s\n", script);
+var _char&& mapping;
+var _char&& interface;
+(interface, mapping) = await INIT;
+
+var Exception? e;
+catch e do
+  _printf ("[server] interface file: %s\n", interface);
+  if interface != null then
     [[
-      dofile (@script)
+      dofile (@interface)
     ]]
   end
-  if e? then
-    _fprintf (_stderr, "[INIT error:] %s\n", e!.message);
+end
+if e? then
+  _fprintf (_stderr, "[INTERFACES error:] %s\n", e!.message);
+  escape 0;
+end
+
+catch e do
+  _printf ("[server] mapping file: %s\n", mapping);
+  if mapping != null then
+    [[
+      dofile (@mapping)
+    ]]
   end
+end
+if e? then
+  _fprintf (_stderr, "[MAPPING error:] %s\n", e!.message);
 end
 
 data UV_TCP_Server_Data with
