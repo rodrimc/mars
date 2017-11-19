@@ -24,6 +24,7 @@
 ]]
 
 #include "mars/util/mars-defs.ceu"
+#include "mars/client/mars-events.ceu"
 
 event (none) abort;
 

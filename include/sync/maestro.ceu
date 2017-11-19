@@ -1,4 +1,4 @@
-#include "mars/util/mars-media.ceu"
+#include "media/media.ceu"
 #include "mars/client/mars-client.ceu"
 
 native/pre do
@@ -189,81 +189,6 @@ par/or do
             spawn Handle_Mapping (&&evt[0], &evt_dev_role, &&mapped[0]) in mapping_pool;
           end
         end
-      end
-    with
-      /* SCENE */
-
-      /* KEY */
-      var uint obj;
-      var _char_ptr_ext key;
-      var bool press;
-      var[] byte tmp;
-      var[] byte buffer;
-      every (obj, key, press) in mars_scene_key do
-
-        var[] byte key_buff = [] .. (_PTR(key) as _char&&);
-        [[
-          luabuff = '{' ..
-                    'device=' .. tostring(@client.stub.id)   .. ',' ..
-                    'object=' .. tostring(@obj)              .. ',' ..
-                    'evt="'   .. EVT_KEY                     .. '",' ..
-                    "key='"   .. tostring(@key_buff)         .. "'," ..
-                    'press='  .. tostring(@press)            ..
-                    '}'
-        ]]
-        buffer = [] .. [[ luabuff ]];
-
-        spawn Client_Send_Message (&client.stub, &buffer) in send_message_pool;
-      end
-    with
-      /* CLICK */
-      var uint obj;
-      var int x;
-      var int y;
-      var int button;
-      var bool press;
-      var[] byte tmp;
-      var[] byte buffer;
-      every (obj, x, y, button, press) in mars_scene_mouse_clicked do
-        [[
-          luabuff = '{' ..
-                    'device=' .. tostring(@client.stub.id)   .. ',' ..
-                    'object=' .. tostring(@obj)              .. ',' ..
-                    'evt="'   .. EVT_SCENE_CLICK             .. '",' ..
-                    'x='      .. tostring(@x)                .. ',' ..
-                    'y='      .. tostring(@y)                .. ',' ..
-                    'button=' .. tostring(@button)           .. ',' ..
-                    'press='  .. tostring(@press)            ..
-                    '}'
-        ]]
-        buffer = [] .. [[ luabuff ]];
-
-        spawn Client_Send_Message (&client.stub, &buffer) in send_message_pool;
-      end
-
-    with
-      /* PLAYER */
-      var uint obj;
-      var int x;
-      var int y;
-      var int button;
-      var bool press;
-      var[] byte tmp;
-      var[] byte buffer;
-      every (obj, x, y, button, press) in mars_player_mouse_clicked do
-        [[
-          luabuff = '{' ..
-                    'device=' .. tostring(@client.stub.id)   .. ',' ..
-                    'object=' .. tostring(@obj)              .. ',' ..
-                    'evt="'   .. EVT_PLAYER_CLICK            .. '",' ..
-                    'x='      .. tostring(@x)                .. ',' ..
-                    'y='      .. tostring(@y)                .. ',' ..
-                    'button=' .. tostring(@button)           .. ',' ..
-                    'press='  .. tostring(@press)            ..
-                    '}'
-        ]]
-        buffer = [] .. [[ luabuff ]];
-        spawn Client_Send_Message (&client.stub, &buffer) in send_message_pool;
       end
     with
       input (_char&&, _u_args) IN;
