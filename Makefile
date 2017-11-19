@@ -8,6 +8,7 @@ all: MODULES 				= play lua5.3 libuv
 all: SRC_NAME				= $(notdir $(SRC))
 all: MAESTRO 				= include/sync/maestro.ceu
 all: EVTS  					= include/mars/util/mars-compile-evts.lua
+all: INPUT_GEN  	  = include/mars/util/mars-input-gen.lua
 
 #server target
 server: MODULES = lua5.3 libuv
@@ -27,6 +28,7 @@ all:
 	cp $(MAESTRO) $(TEMP)
 	sed s:SRC:"\"$(SRC_SED)\"":g -i $(TEMP)
 	$(LUA) $(EVTS) $(TEMP) $(SRC)
+	$(LUA) $(INPUT_GEN) $(IDF) $(SRC) $(BUILD_PATH)/inputs.ceu
 	ceu --pre --pre-args="-I$(CEU_DIR)/include -I$(CEU_MEDIA_DIR)/include	-I./ \
 						-I$(CEU_UV_DIR)/include -I$(CEU_LIB_DIR) -I./include"  	 				 \
 	          --pre-input=$(TEMP)																							 \
