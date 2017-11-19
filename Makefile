@@ -33,13 +33,13 @@ all:
 	    --ceu --ceu-err-unused=pass --ceu-err-uninitialized=pass							 \
 						--ceu-features-exception=true --ceu-features-thread=true				 \
 						--ceu-features-lua=true																					 \
+						--ceu-output=output.c \
 	    --env --env-types=$(CEU_DIR)/env/types.h															 \
 	          --env-threads=$(CEU_DIR)/env/threads.h													 \
 	          --env-main=$(CEU_DIR)/env/main.c																 \
 	          --env-output=/tmp/x.c																						 \
 	    --cc --cc-args="$(CFLAGS)"																						 \
 	         --cc-output=build/$(BIN)
-	$(BUILD_PATH)/$(BIN) $(ARGS)
 	rm $(TEMP)
 
 server:
@@ -57,7 +57,6 @@ server:
 	          --env-output=/tmp/x.c																					\
 	    --cc --cc-args="$(CFLAGS)"																					\
 	         --cc-output=build/$(BIN)
-	$(BUILD_PATH)/$(BIN) $(ARGS)
 
 clean:
 	rm -rf $(BUILD_PATH)
