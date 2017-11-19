@@ -22,7 +22,6 @@
     local map = {}
     if type(SERVER.mapping) == 'table' then
       for _,v in pairs (SERVER.mapping) do
-        print (v[1])
         if v[1] == evt then
           table.insert(map, v)
         end

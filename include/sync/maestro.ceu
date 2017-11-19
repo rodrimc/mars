@@ -116,6 +116,7 @@ end
 /* internal */
 event (none) mirror_ok;
 
+code/await Emit_Input_Event (var&[] byte evt) -> none;
 code/await Handle_Mapping (var _char&& evt, var&[] byte from,  var _char&& mapping) -> none;
 
 par/or do
@@ -162,6 +163,7 @@ par/or do
         end
       end
     with
+      pool[] Emit_Input_Event input_event_pool;
       pool[] Handle_Mapping mapping_pool;
       var[] byte evt = _;
       var[] int mapped = _;
@@ -177,18 +179,8 @@ par/or do
         ]]
 
         evt = [] .. [[ TABLE.evt ]] .. [{'\0'}];
-        if call Has_Mapping (&&evt[0], &evt_dev_role, false) then
-          call Get_Mapping_Indices (&&evt[0], &evt_dev_role, &mapping);
-          var ssize len = $mapping;
-          var ssize i;
-          loop i in [0 -> len[ do
-            $mapped = 0;
-
-            var int index = mapping[i];
-            mapped = [] .. [[ CLIENT.mapping.events[@index ][3] .. '\0']];
-            spawn Handle_Mapping (&&evt[0], &evt_dev_role, &&mapped[0]) in mapping_pool;
-          end
-        end
+        _printf ("evt: %s\n", &&evt[0]);
+        spawn Emit_Input_Event (&evt) in input_event_pool;
       end
     with
       input (_char&&, _u_args) IN;
@@ -228,6 +220,6 @@ with
   end
 end
 
-__COMPILED_EVTS__
+#include "inputs.ceu"
 
 escape 0;
