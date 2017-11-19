@@ -21,7 +21,8 @@
   function get_mapping (evt)
     local map = {}
     if type(SERVER.mapping) == 'table' then
-      for k,v in pairs (SERVER.mapping[1]) do
+      for _,v in pairs (SERVER.mapping) do
+        print (v[1])
         if v[1] == evt then
           table.insert(map, v)
         end
