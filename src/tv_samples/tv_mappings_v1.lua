@@ -1,4 +1,3 @@
-CLIENT.mapping.events =
-  {
-    {"SPACE", "CONTROL",  "PLAY", "TV"},
-  }
+mapping {
+  {"SPACE", "CONTROL_V1",  "PLAY", "TV"},
+}

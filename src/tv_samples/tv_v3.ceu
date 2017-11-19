@@ -1,4 +1,4 @@
-#include "mars/util/mars-media.ceu"
+#include "media/media.ceu"
 
 /*
  * Mapping: scripts/tv_mappings_v2.lua
