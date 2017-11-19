@@ -2,12 +2,14 @@ interface {
   TV = 
     {
       inputs = {
-        { TURN_ON = {'int', 'ssize'} },
-        { TURN_OFF = {'s64'} },
+        { TURN_ON = {} },
+        { TURN_OFF = {} },
         { PLAY = {} },
         { PAUSE = {} },
         { SEEK_FORWARD = {} },
         { SEEK_BACKWARD = {} },
+        { VOLUME_UP = {} },
+        { VOLUME_DOWN = {} },
       },
       outputs = {},
     },
@@ -16,7 +18,7 @@ interface {
       inputs = {},
       outputs = {
         { SPACE = {} },
-        { P = {'int', 'int', 'ssize'} },
+        { P = {} },
         { RIGHT = {} },
         { LEFT = {} },
         { UP = {} },
@@ -33,4 +35,3 @@ interface {
       }
     }
 }
-
