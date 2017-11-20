@@ -1,4 +1,4 @@
-#include "mars/util/mars-media.ceu"
+#include "media/media.ceu"
 
 input (none) SHOW_OPTIONS;
 input (int) USER_CHOICE;
