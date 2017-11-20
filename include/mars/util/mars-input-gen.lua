@@ -28,21 +28,22 @@ end
 
 local HANDLER_TEMPLATE =
 'code/await Emit_Input_Event (var& [] byte evt) -> none\n' ..
-'do\n'                                                    ..
-'{#1}'                                                    ..
+'throws Exception.Lua\n'                                   ..
+'do\n'                                                     ..
+'{#1}'                                                     ..
 'end'
 
 local HANDLER_CHECK_TEMPLATE =
-'\tif _strcmp(&&evt[0],"{#1}") == 0 then\n'               ..
-  '\t\t{#2}\n'                                            ..
-  '\t\tawait Emit_{#3}_Event ({#4});\n'                   ..
+'\tif _strcmp(&&evt[0],"{#1}") == 0 then\n'                ..
+  '\t\t{#2}\n'                                             ..
+  '\t\tawait Emit_{#3}_Event ({#4});\n'                    ..
 '\tend\n'
 
 local CODE_TEMPLATE =
-  'code/await Emit_{#1}_Event ({#2}) -> none\ndo\n'       ..
-    '\tawait async ({#3}) do\n'                           ..
-    '\t\temit {#4} ({#5});\n'                             ..
-    '\tend\n'                                             ..
+  'code/await Emit_{#1}_Event ({#2}) -> none\ndo\n'        ..
+    '\tawait async ({#3}) do\n'                            ..
+    '\t\temit {#4} ({#5});\n'                              ..
+    '\tend\n'                                              ..
   'end\n'
 
 function capitalize_first (str)
