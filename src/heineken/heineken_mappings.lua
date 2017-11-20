@@ -1,7 +1,7 @@
-CLIENT.mapping.events =
-  {
-    {"CHOICE", "TABLET",  "CHOSEN_OPTION", "TV"},
-    {"ACCEPT", "TABLET",  "ACCEPTED", "TV"},
-    {"END_", "TV",  "KILL_APP", "TABLET"},
-    {"QUESTION", "TV",  "SHOW_OPTIONS", "TABLET"},
-  }
+mapping {
+  {"CHOICE", "TABLET",  "CHOSEN_OPTION", "TV"},
+  {"ACCEPT", "TABLET",  "ACCEPTED_", "TV"},
+
+  {"END_", "TV",  "KILL_APP", "TABLET"},
+  {"QUESTION", "TV",  "SHOW_OPTIONS", "TABLET"},
+}

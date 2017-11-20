@@ -1,4 +1,4 @@
-#include "mars/util/mars-media.ceu"
+#include "media/media.ceu"
 
 var _char&& name;
 (name, _) = await JOINED;
@@ -9,8 +9,8 @@ var int height = 576;
 
 par do
   if im_tv then
-    input (none) ACCEPTED;
     input (int) CHOSEN_OPTION;
+    input (none) ACCEPTED_;
 
     output (none) QUESTION;
     output (none) END_;
@@ -29,7 +29,7 @@ par do
       with
         watching 43s
         do
-          await ACCEPTED;
+          await ACCEPTED_;
           accepted = true;
           await FOREVER;
         end
