@@ -19,60 +19,28 @@
 
 #include "mars/util/mars-defs.ceu"
 
-native/pos do
-  ##include <assert.h>
-  ##include <unistd.h>
+native/pre do
   ##include <sys/socket.h>
-  ##include "mars/server/native-pre-server.c"
 
-	##include <netdb.h>
-
-  char* mars_get_peer_net_info (uv_stream_t *stream, int* port)
-  {
-    struct sockaddr_storage addr;
-    char *str = NULL;
-    int len;
-    if (uv_tcp_getpeername ((uv_tcp_t*) stream, (struct sockaddr*) &addr, &len) == 0)
-    {
-      int ret;
-      switch (addr.ss_family)
-      {
-        case AF_INET:
-        {
-          char ip_str [INET_ADDRSTRLEN];
-          struct sockaddr_in* src = (struct sockaddr_in*) &addr;
-          ret = uv_inet_ntop(AF_INET, &src->sin_addr, ip_str, sizeof(ip_str));
-
-          if (ret)
-            fprintf(stderr, "getsockname fail\n");
-
-          str = strdup(ip_str);
-          *port = ntohs(src->sin_port);
-          break;
-        }
-        case AF_INET6:
-        {
-          char ip_str[INET6_ADDRSTRLEN];
-          struct sockaddr_in6* src = (struct sockaddr_in6*) &addr;
-          ret = uv_inet_ntop(AF_INET6, &src->sin6_addr, ip_str, sizeof(ip_str));
-
-          if (ret)
-            fprintf(stderr, "getsockname fail\n");
-
-          str = strdup(ip_str);
-          *port = ntohs(src->sin6_port);
-          break;
-        }
-      }
-    }
-    assert (str);
-    return str;
-  }
+  typedef struct sockaddr_in6 sockaddr_in6;
 end
 
+native/pos do
+  ##include "mars/server/native-pre-server.c"
+end
+
+native/plain
+  _AF_INET,
+  _AF_INET6,
+  _INET_ADDRSTRLEN,
+  _INET6_ADDRSTRLEN,
+  _sockaddr_in6,
+;
+
 native/nohold
+  _uv_ip6_name,
+  _uv_tcp_getpeername,
   _ceu_callback_register,
-  _mars_get_peer_net_info,
   _cb,
 ;
 
@@ -159,7 +127,7 @@ do
       ]]
       var int type = [[ TABLE.type ]];
 
-      if  type == P_REGULAR_SEND then
+      if type == P_REGULAR_SEND then
         var uint from = [[ TABLE.from ]];
         var int index = [[ TABLE.index or -1 ]];
 
@@ -337,26 +305,39 @@ end
 code/await UV_TCP_Server_Handler (var& UV_Stream stream,
                                   var& UV_TCP_Server_Data shared) -> int
 do
-  var int port = _;
-  var _char&& ip_ptr = _mars_get_peer_net_info(&&stream.handle, &&port);
-  do finalize with
-    _free (ip_ptr);
-  end;
+  var _sockaddr_storage sock = _;
+  var int len = sizeof(_sockaddr_in) as int;
+  var int ret = _uv_tcp_getpeername(&&stream.handle as _uv_tcp_t&&,
+    (&&sock as _sockaddr&&), &&len);
+  _ceu_sys_assert(ret == 0, "could not get socket peer name");
 
-  var[] byte ip = [] .. ip_ptr;
+  /* INET6_ADDRSTRLEN is supposed to be large enough to accommodate ipv4 and ipv6 */
+  var[_INET6_ADDRSTRLEN] byte ip = _;
+  var u16 port = _;
 
-  var Exception.Uv? e;
-  catch e do
-    if (shared.isReading) then
-      await Reading_Handler (&stream, &ip, port);
-    else
-      await Writing_Handler (&stream, &ip, port);
-    end
+  if sock.ss_family == _AF_INET then
+    var _sockaddr_in&& src = &&sock as _sockaddr_in &&;
+
+    ret = _uv_ip4_name(src, &&ip[0], _INET_ADDRSTRLEN);
+    _ceu_sys_assert(ret == 0, "could not get ipv4 name");
+
+    port = _ntohs(src:sin_port);
+  else/if sock.ss_family == _AF_INET6 then
+    var _sockaddr_in6&& src = &&sock as _sockaddr_in6 &&;
+
+    ret = _uv_ip6_name(src, &&ip[0], _INET6_ADDRSTRLEN);
+    _ceu_sys_assert(ret == 0, "could not get ipv6 name");
+
+    port = _ntohs(src:sin6_port);
+  end
+  _printf ("Client Socket: %s:%d\n", &&ip[0], port);
+
+  if (shared.isReading) then
+    await Reading_Handler (&stream, &ip, port as int);
+  else
+    await Writing_Handler (&stream, &ip, port as int);
   end
 
-  if e? then
-    _fprintf(_stderr, "[error]: %s\n", e!.message);
-  end
 end
 
 /* We must include tcp-server after we've defined UV_TCP_Server_Handler */
