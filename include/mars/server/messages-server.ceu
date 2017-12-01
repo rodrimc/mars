@@ -1,0 +1,109 @@
+#define FREQ 50
+spawn do
+  every (FREQ)ms do
+    emit send_tick_message(FREQ);
+  end
+end
+
+code/await Send_Not_Joined_Reply (var uint handle_id,
+                                  var& UV_Stream stream) -> none
+do
+  var Exception.Lua? e;
+  catch e do
+    [[
+      luabuff = 'type='   .. tostring(S_NOT_ACCEPTED)
+    ]]
+    var[] byte buff = [] .. [[ luabuff ]];
+    await Send (handle_id, &stream, &buff);
+  end
+  if e? then
+    _fprintf (_stderr, "[Send_Not_Joined_Reply error]: %s\n", e!.message);
+  end
+end
+
+code/await Send_Join_Reply (var uint handle_id,
+                            var& UV_Stream stream) -> none
+do
+  var Exception.Lua? e;
+  catch e do
+    [[
+      peer = SERVER.peers[@handle_id]
+      luabuff = ''
+      if peer then
+        luabuff = 'type='       .. tostring(S_ACCEPTED)         .. ',' ..
+                  'id='         .. tostring(@handle_id)         .. ',' ..
+                  'peers='      .. tostring(@outer.peers_count) .. ',' ..
+                  'interfaces=' .. serialize (outputs)
+      end
+      print (luabuff)
+    ]]
+    var[] byte buff = [] .. [[ luabuff ]];
+    await Send (handle_id, &stream, &buff);
+  end
+  if e? then
+    _fprintf (_stderr, "[Send_Join_Reply error]: %s\n", e!.message);
+  end
+end
+
+code/await Send_Broadcast_Join (var uint handle_id,
+                                var& UV_Stream stream,
+                                var uint id) -> none
+do
+  var Exception.Lua? e;
+  catch e do
+    var u64 ts = _now ();
+    [[
+      luabuff = 'type='      .. tostring(@S_NEW_PEER)        .. ',' ..
+                'new_peer='  .. tostring(@id)                .. ',' ..
+                'peers='     .. tostring(@outer.peers_count)
+    ]]
+    var[] byte buff = [] .. [[ luabuff ]];
+    await Send (handle_id, &stream, &buff);
+  end
+  if e? then
+    _fprintf (_stderr, "[Send_Broadcast_Join error]: %s\n", e!.message);
+  end
+end
+
+code/await Send_Broadcast_Message (var uint handle_id,
+                                   var& UV_Stream stream,
+                                   var uint from,
+                                   var int index,
+                                   var& []byte payload) -> none
+do
+  var Exception.Lua? e;
+  catch e do
+    var u64 ts = _now ();
+    [[
+      luabuff = 'type='       .. tostring(S_BROADCAST)        .. ',' ..
+                'payload='    .. tostring(@payload)
+    ]]
+    var[] byte buff = [] .. [[ luabuff ]];
+    await Send (handle_id, &stream, &buff);
+  end
+  if e? then
+    _fprintf (_stderr, "[Send_Broadcast_Message error]: %s\n", e!.message);
+  end
+end
+
+code/await Send_Tick_Message (var uint handle_id,
+                              var& UV_Stream stream,
+                              var uint freq) -> none
+do
+  var Exception.Lua? e;
+  catch e do
+    var[] byte buff = _;
+      [[
+        luabuff = 'type=' .. tostring(@S_TICK)               .. ',' ..
+                  'freq=' .. tostring(@freq)
+      ]]
+
+      buff = [] .. [[ luabuff ]];
+    await Send (handle_id, &stream, &buff);
+  end
+
+  if e? then
+      _fprintf(_stderr, "[Send_Tick_Message error]: %s\n", e!.message);
+  end
+end
+

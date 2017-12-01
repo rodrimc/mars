@@ -3,85 +3,76 @@
 
 /* Server Lua global */
 [[
+  dofile ('mars-server.lua')
+
+  __peers = require 'peers'
+
   SERVER =
     {
+      peers = {},
+      devices = {},
       mapping = nil,
       interface = nil,
-      roles = {}
+      handler_interfaces = {},
     }
-
-  function interface (T)
-    SERVER.interface = type(T) == 'table' and T or nil
-  end
-
-  function mapping (M)
-    SERVER.mapping = type(M) == 'table' and M or nil
-  end
-
-  function get_mapping (evt)
-    local map = {}
-    if type(SERVER.mapping) == 'table' then
-      for _,v in pairs (SERVER.mapping) do
-        if v[1] == evt then
-          table.insert(map, v)
-        end
-      end
-    end
-    return map
-  end
 ]]
 
 #include "mars/util/mars-defs.ceu"
 
 native/pos do
+  ##include <assert.h>
   ##include <unistd.h>
+  ##include <sys/socket.h>
+  ##include "mars/server/native-pre-server.c"
 
-	tceu_callback_ret evt_cb (int cmd,
-														tceu_callback_arg p1,
-														tceu_callback_arg p2,
-														const char* filename,
-														u32 line)
-	{
-    static int flag = 0;
-    tceu_callback_ret ret = { .is_handled=0 };
-    if (flag == 0 && cmd == CEU_CALLBACK_STEP)
+	##include <netdb.h>
+
+  char* mars_get_peer_net_info (uv_stream_t *stream, int* port)
+  {
+    struct sockaddr_storage addr;
+    char *str = NULL;
+    int len;
+    if (uv_tcp_getpeername ((uv_tcp_t*) stream, (struct sockaddr*) &addr, &len) == 0)
     {
-      char *interface_file = NULL;
-      char *mapping_file = NULL;
-      char c;
-
-      while ((c = getopt (CEU_APP.argc, CEU_APP.argv, "i:m:")) != -1)
+      int ret;
+      switch (addr.ss_family)
       {
-        switch (c)
+        case AF_INET:
         {
-          case 'i':
-          {
-            interface_file = optarg;
-            break;
-          }
-          case 'm':
-          {
-            mapping_file = optarg;
-            break;
-          }
+          char ip_str [INET_ADDRSTRLEN];
+          struct sockaddr_in* src = (struct sockaddr_in*) &addr;
+          ret = uv_inet_ntop(AF_INET, &src->sin_addr, ip_str, sizeof(ip_str));
+
+          if (ret)
+            fprintf(stderr, "getsockname fail\n");
+
+          str = strdup(ip_str);
+          *port = ntohs(src->sin_port);
+          break;
+        }
+        case AF_INET6:
+        {
+          char ip_str[INET6_ADDRSTRLEN];
+          struct sockaddr_in6* src = (struct sockaddr_in6*) &addr;
+          ret = uv_inet_ntop(AF_INET6, &src->sin6_addr, ip_str, sizeof(ip_str));
+
+          if (ret)
+            fprintf(stderr, "getsockname fail\n");
+
+          str = strdup(ip_str);
+          *port = ntohs(src->sin6_port);
+          break;
         }
       }
-
-      tceu_input_INIT p = {interface_file, mapping_file};
-
-      ceu_input (CEU_INPUT_INIT, &p);
-
-      flag = 1;
-      ret.is_handled = 1;
     }
-    return ret;
+    assert (str);
+    return str;
   }
-
-  tceu_callback cb = { &evt_cb, NULL };
 end
 
 native/nohold
   _ceu_callback_register,
+  _mars_get_peer_net_info,
   _cb,
 ;
 
@@ -89,34 +80,44 @@ _ceu_callback_register (&&_cb);
 
 input (_char&&, _char&&) INIT;
 
-var _char&& mapping;
-var _char&& interface;
-(interface, mapping) = await INIT;
+code/await Init (none) -> int
+do
+  var _char&& mapping;
+  var _char&& interface;
+  (interface, mapping) = await INIT;
 
-var Exception? e;
-catch e do
-  _printf ("[server] interface file: %s\n", interface);
-  if interface != null then
-    [[
-      dofile (@interface)
-    ]]
+  var Exception? e;
+  catch e do
+    _printf ("[server] interface file: %s\n", interface);
+    if interface != null then
+      [[
+        dofile (@interface)
+      ]]
+    end
   end
-end
-if e? then
-  _fprintf (_stderr, "[INTERFACES error:] %s\n", e!.message);
+  if e? then
+    _fprintf (_stderr, "[INTERFACES error:] %s\n", e!.message);
+    escape -1;
+  end
+
+  catch e do
+    _printf ("[server] mapping file: %s\n", mapping);
+    if mapping != null then
+      [[
+        dofile (@mapping)
+      ]]
+    end
+  end
+  if e? then
+    _fprintf (_stderr, "[MAPPING error:] %s\n", e!.message);
+  end
+
   escape 0;
 end
 
-catch e do
-  _printf ("[server] mapping file: %s\n", mapping);
-  if mapping != null then
-    [[
-      dofile (@mapping)
-    ]]
-  end
-end
-if e? then
-  _fprintf (_stderr, "[MAPPING error:] %s\n", e!.message);
+var int ret = await Init();
+if ret != 0 then
+  escape ret;
 end
 
 data UV_TCP_Server_Data with
@@ -131,128 +132,16 @@ event (uint) send_tick_message;
 var[] byte mapped_evt = _;
 var[] byte mapped_dest = _;
 var[] byte cur_payload;
-var[] byte cur_role;
+var[] byte cur_interface;
 
 var uint id_ref = 1;
 var usize peers_count = 0;
 
-#define FREQ 50
-spawn do
-  every (FREQ)ms do
-    emit send_tick_message(FREQ);
-  end
-end
+#include "messages-server.ceu"
 
-code/await Send_Not_Joined_Reply (var uint handle_id,
-                                  var& UV_Stream stream) -> none
-do
-  var Exception.Lua? e;
-  catch e do
-    [[
-      luabuff = 'type='   .. tostring(@S_NOT_JOINED)
-    ]]
-    var[] byte buff = [] .. [[ luabuff ]];
-    await Send (handle_id, &stream, &buff);
-  end
-  if e? then
-    _fprintf (_stderr, "[Send_Not_Joined_Reply error]: %s\n", e!.message);
-  end
-end
-
-code/await Send_Join_Reply (var uint handle_id,
-                            var& UV_Stream stream,
-                            var uint id,
-                            var int status,
-                            var int index,
-                            var& []byte outputs) -> none
-do
-  var Exception.Lua? e;
-  catch e do
-    [[
-      luabuff = 'type='     .. tostring(@S_JOINED)          .. ',' ..
-                'id='       .. tostring(@id)                .. ',' ..
-                'peers='    .. tostring(@outer.peers_count) .. ',' ..
-                'status='   .. tostring(@status)            .. ',' ..
-                'outputs="' .. tostring(@outputs)           .. '",' ..
-                'index='    .. tostring(@index)
-      print (luabuff)
-    ]]
-    var[] byte buff = [] .. [[ luabuff ]];
-    await Send (handle_id, &stream, &buff);
-  end
-  if e? then
-    _fprintf (_stderr, "[Send_Join_Reply error]: %s\n", e!.message);
-  end
-end
-
-code/await Send_Broadcast_Join (var uint handle_id,
-                                var& UV_Stream stream,
-                                var uint id) -> none
-do
-  var Exception.Lua? e;
-  catch e do
-    var u64 ts = _now ();
-    [[
-      luabuff = 'type='      .. tostring(@S_NEW_PEER)        .. ',' ..
-                'new_peer='  .. tostring(@id)                .. ',' ..
-                'peers='     .. tostring(@outer.peers_count)
-    ]]
-    var[] byte buff = [] .. [[ luabuff ]];
-    await Send (handle_id, &stream, &buff);
-  end
-  if e? then
-    _fprintf (_stderr, "[Send_Broadcast_Join error]: %s\n", e!.message);
-  end
-end
-
-code/await Send_Broadcast_Message (var uint handle_id,
-                                   var& UV_Stream stream,
-                                   var uint from,
-                                   var& []byte role,
-                                   var int index,
-                                   var& []byte payload) -> none
-do
-  var Exception.Lua? e;
-  catch e do
-    var u64 ts = _now ();
-    [[
-      luabuff = 'type='      .. tostring(@S_BROADCAST)       .. ',' ..
-                'from='      .. tostring(@from)              .. ',' ..
-                'payload='   .. tostring(@payload)           .. ',' ..
-                'role="'     .. tostring(@role)              .. '",' ..
-                'index='     .. tostring(@index)             .. ',' ..
-                'peers='     .. tostring(@outer.peers_count)
-    ]]
-    var[] byte buff = [] .. [[ luabuff ]];
-    await Send (handle_id, &stream, &buff);
-  end
-  if e? then
-    _fprintf (_stderr, "[Send_Broadcast_Message error]: %s\n", e!.message);
-  end
-end
-
-code/await Send_Tick_Message (var uint handle_id,
-                              var& UV_Stream stream,
-                              var uint freq) -> none
-do
-  var Exception.Lua? e;
-  catch e do
-    var[] byte buff = _;
-      [[
-        luabuff = 'type=' .. tostring(@S_TICK)               .. ',' ..
-                  'freq=' .. tostring(@freq)
-      ]]
-
-      buff = [] .. [[ luabuff ]];
-    await Send (handle_id, &stream, &buff);
-  end
-
-  if e? then
-      _fprintf(_stderr, "[Send_Tick_Message error]: %s\n", e!.message);
-  end
-end
-
-code/await Reading_Handler (var& UV_Stream stream) -> NEVER
+code/await Reading_Handler (var& UV_Stream stream,
+                            var&[] byte ip,
+                            var int port) -> NEVER
 do
   loop do
     var[] byte buffer;
@@ -274,8 +163,6 @@ do
         var uint from = [[ TABLE.from ]];
         var int index = [[ TABLE.index or -1 ]];
 
-        outer.cur_role = [] .. [[ TABLE.role ]];
-
         [[ print (serialize(TABLE.payload)) ]]
         [[ m = get_mapping (TABLE.payload.evt) ]]
 
@@ -283,15 +170,25 @@ do
         var ssize i;
         loop i in [1 -> len] do
           [[
-            ok = m[@i][2] == TABLE.role
+            local p = MARS.__private.peers[TABLE.from]
+            ok = false
+            if p ~= nil then
+              local interface = m[@i][2]
+              local peer_interfaces = p:getInterfaces()
+              for k,v in pairs (peer_interfaces) do
+                if v.interface == interface then
+                  ok = true
+                end
+              end
+            end
             if ok then
               if type(m[@i][5]) == 'function' then
                 ok, mapped_args = m[@i][5](TABLE.payload.args)
               end
             end
           ]]
-          var bool flag = [[ ok ]];
-          if flag then
+          var bool ok = [[ ok ]];
+          if ok then
             outer.mapped_evt = [] .. [[ m[@i][3] .. '\0']];
             outer.mapped_dest = [] .. [[ (m[@i][4] or '') .. '\0' ]];
 
@@ -312,13 +209,14 @@ do
       end
     end
     if e? then
-      _printf ("[error]: %s\n", e!.message);
+      _printf ("[Receive error]: %s\n", e!.message);
     end
   end
 end
 
-code/await Writing_Handler (var& UV_Stream stream) -> NEVER
-                            throws Exception.Uv
+code/await Writing_Handler (var& UV_Stream stream,
+                            var&[] byte ip,
+                            var int port) -> NEVER
 do
   var uint handle_id = outer.id_ref;
   outer.id_ref = outer.id_ref + 1;
@@ -334,9 +232,6 @@ do
   pool[] Send_Broadcast_Message pool_broadcast_message;
   pool[] Send_Tick_Message      pool_tick_message;
 
-  var[] byte myrole = [] .. "";
-  var[] byte outputs = [] .. "";
-  var int myindex = _;
   var int status = _;
 
   event (none) accepted;
@@ -353,56 +248,39 @@ do
 
         if (type == P_JOIN) then
           [[
-            role = nil
             status = NOT_ACCEPTED
-            outputs = ''
-            if MESSAGE.role and SERVER.interface and
-               type(SERVER.interface) == 'table' then
-              role = MESSAGE.role
+            if MESSAGE.interfaces and MARS.__private.interfaces and
+               type(MARS.__private.interfaces) == 'table' then
 
-              if SERVER.interface[role] ~= nil then
-                status = ACCEPTED
+              interfaces = MESSAGE.interfaces
+              peer = nil
+              for interface in MESSAGE.interfaces:gmatch ('([^,]+)') do
+                index, out = nil, ''
+                if MARS.__private.interfaces[interface] ~= nil then
+                  status = ACCEPTED
 
-                for k,v in pairs (SERVER.interface[role].outputs) do
-                  for k1,v1 in pairs (v) do
-                    outputs = outputs .. k1 .. ','
+                  if peer == nil then
+                    peer = __peers.Peer:new {id = @handle_id}
+                    MARS.__private.peers[@handle_id] = peer
                   end
+                  peer:addInterface (interface, index)
                 end
-
-                if outputs ~= '' then
-                  outputs = outputs:sub (1, -2)
-                end
-                print (outputs)
-
-                if SERVER.roles[role] == nil then
-                  SERVER.roles[role] = 1
-                else
-                  SERVER.roles[role] = SERVER.roles[role] + 1
-                end
-
-                index = SERVER.roles[role]
               end
-            else
-              role = ''
-              index = 0
+            end
+            if status and type (MARS.onConnect) == 'function' then
+              MARS.onConnect ()
             end
           ]]
           status = [[ status ]];
 
           if status == ACCEPTED then
-            myrole = [] .. [[ role .. '\0' ]];
-            myindex = [[ index ]];
-            outputs = [] .. [[ outputs ]];
             emit accepted ();
-            spawn Send_Join_Reply (handle_id, &stream, handle_id, status,
-                                   myindex, &outputs) in pool_join_reply;
+            spawn Send_Join_Reply (handle_id, &stream) in pool_join_reply;
             emit outer.send_broadcast_join (handle_id);
           else
             spawn Send_Not_Joined_Reply (handle_id, &stream)
-                                                      in pool_not_joined_reply;
+                                                    in pool_not_joined_reply;
           end
-
-
           break;
         end
       end
@@ -426,14 +304,30 @@ do
     with
       var uint from;
       var int index;
+      var bool ok = false;
       every (from, index) in outer.send_broadcast_message do
-        if _strcmp (&&myrole[0], &&outer.mapped_dest[0]) == 0 then
-          _printf ("payload: %s\n", &&outer.cur_payload[0]);
+        /* [[ */
+        /*   ok = false */
+        /*   local p = MARS.__private.peers[@handle_id] */
+        /*   if p ~= nil then */
+        /*     local out = @outer.mapped_dest */
+        /*     local peer_interfaces = p:getInterfaces() */
+        /*     for _,v in pairs (peer_interfaces) do */
+        /*       if v.interface == out then */
+        /*         ok = true */
+        /*         break */
+        /*       end */
+        /*     end */
+        /*   end */
+        /* ]] */
+        /* ok = [[ ok ]]; */
+        /* if ok then */
+        /*   _printf ("payload: %s\n", &&outer.cur_payload[0]); */
 
-          spawn Send_Broadcast_Message (handle_id, &stream, from, &outer.cur_role,
-                                        index, &outer.cur_payload)
-                                        in pool_broadcast_message;
-        end
+        /*   spawn Send_Broadcast_Message (handle_id, &stream, from, */
+        /*                                 index, &outer.cur_payload) */
+        /*                                 in pool_broadcast_message; */
+        /* end */
       end
     end
   end
@@ -443,12 +337,20 @@ end
 code/await UV_TCP_Server_Handler (var& UV_Stream stream,
                                   var& UV_TCP_Server_Data shared) -> int
 do
+  var int port = _;
+  var _char&& ip_ptr = _mars_get_peer_net_info(&&stream.handle, &&port);
+  do finalize with
+    _free (ip_ptr);
+  end;
+
+  var[] byte ip = [] .. ip_ptr;
+
   var Exception.Uv? e;
   catch e do
     if (shared.isReading) then
-      await Reading_Handler (&stream);
+      await Reading_Handler (&stream, &ip, port);
     else
-      await Writing_Handler (&stream);
+      await Writing_Handler (&stream, &ip, port);
     end
   end
 
@@ -459,5 +361,14 @@ end
 
 /* We must include tcp-server after we've defined UV_TCP_Server_Handler */
 #include "uv/tcp-server.ceu"
+
+_printf ("[server] Starting server...\n");
+par do
+  var UV_TCP_Server_Data shared = val UV_TCP_Server_Data (true);
+  await UV_TCP_Server (LOCALHOST, R_PORT, BACKLOG, _, &shared);
+with
+  var UV_TCP_Server_Data shared = val UV_TCP_Server_Data (false);
+  await UV_TCP_Server (LOCALHOST, W_PORT, BACKLOG, _, &shared);
+end
 
 #endif
