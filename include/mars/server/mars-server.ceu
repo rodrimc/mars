@@ -5,7 +5,7 @@
 [[
   dofile ('mars-server.lua')
 
-  __peers = require 'peers'
+  Peer = require 'peers'
 
   SERVER =
     {
@@ -223,24 +223,27 @@ do
               interfaces = MESSAGE.interfaces
               peer = nil
               for interface in MESSAGE.interfaces:gmatch ('([^,]+)') do
-                index, out = nil, ''
                 if MARS.__private.interfaces[interface] ~= nil then
                   status = ACCEPTED
 
                   if peer == nil then
-                    peer = __peers.Peer:new {id = @handle_id}
+                    peer = Peer:new {
+                      id = @handle_id,
+                      ip = @ip,
+                      port = @port
+                    }
                     MARS.__private.peers[@handle_id] = peer
                   end
-                  peer:addInterface (interface, index)
+                  peer:addInterface (interface)
                 end
               end
             end
             if status and type (MARS.onConnect) == 'function' then
-              MARS.onConnect ()
+              MARS.onConnect (peer)
             end
           ]]
-          status = [[ status ]];
 
+          status = [[ status ]];
           if status == ACCEPTED then
             emit accepted ();
             spawn Send_Join_Reply (handle_id, &stream) in pool_join_reply;
@@ -336,8 +339,6 @@ do
 
     port = _ntohs(src:sin6_port);
   end
-
-  _printf ("Client Socket: %s:%d\n", &&ip[0], port);
 
   if (shared.isReading) then
     await Reading_Handler (&stream, &ip, port as int);

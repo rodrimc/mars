@@ -1,22 +1,24 @@
 local peers = {}
 
-Peer = {}
-
-Peer.ip = -1 
-Peer.port = -1 
-Peer.interfaces = {}
-Peer.outputs = {}
+Peer = {
+  ip = -1,
+  port = -1
+}
 
 function Peer:new (o)
   o = o or {}
+  o.interfaces = {}
+  o.outputs = {}
+  o.__handler = nil
+
   setmetatable (o, self)
   self.__index = self
   return o
 end
 
 function Peer:addInterface (interface, index)
-  if type(interface) == 'string' and type(index) == 'number' then
-    table.insert (self.interfaces, {interface = interface, index = index})
+  if type(interface) == 'string' then
+    table.insert (self.interfaces, interface)
   end
 end
 
@@ -34,6 +36,4 @@ function Peer:getInterfaces ()
   return self.interfaces
 end
 
-peers.Peer = Peer
-
-return peers
+return Peer
