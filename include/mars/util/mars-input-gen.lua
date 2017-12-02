@@ -70,46 +70,44 @@ function get_emit_args_from_vars (args)
   end
 end
 
-function interface (T)
+function interfaces (T)
   local gen = ''
   local checks = ''
 
-  for k,v in pairs (T) do
-    for _,intable in pairs (v.inputs) do
-      for evt, args in pairs (intable) do
-        if srcinputs[evt] == true then
-          local code = CODE_TEMPLATE:gsub ('{#0}', evt)
-                                    :gsub ('{#1}', capitalize_first(evt))
-          local varcheckdecl = ''
-          local paramdecl = ''
-          for i=1, #args do
-            paramdecl = paramdecl .. decl_param (args[i], i) .. ','
-            varcheckdecl = varcheckdecl .. decl_param (args[i], i) ..
-                            ' = [[ CLIENT.remote.args[' .. i .. '] ]];\n\t\t'
-          end
-
-          if paramdecl == '' then
-            paramdecl = 'none'
-          else
-            paramdecl = paramdecl:sub(1, -2)
-          end
-
-          code = code:gsub('{#2}', paramdecl)
-
-          local async_args = get_vars_from_params (paramdecl)
-          local emit_args  = get_emit_args_from_vars (async_args)
-          code = code:gsub('{#3}', async_args)
-                     :gsub('{#4}', evt:upper())
-                     :gsub('{#5}', emit_args)
-
-          gen = gen .. code .. '\n\n'
-
-          local check = HANDLER_CHECK_TEMPLATE:gsub ('{#1}', evt)
-                                              :gsub ('{#2}', varcheckdecl)
-                                              :gsub ('{#3}', capitalize_first(evt))
-                                              :gsub ('{#4}', emit_args)
-          checks = checks .. check .. '\n'
+  for name, t in pairs (T) do
+    for evt, args in pairs (t.inputs) do
+      if srcinputs[evt] == true then
+        local code = CODE_TEMPLATE:gsub ('{#0}', evt)
+                                  :gsub ('{#1}', capitalize_first(evt))
+        local varcheckdecl = ''
+        local paramdecl = ''
+        for i=1, #args do
+          paramdecl = paramdecl .. decl_param (args[i], i) .. ','
+          varcheckdecl = varcheckdecl .. decl_param (args[i], i) ..
+          ' = [[ CLIENT.remote.args[' .. i .. '] ]];\n\t\t'
         end
+
+        if paramdecl == '' then
+          paramdecl = 'none'
+        else
+          paramdecl = paramdecl:sub(1, -2)
+        end
+
+        code = code:gsub('{#2}', paramdecl)
+
+        local async_args = get_vars_from_params (paramdecl)
+        local emit_args  = get_emit_args_from_vars (async_args)
+        code = code:gsub('{#3}', async_args)
+                   :gsub('{#4}', evt:upper())
+                   :gsub('{#5}', emit_args)
+
+        gen = gen .. code .. '\n\n'
+
+        local check = HANDLER_CHECK_TEMPLATE:gsub ('{#1}', evt)
+                                            :gsub ('{#2}', varcheckdecl)
+                                            :gsub ('{#3}', capitalize_first(evt))
+                                            :gsub ('{#4}', emit_args)
+        checks = checks .. check .. '\n'
       end
     end
   end
