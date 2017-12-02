@@ -27,15 +27,12 @@ do
   var Exception.Lua? e;
   catch e do
     [[
-      peer = SERVER.peers[@handle_id]
       luabuff = ''
       if peer then
         luabuff = 'type='       .. tostring(S_ACCEPTED)         .. ',' ..
                   'id='         .. tostring(@handle_id)         .. ',' ..
-                  'peers='      .. tostring(@outer.peers_count) .. ',' ..
-                  'interfaces=' .. serialize (outputs)
+                  'peers='      .. tostring(@outer.peers_count)
       end
-      print (luabuff)
     ]]
     var[] byte buff = [] .. [[ luabuff ]];
     await Send (handle_id, &stream, &buff);
