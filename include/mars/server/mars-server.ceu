@@ -312,24 +312,31 @@ do
   _ceu_sys_assert(ret == 0, "could not get socket peer name");
 
   /* INET6_ADDRSTRLEN is supposed to be large enough to accommodate ipv4 and ipv6 */
-  var[_INET6_ADDRSTRLEN] byte ip = _;
+  var[] byte ip = _;
   var u16 port = _;
 
   if sock.ss_family == _AF_INET then
     var _sockaddr_in&& src = &&sock as _sockaddr_in &&;
+    var[_INET_ADDRSTRLEN] byte tmp = _;
 
-    ret = _uv_ip4_name(src, &&ip[0], _INET_ADDRSTRLEN);
+    ret = _uv_ip4_name(src, &&tmp[0], _INET_ADDRSTRLEN);
     _ceu_sys_assert(ret == 0, "could not get ipv4 name");
+
+    ip = [] .. &&tmp[0] as _char&&;
 
     port = _ntohs(src:sin_port);
   else/if sock.ss_family == _AF_INET6 then
     var _sockaddr_in6&& src = &&sock as _sockaddr_in6 &&;
+    var[_INET6_ADDRSTRLEN] byte tmp = _;
 
     ret = _uv_ip6_name(src, &&ip[0], _INET6_ADDRSTRLEN);
     _ceu_sys_assert(ret == 0, "could not get ipv6 name");
 
+    ip = [] .. &&tmp[0] as _char&&;
+
     port = _ntohs(src:sin6_port);
   end
+
   _printf ("Client Socket: %s:%d\n", &&ip[0], port);
 
   if (shared.isReading) then
