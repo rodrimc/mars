@@ -2,11 +2,12 @@
 LUA						= lua5.3
 
 #paths
-server all: BASE_PATH					= include
-server all: MARS_PATH 				= $(BASE_PATH)/mars
-server all: MARS_UTIL_PATH    = $(MARS_PATH)/util
-server all: MARS_SERVER_PATH  = $(MARS_PATH)/server
-server all: MARS_CLIENT_PATH  = $(MARS_PATH)/client
+BASE_PATH					= include
+MARS_PATH 				= $(BASE_PATH)/mars
+MARS_UTIL_PATH    = $(MARS_PATH)/util
+MARS_SERVER_PATH  = $(MARS_PATH)/server
+MARS_CLIENT_PATH  = $(MARS_PATH)/client
+MARS_LUA_UTIL			= $(MARS_UTIL_PATH)/mars-util.lua
 
 #all target
 all: SRC 						= $(error set SRC to a CÉU program)
@@ -16,6 +17,7 @@ all: SRC_NAME				= $(notdir $(SRC))
 all: MAESTRO 				= $(BASE_PATH)/sync/maestro.ceu
 all: EVTS  					= $(MARS_UTIL_PATH)/mars-compile-evts.lua
 all: INPUT_GEN  	  = $(MARS_UTIL_PATH)/mars-input-gen.lua
+all: LUA_CLIENT		  = $(MARS_CLIENT_PATH)/mars-client.lua
 
 #server target
 server: MODULES 					= lua5.3 libuv
@@ -35,6 +37,8 @@ TEMP 				:= $(BUILD_PATH)/temp-$(shell date --iso=ns).ceu
 all:
 	mkdir -p $(BUILD_PATH)
 	cp $(LUA_PEERS_MODULE) $(BUILD_PATH)/
+	cp $(MARS_LUA_UTIL) $(BUILD_PATH)/
+	cp $(LUA_CLIENT) $(BUILD_PATH)/
 	cp $(MAESTRO) $(TEMP)
 	sed s:SRC:"\"$(SRC_SED)\"":g -i $(TEMP)
 	$(LUA) $(EVTS) $(TEMP) $(SRC)
@@ -58,6 +62,7 @@ server:
 	mkdir -p $(BUILD_PATH)
 	cp $(LUA_PEERS_MODULE) $(BUILD_PATH)/
 	cp $(LUA_SERVER) $(BUILD_PATH)/
+	cp $(MARS_LUA_UTIL) $(BUILD_PATH)/
 	ceu --pre --pre-args="-I$(CEU_DIR)/include -I$(CEU_MEDIA_DIR)/include		\
 						-I$(CEU_UV_DIR)/include -I$(CEU_LIB_DIR) -I./include"					\
 	          --pre-input=$(SRC)																						\

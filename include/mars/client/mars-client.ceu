@@ -3,13 +3,14 @@
 
 /* Client Lua global */
 [[
+  dofile ('build/mars-util.lua')
+  dofile ('build/mars-client.lua')
+
+  Peer = require 'build/peers'
+
   CLIENT =
     {
-      role =
-      {
-        name = nil,
-        index = nil
-      },
+      interfaces = {},
       mapping =
       {
         events = {},
@@ -30,18 +31,21 @@ event (none) abort;
 
 /*** CLIENT API ***/
 
-code/await Client_Send_Message (var& Stub stub, var&[] byte buffer) -> none
+var[] byte server_ip = _;
+var u16 wport = _;
+var u16 rport = _;
+
+code/await Client_Send_Message (var& Stub stub,
+                                var&[] byte interface,
+                                var&[] byte buffer) -> none
 do
   var Exception.Lua? e;
   catch e do
-    var u64 ts = _now();
     [[
-      luabuff = 'type='      .. tostring(@P_REGULAR_SEND)    .. ',' ..
-                'from='      .. tostring(@stub.id)           .. ',' ..
-                'role="'     .. CLIENT.role.name             .. '",' ..
-                'index='     .. CLIENT.role.index            .. ',' ..
-                'payload='   .. tostring(@buffer)            .. ',' ..
-                'timestamp=' .. tostring(@ts)
+      luabuff = 'type='       .. tostring(P_REGULAR_SEND) .. ',' ..
+                'interface="' .. @interface               .. '",' ..
+                'from='       .. tostring(@stub.id)       .. ',' ..
+                'payload='    .. tostring(@buffer)
     ]]
 
     stub.wbuffer = [] .. [[ luabuff ]];
@@ -63,20 +67,27 @@ do
     [[ TABLE =  load ('return{' .. @stub.rbuffer .. '}')() ]]
     type = [[ TABLE.type ]];
 
-    if type == S_JOINED then
+    if type == S_ACCEPTED then
       stub.id = [[ TABLE.id ]];
       var uint peers = [[ TABLE.peers ]];
 
       [[
-        CLIENT.role.index = TABLE.index or  -1
-        for evt in TABLE.outputs:gmatch ('([^,]+)') do
-          CLIENT.mapping.events[evt] = true
+        if MARS.peer == nil then
+          MARS.peer = Peer:new {
+            id = TABLE.id,
+            ip = @outer.server_ip,
+            port = @outer.rport
+          }
+
+          for _,i in ipairs(MARS.interfaces) do
+            MARS.peer:addInterface(i, MARS.__private.interfaces[i])
+          end
         end
       ]]
 
       emit stub.joined (stub.id, peers);
 
-    else/if type == S_NOT_JOINED then
+    else/if type == S_NOT_ACCEPTED then
       _fprintf (_stderr, "[Client:] server didn't accepted me!\n");
       emit outer.abort;
 
@@ -143,6 +154,7 @@ do
       with
         await r_conn.ok;
         emit stream_ready;
+        outer.rport = await Get_Net_Address (&r_conn.stream, &outer.server_ip);
       end
     with
       /* write trail */
@@ -154,6 +166,7 @@ do
       with
         await w_conn.ok;
         emit stream_ready;
+        outer.wport = await Get_Net_Address (&w_conn.stream, &outer.server_ip);
       end
     with
       var usize i;
@@ -165,8 +178,8 @@ do
       var Exception? e;
       catch e do
         [[
-          luabuff = 'type=' .. tostring(@P_JOIN) .. ',' ..
-                    'role="' .. CLIENT.role.name .. '"'
+          luabuff = 'type=' .. tostring(P_JOIN) .. ',' ..
+                    'interfaces="' .. MARS.interfaces[1] .. '"'
         ]]
 
         stub.wbuffer = [] .. [[ luabuff ]];

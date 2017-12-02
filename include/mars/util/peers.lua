@@ -1,6 +1,7 @@
 local peers = {}
 
 Peer = {
+  id = -1,
   ip = -1,
   port = -1
 }
@@ -8,32 +9,35 @@ Peer = {
 function Peer:new (o)
   o = o or {}
   o.interfaces = {}
-  o.outputs = {}
-  o.__handler = nil
 
   setmetatable (o, self)
   self.__index = self
   return o
 end
 
-function Peer:addInterface (interface, index)
-  if type(interface) == 'string' then
-    table.insert (self.interfaces, interface)
-  end
-end
-
-function Peer:addOutput (evt)
-  if type(evt) == 'string' then
-    table.insert (self.outputs, evt)
-  end
-end
-
-function Peer:getOutputs ()
-  return self.outputs
+function Peer:addInterface (name, events)
+  self.interfaces[name] = events
 end
 
 function Peer:getInterfaces ()
   return self.interfaces
+end
+
+function Peer:getInterfaceOfEvent (evt)
+  for name,args in pairs (self.interfaces) do
+    if _hasEvent (evt, args.inputs) or _hasEvent (evt, args.outputs) then
+      return name
+    end
+  end
+  return nil
+end
+
+function _hasEvent (evt, t)
+  local has = false
+  for k,_ in pairs (t) do
+    has = has or k == evt
+  end
+  return has
 end
 
 return Peer

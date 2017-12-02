@@ -7,8 +7,6 @@ end
 
 native/pos do
   int MIRROR_OK = 0;
-  char *ROLE_NAME = NULL;
-  int ROLE_INDEX = -1;
 
 	tceu_callback_ret evt_cb (int cmd,
 														tceu_callback_arg p1,
@@ -17,20 +15,26 @@ native/pos do
 														u32 line)
 	{
     static int flag = 0;
-    tceu_callback_ret ret = { .is_handled = 1 };
+    tceu_callback_ret ret = { .is_handled = 0 };
     switch (cmd)
     {
       case CEU_CALLBACK_STEP:
       {
         if (flag == 0)
         {
+          char *interfaces_file = NULL;
           char *device = "";
           char c;
 
-          while ((c = getopt (CEU_APP.argc, CEU_APP.argv, "d:")) != -1)
+          while ((c = getopt (CEU_APP.argc, CEU_APP.argv, "d:i:")) != -1)
           {
             switch (c)
             {
+              case 'i':
+              {
+                interfaces_file = optarg;
+                break;
+              }
               case 'd':
               {
                 device = optarg;
@@ -38,22 +42,12 @@ native/pos do
               }
             }
           }
-
-          ceu_input (CEU_INPUT_INIT, &device);
-
+          tceu_input_INIT p = {device, interfaces_file};
+          ceu_input (CEU_INPUT_INIT, &p);
           flag = 1;
+
+          ret.is_handled = 1;
         }
-
-        if (MIRROR_OK == 1)
-        {
-          tceu_input_JOINED p = {ROLE_NAME, ROLE_INDEX};
-          ceu_input (CEU_INPUT_JOINED, &p);
-
-          MIRROR_OK = 0;
-        }
-        else
-          ret.is_handled = 0;
-
         break;
       }
       case CEU_CALLBACK_OUTPUT:
@@ -63,24 +57,13 @@ native/pos do
 __CALLBACK_OUTPUT_COND__
         tceu_input_IN input_p = {type, p};
         ceu_input (CEU_INPUT_IN, &input_p);
+
+        ret.is_handled = 1;
         break;
       }
-      case CEU_CALLBACK_STOP:
-      {
-        if (ROLE_NAME)
-          free (ROLE_NAME);
-        break;
-      }
-      default:
-        ret.is_handled = 0;
     }
 
     return ret;
-  }
-
-  void alloc_role_name (size_t size)
-  {
-    ROLE_NAME = malloc (size);
   }
 
   tceu_callback cb = { &evt_cb, NULL };
@@ -90,28 +73,36 @@ native/nohold
   _cb,
   _u_args,
   _ceu_callback_register,
-  _alloc_role_name,
-  _MIRROR_OK,
-  _ROLE_NAME,
-  _ROLE_INDEX
 ;
 
 _ceu_callback_register (&&_cb);
 
-input (_char&&) INIT;
-input (_char&&, int) JOINED;
+input (_char&&, _char&&) INIT;
 
-spawn do
-  var _char&& role = await INIT;
+code/await Init (none) -> none
+do
+  var _char&& device;
+  var _char&& interfaces;
+  (device, interfaces) = await INIT;
   var Exception? e;
   catch e do
-    _printf ("[client] role: %s\n", role);
-    [[ CLIENT.role.name = @role ]]
+    _printf ("[client] device: %s\n", device);
+
+    /* TODO: parse interfaces by comma */
+    [[ table.insert (MARS.interfaces, @device) ]]
+
+    if interfaces != null then
+      [[
+        dofile (@interfaces)
+      ]]
+    end
   end
   if e? then
     _fprintf (_stderr, "[INIT error:] %s\n", e!.message);
   end
 end
+
+await Init ();
 
 /* internal */
 event (none) mirror_ok;
@@ -171,53 +162,42 @@ par/or do
       every client.stub.incoming_message do
         [[ print ('[APP(' .. tostring(@client.stub.id) .. ')] Message: ' ..
                                   @client.stub.message) ]]
-        _log ("[APP(%u)] Message: %s\n", client.stub.id, &&client.stub.message[0]);
+        _printf ("[APP(%u)] Message: %s\n", client.stub.id, &&client.stub.message[0]);
 
-        [[ 
-          TABLE = load (@client.stub.message)() 
+        [[
+          TABLE = load (@client.stub.message)()
           CLIENT.remote.args = TABLE.args or {}
         ]]
 
         evt = [] .. [[ TABLE.evt ]] .. [{'\0'}];
         _printf ("evt: %s\n", &&evt[0]);
-        spawn Emit_Input_Event (&evt) in input_event_pool;
+        spawn Emit_Input_Event (&evt[0]) in input_event_pool;
       end
     with
       input (_char&&, _u_args) IN;
-      var _char&& type;
+      var _char&& evt;
       var _u_args args;
-      var[] byte role;
+      var[] byte interface;
       var[] byte buffer;
-      every (type, args) in IN do
-        role = [] .. [[ CLIENT.role.name ]];
+      var bool toSend = false;
+      every (evt, args) in IN do
+        [[
+          interface = nil
+          if MARS.peer ~= nil then
+            interface = MARS.peer:getInterfaceOfEvent (@evt)
+          end
+        ]]
+        toSend = [[ not (interface == nil) ]];
+        if toSend then
 __OUTPUT_HANDLE__
+        end
       end
     end
   end
+  _printf ("client finished\n");
 with
   await mirror_ok;
-  par/and do
-    #include SRC
-  with
-    var[] byte role_name = [] .. "";
-    var Exception.Lua? e;
-    catch e do
-      var ssize len = [[ CLIENT.role.name:len() ]];
-      _alloc_role_name(len + 1);
-
-      var ssize i;
-      loop i in [1->len] do
-        var byte c = [[ string.byte(CLIENT.role.name:sub(@i, @i)) ]];
-        _ROLE_NAME[i - 1] = c;
-      end
-      _ROLE_NAME [len] = {'\0'};
-      _ROLE_INDEX = [[ CLIENT.role.index ]];
-      _MIRROR_OK = 1;
-    end
-    if e? then
-      _fprintf (_stderr, "[JOINED error]: %s\n", e!.message);
-    end
-  end
+  #include SRC
 end
 
 #include "inputs.ceu"

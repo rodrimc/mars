@@ -78,16 +78,6 @@ var int evt_dev_role_index = -1;
     return toEmit
   end
 
-  function pack (evt, ...)
-    local args = {...}
-    local packed = {evt = evt, args = {}}
-    for i = 1, #args do
-      table.insert (packed.args, args[i])
-    end
-    local serialized = serialize (packed)
-    return serialized
-  end
-
 ]]
 
 code/tight Has_Mapping (var _char&& evt,

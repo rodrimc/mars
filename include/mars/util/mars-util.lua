@@ -15,7 +15,14 @@ function serialize (o)
       result = result .. tostring(v) .. ','
     end
   end
-  result = result:sub (1, -2) 
+  if result:sub (-1) == ',' then
+    result = result:sub (1, -2)
+  end
   result = result .. '}'
   return result
 end
+
+function interfaces (T)
+  MARS.__private.interfaces = type(T) == 'table' and T or nil
+end
+

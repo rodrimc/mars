@@ -90,10 +90,8 @@ local IF_OUTPUT_CALLBACK_TEMPLATE =
   '\t\t\t\t}'
 
 local IF_OUTPUT_EVERY_TEMPLATE =
-  '\tif call Has_Mapping ("{#1}", &role, true) then\n'                                    ..
-  '\t\t\t\t\t\tbuffer = [] .. [[ pack("{#1}",{#2}) ]];\n'                                 ..
-  '\t\t\t\t\t\tspawn Client_Send_Message (&client.stub, &buffer) in send_message_pool;\n' ..
-  '\t\t\t\t\tend'
+  '\t\tbuffer = [] .. [[ pack("{#1}",{#2}) ]];\n'                                 ..
+  '\t\t\t\t\t\tspawn Client_Send_Message (&client.stub, &interface, &buffer) in send_message_pool;\n'
 
 local if_indent = '\t\t\t\t'
 local every_indent = '\t\t\t'
@@ -105,7 +103,7 @@ local OUTPUT_HANDLE_TO_GEN = ''
 
 local union_fields = ''
 
-local cond = '_strcmp(type, "{#1}") == 0 then\n'
+local cond = '_strcmp(evt, "{#1}") == 0 then\n'
 
 for i = 1, #output_evts do
   local output = output_evts[i].line
@@ -118,7 +116,7 @@ for i = 1, #output_evts do
   --struct
   local struct_body = ''
 
-  --set 'type' and 'u_args' variables
+  --set 'evt' and 'u_args' variables
   IF_TO_GEN = IF_TO_GEN .. IF_OUTPUT_CALLBACK_TEMPLATE:gsub ('{#1}', evt):
                                                        gsub ('{#2}', evt:lower()) .. '\n'
 
@@ -136,7 +134,7 @@ for i = 1, #output_evts do
   else
     if_statement = '\t\telse/if '
   end
-  every_body = '\t\t' .. if_statement .. cond:gsub ('{#1}', evt)
+  every_body = '\t\t\t' .. if_statement .. cond:gsub ('{#1}', evt)
 
   for j = 1, #output_evts[i].args do
     local varname = 'arg' .. j
@@ -145,12 +143,12 @@ for i = 1, #output_evts do
     --body of structures (each per output event)
     struct_body = struct_body .. decl
 
-    --body of ifs within the `every` handle (each per output event)
-    decl = indent .. '\tvar ' .. output_evts[i].args[j] .. ' ' .. varname .. ';\n'
+    --body of ifs within the `every` handle (one per output event)
+    decl = indent .. '\t\tvar ' .. output_evts[i].args[j] .. ' ' .. varname .. ';\n'
     if_vars = if_vars .. decl
 
     --assign the value passed in the event to each variable
-    local assignment = indent .. '\t' .. varname .. ' = ' .. 'args.' .. evt:lower() .. '.arg' .. j
+    local assignment = indent .. '\t\t' .. varname .. ' = ' .. 'args.' .. evt:lower() .. '.arg' .. j
     if_assignments = if_assignments  .. assignment .. ';\n'
 
     --arguments to the 'pack' function
@@ -174,7 +172,7 @@ for i = 1, #output_evts do
 end
 
 if OUTPUT_HANDLE_TO_GEN ~= '' then
-  OUTPUT_HANDLE_TO_GEN = OUTPUT_HANDLE_TO_GEN .. '\t\t\t\tend'
+  OUTPUT_HANDLE_TO_GEN = OUTPUT_HANDLE_TO_GEN .. '\t\t\t\t\tend'
 end
 
 OUTPUT_TO_GEN = OUTPUT_TO_GEN .. UNION_TEMPLATE:gsub ('{#1}', union_fields)
