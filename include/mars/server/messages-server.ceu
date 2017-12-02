@@ -48,7 +48,6 @@ code/await Send_Broadcast_Join (var uint handle_id,
 do
   var Exception.Lua? e;
   catch e do
-    var u64 ts = _now ();
     [[
       luabuff = 'type='      .. tostring(@S_NEW_PEER)        .. ',' ..
                 'new_peer='  .. tostring(@id)                .. ',' ..
@@ -70,7 +69,6 @@ code/await Send_Broadcast_Message (var uint handle_id,
 do
   var Exception.Lua? e;
   catch e do
-    var u64 ts = _now ();
     [[
       luabuff = 'type='       .. tostring(S_BROADCAST)        .. ',' ..
                 'payload='    .. tostring(@payload)

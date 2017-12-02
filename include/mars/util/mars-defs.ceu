@@ -21,53 +21,31 @@
 #define S_BROADCAST           23
 #define S_TICK                24
 
-/* event codes */
-#define EVT_KEY               "CM_SCENE_KEY\0"
-#define EVT_SCENE_CLICK       "CM_SCENE_MOUSE_CLICK\0"
-#define EVT_PLAYER_CLICK      "CM_PLAYER_MOUSE_CLICK\0"
-/* more? */
-
 #define ACCEPTED               1
 #define NOT_ACCEPTED          -1
 
 #include "c.ceu"
-#include <r-util.ceu>
 
 native/pre do
   ##include <time.h>
   ##include <string.h>
+  ##include <sys/socket.h>
 
-  long long unsigned int now (void)
-  {
-    struct timespec ts;
-    clock_gettime(CLOCK_REALTIME, &ts);
-    return (long long unsigned int)ts.tv_sec * 1000000000L + ts.tv_nsec;
-  }
-
+  typedef struct sockaddr_in6 sockaddr_in6;
 end
 
-native/nohold
-  _now,
+native/plain
+  _AF_INET,
+  _AF_INET6,
+  _INET_ADDRSTRLEN,
+  _INET6_ADDRSTRLEN,
+  _sockaddr_in6,
 ;
 
-[[
-   function serialize (o)
-     local result = '{'
-     for k,v in pairs(o) do
-       local index = type(k) == 'number' and ('[' .. k .. ']') or k
-       result = result .. index .. '='
-       if type (v) == 'string' then
-         result = result .. "'" .. v .. "',"
-       elseif type(v) == 'table' then
-         result = result .. serialize (v) .. ','
-       else
-         result = result .. tostring(v) .. ','
-       end
-     end
-     result = result .. '}'
-     return result
-   end
-]]
+native/nohold
+  _uv_ip6_name,
+  _uv_tcp_getpeername,
+;
 
 data Stub with
   var uint id;
@@ -168,6 +146,43 @@ do
   end
 
   escape success;
+end
+
+code/await Get_Net_Address (var& UV_Stream stream,
+                            var& [] byte ip) -> u16
+do
+  var _sockaddr_storage sock = _;
+  var int len = sizeof(_sockaddr_in) as int;
+  var int ret = _uv_tcp_getpeername(&&stream.handle as _uv_tcp_t&&,
+    (&&sock as _sockaddr&&), &&len);
+  _ceu_sys_assert(ret == 0, "could not get socket peer name");
+
+  /* INET6_ADDRSTRLEN is supposed to be large enough to accommodate ipv4 and ipv6 */
+  var u16 port = _;
+
+  if sock.ss_family == _AF_INET then
+    var _sockaddr_in&& src = &&sock as _sockaddr_in &&;
+    var[_INET_ADDRSTRLEN] byte tmp = _;
+
+    ret = _uv_ip4_name(src, &&tmp[0], _INET_ADDRSTRLEN);
+    _ceu_sys_assert(ret == 0, "could not get ipv4 name");
+
+    ip = [] .. &&tmp[0] as _char&&;
+
+    port = _ntohs(src:sin_port);
+  else/if sock.ss_family == _AF_INET6 then
+    var _sockaddr_in6&& src = &&sock as _sockaddr_in6 &&;
+    var[_INET6_ADDRSTRLEN] byte tmp = _;
+
+    ret = _uv_ip6_name(src, &&ip[0], _INET6_ADDRSTRLEN);
+    _ceu_sys_assert(ret == 0, "could not get ipv6 name");
+
+    ip = [] .. &&tmp[0] as _char&&;
+
+    port = _ntohs(src:sin6_port);
+  end
+
+  escape port;
 end
 
 #endif

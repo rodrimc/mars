@@ -4,6 +4,7 @@
 /* Server Lua global */
 [[
   dofile ('mars-server.lua')
+  dofile ('mars-util.lua')
 
   Peer = require 'peers'
 
@@ -19,27 +20,11 @@
 
 #include "mars/util/mars-defs.ceu"
 
-native/pre do
-  ##include <sys/socket.h>
-
-  typedef struct sockaddr_in6 sockaddr_in6;
-end
-
 native/pos do
   ##include "mars/server/mars-server.c"
 end
 
-native/plain
-  _AF_INET,
-  _AF_INET6,
-  _INET_ADDRSTRLEN,
-  _INET6_ADDRSTRLEN,
-  _sockaddr_in6,
-;
-
 native/nohold
-  _uv_ip6_name,
-  _uv_tcp_getpeername,
   _ceu_callback_register,
   _cb,
 ;
@@ -308,37 +293,10 @@ end
 code/await UV_TCP_Server_Handler (var& UV_Stream stream,
                                   var& UV_TCP_Server_Data shared) -> int
 do
-  var _sockaddr_storage sock = _;
-  var int len = sizeof(_sockaddr_in) as int;
-  var int ret = _uv_tcp_getpeername(&&stream.handle as _uv_tcp_t&&,
-    (&&sock as _sockaddr&&), &&len);
-  _ceu_sys_assert(ret == 0, "could not get socket peer name");
-
-  /* INET6_ADDRSTRLEN is supposed to be large enough to accommodate ipv4 and ipv6 */
   var[] byte ip = _;
-  var u16 port = _;
+  var u16 port = await Get_Net_Address (&stream, &ip);
 
-  if sock.ss_family == _AF_INET then
-    var _sockaddr_in&& src = &&sock as _sockaddr_in &&;
-    var[_INET_ADDRSTRLEN] byte tmp = _;
-
-    ret = _uv_ip4_name(src, &&tmp[0], _INET_ADDRSTRLEN);
-    _ceu_sys_assert(ret == 0, "could not get ipv4 name");
-
-    ip = [] .. &&tmp[0] as _char&&;
-
-    port = _ntohs(src:sin_port);
-  else/if sock.ss_family == _AF_INET6 then
-    var _sockaddr_in6&& src = &&sock as _sockaddr_in6 &&;
-    var[_INET6_ADDRSTRLEN] byte tmp = _;
-
-    ret = _uv_ip6_name(src, &&ip[0], _INET6_ADDRSTRLEN);
-    _ceu_sys_assert(ret == 0, "could not get ipv6 name");
-
-    ip = [] .. &&tmp[0] as _char&&;
-
-    port = _ntohs(src:sin6_port);
-  end
+  _printf ("%s:%u\n", &&ip[0], port);
 
   if (shared.isReading) then
     await Reading_Handler (&stream, &ip, port as int);
