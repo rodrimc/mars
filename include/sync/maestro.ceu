@@ -89,7 +89,7 @@ do
     _printf ("[client] device: %s\n", device);
 
     /* TODO: parse interfaces by comma */
-    [[ table.insert (MARS.interfaces, @device) ]]
+    [[ table.insert (MARS.instance, @device) ]]
 
     if interfaces != null then
       [[
@@ -166,12 +166,11 @@ par/or do
 
         [[
           TABLE = load (@client.stub.message)()
-          CLIENT.remote.args = TABLE.args or {}
+          MARS.message.args = TABLE.args or {}
         ]]
 
-        evt = [] .. [[ TABLE.evt ]] .. [{'\0'}];
-        _printf ("evt: %s\n", &&evt[0]);
-        spawn Emit_Input_Event (&evt[0]) in input_event_pool;
+        evt = [] .. [[ TABLE.evt ]];
+        spawn Emit_Input_Event (&evt) in input_event_pool;
       end
     with
       input (_char&&, _u_args) IN;
@@ -184,8 +183,10 @@ par/or do
         [[
           interface = nil
           if MARS.peer ~= nil then
+            print (serialize(MARS.peer))
             interface = MARS.peer:getInterfaceOfEvent (@evt)
           end
+          print (interface)
         ]]
         toSend = [[ not (interface == nil) ]];
         if toSend then

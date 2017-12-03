@@ -6,22 +6,7 @@
   dofile ('build/mars-util.lua')
   dofile ('build/mars-client.lua')
 
-  Peer = require 'build/peers'
-
-  CLIENT =
-    {
-      interfaces = {},
-      mapping =
-      {
-        events = {},
-        args = {},
-        apply = nil
-      },
-      remote =
-      {
-        args = nil,
-      }
-    }
+  require 'build/peers'
 ]]
 
 #include "mars/util/mars-defs.ceu"
@@ -36,14 +21,12 @@ var u16 wport = _;
 var u16 rport = _;
 
 code/await Client_Send_Message (var& Stub stub,
-                                var&[] byte interface,
                                 var&[] byte buffer) -> none
 do
   var Exception.Lua? e;
   catch e do
     [[
       luabuff = 'type='       .. tostring(P_REGULAR_SEND) .. ',' ..
-                'interface="' .. @interface               .. '",' ..
                 'from='       .. tostring(@stub.id)       .. ',' ..
                 'payload='    .. tostring(@buffer)
     ]]
@@ -78,9 +61,8 @@ do
             ip = @outer.server_ip,
             port = @outer.rport
           }
-
-          for _,i in ipairs(MARS.interfaces) do
-            MARS.peer:addInterface(i, MARS.__private.interfaces[i])
+          for _,i in ipairs(MARS.instance) do
+            MARS.peer:addInterface(i, MARS.interfaces[i])
           end
         end
       ]]
@@ -179,7 +161,7 @@ do
       catch e do
         [[
           luabuff = 'type=' .. tostring(P_JOIN) .. ',' ..
-                    'interfaces="' .. MARS.interfaces[1] .. '"'
+                    'interfaces="' .. MARS.instance[1] .. '"'
         ]]
 
         stub.wbuffer = [] .. [[ luabuff ]];

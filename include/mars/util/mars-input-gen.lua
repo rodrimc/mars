@@ -84,7 +84,7 @@ function interfaces (T)
         for i=1, #args do
           paramdecl = paramdecl .. decl_param (args[i], i) .. ','
           varcheckdecl = varcheckdecl .. decl_param (args[i], i) ..
-          ' = [[ CLIENT.remote.args[' .. i .. '] ]];\n\t\t'
+          ' = [[ MARS.message.args[' .. i .. '] ]];\n\t\t'
         end
 
         if paramdecl == '' then

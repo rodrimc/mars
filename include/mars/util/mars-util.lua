@@ -23,6 +23,6 @@ function serialize (o)
 end
 
 function interfaces (T)
-  MARS.__private.interfaces = type(T) == 'table' and T or nil
+  MARS.interfaces = type(T) == 'table' and T or nil
 end
 

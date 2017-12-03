@@ -91,7 +91,7 @@ local IF_OUTPUT_CALLBACK_TEMPLATE =
 
 local IF_OUTPUT_EVERY_TEMPLATE =
   '\t\tbuffer = [] .. [[ pack("{#1}",{#2}) ]];\n'                                 ..
-  '\t\t\t\t\t\tspawn Client_Send_Message (&client.stub, &interface, &buffer) in send_message_pool;\n'
+  '\t\t\t\t\t\tspawn Client_Send_Message (&client.stub, &buffer) in send_message_pool;\n'
 
 local if_indent = '\t\t\t\t'
 local every_indent = '\t\t\t'

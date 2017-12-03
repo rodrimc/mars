@@ -1,8 +1,9 @@
 MARS = {
   peer = nil,
   interfaces = {},
-  __private = {
-    interfaces = nil
+  instance = {},
+  message = {
+    args = nil
   }
 }
 
