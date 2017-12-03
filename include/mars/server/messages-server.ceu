@@ -61,11 +61,9 @@ do
   end
 end
 
-code/await Send_Broadcast_Message (var uint handle_id,
-                                   var& UV_Stream stream,
-                                   var uint from,
-                                   var int index,
-                                   var& []byte payload) -> none
+code/await Send_Message (var uint handle_id,
+                         var& UV_Stream stream,
+                         var& []byte payload) -> none
 do
   var Exception.Lua? e;
   catch e do

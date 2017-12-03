@@ -6,16 +6,7 @@
   dofile ('mars-server.lua')
   dofile ('mars-util.lua')
 
-  Peer = require 'peers'
-
-  SERVER =
-    {
-      peers = {},
-      devices = {},
-      mapping = nil,
-      interface = nil,
-      handler_interfaces = {},
-    }
+  require 'peers'
 ]]
 
 #include "mars/util/mars-defs.ceu"
@@ -78,14 +69,13 @@ data UV_TCP_Server_Data with
 end
 
 /*** SERVER SIDE ***/
+event (uint) incoming_message;
 event (uint) send_broadcast_join;
-event (uint, int) send_broadcast_message;
 event (uint) send_tick_message;
 
 var[] byte mapped_evt = _;
 var[] byte mapped_dest = _;
-var[] byte cur_payload;
-var[] byte cur_interface;
+var[] byte message_payload = _;
 
 var uint id_ref = 1;
 var usize peers_count = 0;
@@ -114,51 +104,9 @@ do
 
       if type == P_REGULAR_SEND then
         var uint from = [[ TABLE.from ]];
-        var int index = [[ TABLE.index or -1 ]];
+        [[ MARS.incoming_payload = TABLE.payload ]]
 
-        [[ print (serialize(TABLE.payload)) ]]
-        [[ m = get_mapping (TABLE.payload.evt) ]]
-
-        var ssize len = [[ #m ]];
-        var ssize i;
-        loop i in [1 -> len] do
-          [[
-            local p = MARS.__private.peers[TABLE.from]
-            ok = false
-            if p ~= nil then
-              local interface = m[@i][2]
-              local peer_interfaces = p:getInterfaces()
-              for k,v in pairs (peer_interfaces) do
-                if v.interface == interface then
-                  ok = true
-                end
-              end
-            end
-            if ok then
-              if type(m[@i][5]) == 'function' then
-                ok, mapped_args = m[@i][5](TABLE.payload.args)
-              end
-            end
-          ]]
-          var bool ok = [[ ok ]];
-          if ok then
-            outer.mapped_evt = [] .. [[ m[@i][3] .. '\0']];
-            outer.mapped_dest = [] .. [[ (m[@i][4] or '') .. '\0' ]];
-
-            [[
-              --TODO: apply function to args
-              TABLE.payload.evt = m[@i][3]
-              if mapped_args then
-                TABLE.payload.args = mapped_args
-              end
-            ]]
-
-            outer.cur_payload = [] .. [[ serialize (TABLE.payload) ]];
-
-            emit outer.send_broadcast_message (from, index);
-          end
-        end
-
+        emit outer.incoming_message (from);
       end
     end
     if e? then
@@ -182,7 +130,7 @@ do
   pool[] Send_Not_Joined_Reply  pool_not_joined_reply;
   pool[] Send_Join_Reply        pool_join_reply;
   pool[] Send_Broadcast_Join    pool_broadcast_join;
-  pool[] Send_Broadcast_Message pool_broadcast_message;
+  pool[] Send_Message           pool_send_message;
   pool[] Send_Tick_Message      pool_tick_message;
 
   var int status = _;
@@ -202,13 +150,14 @@ do
         if (type == P_JOIN) then
           [[
             status = NOT_ACCEPTED
-            if MESSAGE.interfaces and MARS.__private.interfaces and
-               type(MARS.__private.interfaces) == 'table' then
+            if MESSAGE.interfaces and MARS.interfaces and
+               type(MARS.interfaces) == 'table' then
 
               interfaces = MESSAGE.interfaces
               peer = nil
-              for interface in MESSAGE.interfaces:gmatch ('([^,]+)') do
-                if MARS.__private.interfaces[interface] ~= nil then
+              for i in MESSAGE.interfaces:gmatch ('([^,]+)') do
+                if MARS.interfaces[i] ~= nil then
+                  interface = MARS.interfaces[i]
                   status = ACCEPTED
 
                   if peer == nil then
@@ -217,9 +166,9 @@ do
                       ip = @ip,
                       port = @port
                     }
-                    MARS.__private.peers[@handle_id] = peer
+                    MARS.peers[@handle_id] = peer
                   end
-                  peer:addInterface (interface)
+                  peer:addInterface (i, interface)
                 end
               end
             end
@@ -258,32 +207,43 @@ do
                                                         in pool_broadcast_join;
       end
     with
-      var uint from;
-      var int index;
-      var bool ok = false;
-      every (from, index) in outer.send_broadcast_message do
-        /* [[ */
-        /*   ok = false */
-        /*   local p = MARS.__private.peers[@handle_id] */
-        /*   if p ~= nil then */
-        /*     local out = @outer.mapped_dest */
-        /*     local peer_interfaces = p:getInterfaces() */
-        /*     for _,v in pairs (peer_interfaces) do */
-        /*       if v.interface == out then */
-        /*         ok = true */
-        /*         break */
-        /*       end */
-        /*     end */
-        /*   end */
-        /* ]] */
-        /* ok = [[ ok ]]; */
-        /* if ok then */
-        /*   _printf ("payload: %s\n", &&outer.cur_payload[0]); */
+      var Exception.Lua? e;
+      catch e
+      do
+        var uint from;
+        var bool ok = false;
+        every (from) in outer.incoming_message do
+          [[
+            dest = {}
+            local p = MARS.peers[@from]
+            mymap = nil
+            if p~= nil then
+              m = p.__mapping[MARS.incoming_payload.evt]
+              if m ~= nil then
+                for _,v in ipairs (m) do
+                  if v.to.id == @handle_id then
+                    mymap = v
+                    break
+                  end
+                end
+              end
+            end
+          ]]
 
-        /*   spawn Send_Broadcast_Message (handle_id, &stream, from, */
-        /*                                 index, &outer.cur_payload) */
-        /*                                 in pool_broadcast_message; */
-        /* end */
+          ok = [[ mymap ~= nil and true or false ]];
+
+          if ok then
+            outer.message_payload = [] .. [[ (serialize({
+                  evt = mymap.evt,
+                  args = MARS.incoming_payload.args
+                })) ]];
+            spawn Send_Message (handle_id, &stream, &outer.message_payload)
+                                                        in pool_send_message;
+          end
+        end
+      end
+      if e? then
+        _printf ("[Incoming Message error:] %s\n", e!.message);
       end
     end
   end

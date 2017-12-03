@@ -1,33 +1,24 @@
 MARS = {
   onConnect = nil,
   onDisconnect = nil,
-  __private = {
-    peers = {},
-    interfaces = nil,
-    connectedCallback = nil
-  }
+  peers = {},
+  interfaces = nil,
+  incoming_payload = nil,
 }
 
-function interfaces (T)
-  MARS.__private.interfaces = type(T) == 'table' and T or nil
-end
+function map (instFrom, evtFrom, instTo, evtTo, transform)
+  if instFrom.__mapping [evtFrom] == nil then
+    instFrom.__mapping [evtFrom] = {}
+  end
 
-function map (table)
-  print ('mapping')
+  table.insert (instFrom.__mapping[evtFrom],
+    {
+      to = instTo,
+      evt = evtTo,
+      func = transform
+    })
 end
 
 function mapping (M)
-  MARS.__private.interfaces = type(M) == 'table' and M or nil
-end
-
-function get_mapping (evt)
-  local map = {}
-  -- if type(SERVER.mapping) == 'table' then
-  --   for _,v in pairs (SERVER.mapping) do
-  --     if v[1] == evt then
-  --       table.insert(map, v)
-  --     end
-  --   end
-  -- end
-  return map
+  MARS.interfaces = type(M) == 'table' and M or nil
 end

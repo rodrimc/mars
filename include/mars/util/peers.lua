@@ -9,6 +9,7 @@ Peer = {
 function Peer:new (o)
   o = o or {}
   o.interfaces = {}
+  o.__mapping = {}
 
   setmetatable (o, self)
   self.__index = self
