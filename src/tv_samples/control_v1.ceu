@@ -1,14 +1,18 @@
 #include "media/media.ceu"
 
-/*
- * Mapping: scripts/tv_mappings_v1.lua
- */
+output (none) RETURN_;
+output (none) SPACE;
+output (none) P;
+output (none) UP;
+output (none) DOWN;
+output (none) RIGHT;
+output (none) LEFT;
+output (none) ESC;
+
 var Media.Image control = val Media.Image (
                 [] .. "resources/remote_control.png",
                 Region (0, 0, 400, 400, 1),
                 1.0);
-
-output (none) SPACE;
 
 var Size size = val Size (400, 400);
 var&? Scene scene = spawn Scene(size);
@@ -18,8 +22,24 @@ watching scene do
   var bool press;
   var _char_ptr_ext key;
   every (_, key, press) in CM_SCENE_KEY do
-    if press and  _strcmp(key, "space") == 0 then
-      emit SPACE ();
+    if press then
+      if _strcmp(key, "Return") == 0 then
+        emit RETURN_ ();
+      else/if _strcmp(key, "space") == 0 then
+        emit SPACE ();
+      else/if _strcmp (key, "p") == 0 then
+        emit P ();
+      else/if _strcmp (key, "Right") == 0 then
+        emit RIGHT ();
+      else/if _strcmp (key, "Left") == 0 then
+        emit LEFT ();
+      else/if _strcmp (key, "Up") == 0 then
+        emit UP ();
+      else/if _strcmp (key, "Down") == 0 then
+        emit DOWN ();
+      else/if _strcmp (key, "Escape") == 0 then
+        emit ESC ();
+      end
     end
   end
 end

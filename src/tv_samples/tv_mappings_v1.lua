@@ -1,6 +1,18 @@
 tvs = {}
 controls = {}
 
+function link_control_tv (control, tv)
+  map (control, 'RETURN_', tv, 'TURN_ON')
+  map (control, 'ESC',     tv, 'TURN_OFF')
+  map (control, 'P',       tv, 'PLAY')
+  map (control, 'SPACE',   tv, 'PAUSE')
+  map (control, 'RIGHT',   tv, 'SEEK_FORWARD')
+  map (control, 'LEFT',    tv, 'SEEK_BACKWARD')
+  map (control, 'UP',      tv, 'VOLUME_UP')
+  map (control, 'DOWN',    tv, 'VOLUME_DOWN')
+end
+
+
 MARS.onConnect = function (p)
   local interfaces = p:getInterfaces()
   local isControl = false
@@ -21,13 +33,13 @@ MARS.onConnect = function (p)
 
   if isControl then
     for _,tv in ipairs(tvs) do
-      map (p, 'SPACE', tv, 'PLAY')
+      link_control_tv (p, tv)
     end
   end
 
   if isTv then
     for _,control in ipairs (controls) do
-      map (control, 'SPACE', p, 'PLAY')
+      link_control_tv (control, p)
     end
   end
 end
