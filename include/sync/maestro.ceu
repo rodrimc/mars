@@ -169,7 +169,7 @@ par/or do
           MARS.message.args = TABLE.args or {}
         ]]
 
-        evt = [] .. [[ TABLE.evt ]];
+        evt = [] .. [[ TABLE.evt .. '\0']];
         spawn Emit_Input_Event (&evt) in input_event_pool;
       end
     with
