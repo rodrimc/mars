@@ -172,7 +172,7 @@ do
                 end
               end
             end
-            if status and type (MARS.onConnect) == 'function' then
+            if status == ACCEPTED and type (MARS.onConnect) == 'function' then
               MARS.onConnect (peer)
             end
           ]]

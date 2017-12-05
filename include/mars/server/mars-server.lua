@@ -15,7 +15,7 @@ function map (instFrom, evtFrom, instTo, evtTo, transform)
     {
       to = instTo,
       evt = evtTo,
-      func = transform
+      transform = transform
     })
 end
 
