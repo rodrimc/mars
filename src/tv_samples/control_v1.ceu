@@ -1,0 +1,25 @@
+#include "media/media.ceu"
+
+/*
+ * Mapping: scripts/tv_mappings_v1.lua
+ */
+var Media.Image control = val Media.Image (
+                [] .. "resources/remote_control.png",
+                Region (0, 0, 400, 400, 1),
+                1.0);
+
+output (none) SPACE;
+
+var Size size = val Size (400, 400);
+var&? Scene scene = spawn Scene(size);
+
+watching scene do
+  spawn Play (&scene.scene, &control);
+  var bool press;
+  var _char_ptr_ext key;
+  every (_, key, press) in CM_SCENE_KEY do
+    if press and  _strcmp(key, "space") == 0 then
+      emit SPACE ();
+    end
+  end
+end

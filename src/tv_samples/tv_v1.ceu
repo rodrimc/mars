@@ -4,51 +4,17 @@
  * Mapping: scripts/tv_mappings_v1.lua
  */
 
-var _char&& name;
-(name, _) = await JOINED;
-var bool im_tv = _strcmp (name, "TV") == 0;
-
-_printf ("im_tv: %d\n", im_tv);
+input (none) PLAY;
 
 var Media.Video video = val Media.Video (
                 [] .. "resources/bunny.ogg",
                 Region (0, 0, 720, 480, 1),
                 1.0, 1.0);
 
-var Media.Image control = val Media.Image (
-                [] .. "resources/remote_control.png",
-                Region (0, 0, 400, 400, 1),
-                1.0);
 
-par do
-  if im_tv then
-    /* tv.ceu */
-    input (none) PLAY;
-
-    var Size size = val Size (720, 480);
-    var&? Scene scene = spawn Scene(size);
-    watching scene do
-      await PLAY;
-      await Play (&scene.scene, &video);
-    end
-  end
-with
-  if not im_tv then
-    /* control.ceu */
-    output (none) SPACE;
-
-    var Size size = val Size (400, 400);
-    var&? Scene scene = spawn Scene(size);
-
-    watching scene do
-      spawn Play (&scene.scene, &control);
-      var bool press;
-      var _char_ptr_ext key;
-      every (_, key, press) in CM_SCENE_KEY do
-        if press and  _strcmp(key, "space") == 0 then
-          emit SPACE ();
-        end
-      end
-    end
-  end
+var Size size = val Size (720, 480);
+var&? Scene scene = spawn Scene(size);
+watching scene do
+  await PLAY;
+  await Play (&scene.scene, &video);
 end
