@@ -160,11 +160,11 @@ par/or do
       var[] int mapped = _;
       var[] int mapping = _;
       every client.stub.incoming_message do
-        [[ print ('[APP(' .. tostring(@client.stub.id) .. ')] Message: ' ..
-                                  @client.stub.message) ]]
-        _printf ("[APP(%u)] Message: %s\n", client.stub.id, &&client.stub.message[0]);
-
         [[
+          print ('incoming_message')
+          print ('[APP(' .. tostring(@client.stub.id) .. ')] Message: ' ..
+                                  @client.stub.message)
+
           TABLE = load (@client.stub.message)()
           MARS.message.args = TABLE.args or {}
         ]]
