@@ -28,6 +28,7 @@ tceu_callback_ret evt_cb (int cmd,
           }
       }
     }
+    optind = 0;
 
     tceu_input_INIT p = {interface_file, mapping_file};
 

@@ -42,6 +42,9 @@ native/pos do
               }
             }
           }
+
+          optind = 0;
+
           tceu_input_INIT p = {device, interfaces_file};
           ceu_input (CEU_INPUT_INIT, &p);
           flag = 1;
