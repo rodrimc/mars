@@ -212,6 +212,7 @@ do
       do
         var uint from;
         var ssize len = 0;
+        var bool ok = false;
         every (from) in outer.incoming_message do
           [[
             local p = MARS.peers[@from]
@@ -232,13 +233,24 @@ do
 
           var ssize i;
           loop i in [1 -> len] do
-            outer.message_payload = [] .. [[ (serialize({
-                  evt = mymap[@i].evt,
-                  args = MARS.incoming_payload.args
-                })) ]];
-            _printf ("%s\n", &&outer.message_payload[0]);
-            spawn Send_Message (handle_id, &stream, &outer.message_payload)
-                                                        in pool_send_message;
+            [[
+              ok = true
+              args = MARS.incoming_payload.args
+              if type (mymap[@i].transform) == 'function' then
+                ok, args = mymap[@i].transform (MARS.peers[@from],
+                                                table.unpack(MARS.incoming_payload.args))
+              end
+            ]]
+            ok = [[ ok ]];
+            if ok then
+              outer.message_payload = [] .. [[ (serialize({
+                    evt = mymap[@i].evt,
+                    args = args
+                  })) ]];
+              _printf ("sending: %s\n", &&outer.message_payload[0]);
+              spawn Send_Message (handle_id, &stream, &outer.message_payload)
+                                                          in pool_send_message;
+            end
           end
         end
       end
