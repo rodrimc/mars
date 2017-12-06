@@ -211,32 +211,32 @@ do
       catch e
       do
         var uint from;
-        var bool ok = false;
+        var ssize len = 0;
         every (from) in outer.incoming_message do
           [[
-            dest = {}
             local p = MARS.peers[@from]
-            mymap = nil
+            mymap = {}
             if p~= nil then
               m = p.__mapping[MARS.incoming_payload.evt]
               if m ~= nil then
                 for _,v in ipairs (m) do
-                  if v.to.id == @handle_id then
-                    mymap = v
-                    break
+                  if v.to == @handle_id then
+                    table.insert (mymap, v)
                   end
                 end
               end
             end
           ]]
 
-          ok = [[ mymap ~= nil and true or false ]];
+          len = [[ #mymap ]];
 
-          if ok then
+          var ssize i;
+          loop i in [1 -> len] do
             outer.message_payload = [] .. [[ (serialize({
-                  evt = mymap.evt,
+                  evt = mymap[@i].evt,
                   args = MARS.incoming_payload.args
                 })) ]];
+            _printf ("%s\n", &&outer.message_payload[0]);
             spawn Send_Message (handle_id, &stream, &outer.message_payload)
                                                         in pool_send_message;
           end

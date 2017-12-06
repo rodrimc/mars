@@ -13,7 +13,7 @@ function map (instFrom, evtFrom, instTo, evtTo, transform)
 
   table.insert (instFrom.__mapping[evtFrom],
     {
-      to = instTo,
+      to = instTo.id,
       evt = evtTo,
       transform = transform
     })
