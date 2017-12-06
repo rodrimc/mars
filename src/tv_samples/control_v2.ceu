@@ -1,0 +1,39 @@
+#include "media/media.ceu"
+
+output (int) KEY_PRESSED;
+
+var Media.Image control = val Media.Image (
+                [] .. "resources/remote_control.png",
+                Region (0, 0, 400, 400, 1),
+                1.0);
+
+var Size size = val Size (400, 400);
+var&? Scene scene = spawn Scene(size);
+
+watching scene do
+  spawn Play (&scene.scene, &control);
+  var bool press;
+  var _char_ptr_ext key;
+  every (_, key, press) in CM_SCENE_KEY do
+    _printf ("%s\n", key);
+    if press then
+      if _strcmp(key, "Return") == 0 then
+        emit KEY_PRESSED (0);
+      else/if _strcmp(key, "space") == 0 then
+        emit KEY_PRESSED (1);
+      else/if _strcmp (key, "p") == 0 then
+        emit KEY_PRESSED (2);
+      else/if _strcmp (key, "Right") == 0 then
+        emit KEY_PRESSED (3);
+      else/if _strcmp (key, "Left") == 0 then
+        emit KEY_PRESSED (4);
+      else/if _strcmp (key, "Up") == 0 then
+        emit KEY_PRESSED (5);
+      else/if _strcmp (key, "Down") == 0 then
+        emit KEY_PRESSED (6);
+      else/if _strcmp (key, "Escape") == 0 then
+        emit KEY_PRESSED (7);
+      end
+    end
+  end
+end
