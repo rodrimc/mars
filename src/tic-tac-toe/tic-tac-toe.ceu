@@ -1,10 +1,53 @@
-#include "mars/util/mars-media.ceu"
+#include "media/media.ceu"
 
-var _char&& name;
-(name, _) = await JOINED;
-var byte my_char = name[0];
+#define UNKNOWN -1
+#define X        0
+#define O        1
 
-_printf ("player: %c\n", my_char);
+native/pos do
+  int get_player ()
+  {
+    char *player = NULL;
+    char c;
+    while ((c = getopt (CEU_APP.argc, CEU_APP.argv, "idp:")) != -1)
+    {
+      switch (c)
+      {
+        case 'p':
+        {
+          player = optarg;
+          break;
+        }
+      }
+    }
+    if (player)
+    {
+      if (strcmp(player, "X") == 0)
+        return X;
+      else if (strcmp (player, "O") == 0)
+        return O;
+    }
+
+    return UNKNOWN;
+  }
+end
+
+native/nohold
+  _get_player,
+;
+
+var int player = _get_player();
+var byte my_char;
+
+if player == X then
+  my_char = {'x'};
+else/if player == O then
+  my_char = {'o'};
+else
+  escape -1;
+end
+
+_printf ("player: %d\n", my_char);
 
 var int width  = 300;
 var int height = 300;
@@ -32,12 +75,12 @@ do
   path = path .. ".png";
 
   var Media.Image icon = val Media.Image ([] .. path,
-    Region (x * dx, y * dy, dx, dy, 2), 1.0); 
+    Region (x * dx, y * dy, dx, dy, 2), 1.0);
 
-  await Play (&s, &icon); 
+  await Play (&s, &icon);
 end
 
-code/tight Check_Winner (var&[] byte board) -> byte 
+code/tight Check_Winner (var&[] byte board) -> byte
 do
   if board[0] == board[1] and board[1] == board[2] and board[0] != {'.'} then
     escape board[0];
@@ -56,7 +99,7 @@ do
   else/if board[6] == board[4] and board[4] == board[2] and board[4] != {'.'} then
     escape board[6];
   else
-    escape {'.'}; 
+    escape {'.'};
   end
 end
 
@@ -66,13 +109,13 @@ do
   input (int, int) OPPONENT_MOVE;
   output (int, int) MY_MOVE;
 
-  event (byte) finish; 
+  event (byte) finish;
 
   pool[] Draw_Icon draw_pool;
   var int count = 9;
   var byte winner = _;
-  var[] byte board = [] .. "........."; 
-  var bool myturn = my_char == {'x'}; 
+  var[] byte board = [] .. ".........";
+  var bool myturn = my_char == {'x'};
 
   par/or do
     await Play (&scene.scene, &background);
@@ -80,8 +123,8 @@ do
     var int x;
     var int y;
     var bool press;
-    
-    every (_, x, y, _,  press) in CM_SCENE_MOUSE_CLICK do 
+
+    every (_, x, y, _,  press) in CM_SCENE_MOUSE_CLICK do
       if press and myturn then
         var int index = call Get_Index (x, y);
 
@@ -112,7 +155,7 @@ do
       opponent_char = {'x'};
     end
 
-    every (x, y) in OPPONENT_MOVE do 
+    every (x, y) in OPPONENT_MOVE do
       _printf ("OPPONENT_MOVE\n");
       var int index = call Get_Index (x, y);
       board[index] = opponent_char;
