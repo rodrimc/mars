@@ -9,11 +9,6 @@ var Media.Video video = val Media.Video (
                 Region (0, 0, 720, 480, 1),
                 1.0, 1.0);
 
-var Media.Image control = val Media.Image (
-                [] .. "resources/remote_control.png",
-                Region (0, 0, 400, 400, 1),
-                1.0);
-
 #define SECONDS * 1000000000
 
 input (none) PLAY;
@@ -37,27 +32,22 @@ loop do
       watching p do
         par do
           every PLAY do
-            _printf ("PLAY\n");
             call Scene_Resume (&scene.scene);
           end
         with
           every PAUSE do
-            _printf ("PAUSE\n");
             call Scene_Pause (&scene.scene);
           end
         with
           every SEEK_FORWARD do
-            _printf ("SEEK_FORWARD\n");
             call Player_Seek (&p.player, 10 SECONDS , true);
           end
         with
           every SEEK_BACKWARD do
-            _printf ("SEEK_BACKWARD\n");
             call Player_Seek (&p.player, -10 SECONDS, true);
           end
         with
           every VOLUME_UP do
-            _printf ("VOLUME_UP\n");
             var r64 vol_level = call Player_Get_Double (&p.player, "volume");
             if vol_level < 1.0 then
               vol_level = vol_level + 0.2;
@@ -66,7 +56,6 @@ loop do
           end
         with
           every VOLUME_DOWN do
-            _printf ("VOLUME_DOWN\n");
             var r64 vol_level = call Player_Get_Double (&p.player, "volume");
             if vol_level > 0.0 then
               vol_level = vol_level - 0.2;
