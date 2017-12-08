@@ -1,0 +1,89 @@
+#include "media/media.ceu"
+
+var int width = 1024;
+var int height = 576;
+
+input (int) CHOSEN_OPTION;
+input (none) ACCEPTED_;
+
+output (none) QUESTION;
+output (none) END_;
+
+var Media.Video video = val Media.Video (
+                [] .. "resources/priv/video_principal.mp4",
+                Region (0, 0, width, height, 1),
+                1.0, 1.0);
+
+var&? Scene s = spawn Scene (Size(width, height));
+watching s do
+  var bool accepted = false;
+  var int option = 1;
+  par/or do
+    await Play (&s.scene, &video);
+  with
+    watching 43s
+    do
+      await ACCEPTED_;
+      accepted = true;
+      await FOREVER;
+    end
+    if accepted then
+      par/or do
+        emit QUESTION;
+        var Media.Image interatividade = val Media.Image (
+            [] .. "resources/priv/interatividade_1.png",
+                Region (0, 0, width, height, 2),
+                1.0);
+
+        await Play (&s.scene, &interatividade);
+      with
+        await 15s;
+      with
+        option = await CHOSEN_OPTION;
+      end
+    else
+      var Media.Image interatividade = val Media.Image (
+          [] .. "resources/priv/interatividade_2.png",
+              Region (0, 0, width, height, 2),
+              1.0);
+      watching 15s
+      do
+        par/or do
+          await Play (&s.scene, &interatividade);
+        with
+          loop do
+            var _char_ptr_ext key;
+            (_, key, _) = await CM_SCENE_KEY;
+            if _strcmp (key, "F1") == 0 then
+              option = 1;
+              break;
+            else/if _strcmp (key, "F2") == 0 then
+              option = 2;
+              break;
+            else/if _strcmp (key, "F3") == 0 then
+              option = 3;
+              break;
+            end
+          end
+        end
+      end
+    end
+  end
+  _printf ("option: %d\n", option);
+  var []byte end_;
+  if option == 1 then
+    end_ = [] .. "resources/priv/final_1.mp4";
+  else/if option == 2 then
+    end_ = [] .. "resources/priv/final_2.mp4";
+  else
+    end_ = [] .. "resources/priv/final_3.mp4";
+  end
+
+  var Media.Video final = val Media.Video (
+                [] .. end_,
+                Region (0, 0, width, height, 1),
+                1.0, 1.0);
+
+  await Play (&s.scene, &final);
+  emit END_ ();
+end
