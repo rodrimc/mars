@@ -1,8 +1,25 @@
-#include "mars/util/mars-media.ceu"
+#include "media/media.ceu"
 
-var _char&& name;
-(name, _) = await JOINED;
-var bool im_shooter = _strcmp (name, "SHOOTER") == 0;
+native/pos do
+  int im_shooter ()
+  {
+    static int im_shooter = 0;
+
+    char c;
+    while ((c = getopt (CEU_APP.argc, CEU_APP.argv, "idp:")) != -1)
+    {
+      if (c == 'p' && strcmp (optarg, "SHOOTER") == 0)
+      {
+        return 1;
+      }
+    }
+    return 0;
+  }
+end
+
+native/nohold
+  _im_shooter,
+;
 
 var int width   = 320;
 var int height = 420;
@@ -78,8 +95,8 @@ do
   end
 end
 
-output (int) CHOICE;
-input (int) OPPONENT_CHOICE;
+output (int) MY_MOVE;
+input (int) OPPONENT_MOVE;
 
 watching s
 do
@@ -91,6 +108,8 @@ do
   with
     await CM_PLAYER_MOUSE_CLICK;
   end
+
+  var bool im_shooter = _im_shooter () as bool;
 
   var[] byte img;
   if im_shooter then
@@ -117,9 +136,9 @@ do
         choice = LEFT;
       end
       _printf ("choice: %d\n", choice);
-      emit CHOICE (choice);
+      emit MY_MOVE (choice);
     with
-      opponent_choice = await OPPONENT_CHOICE;
+      opponent_choice = await OPPONENT_MOVE;
       _printf ("opponent_choice: %d\n", opponent_choice);
     end
   end

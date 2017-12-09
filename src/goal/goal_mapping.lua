@@ -1,9 +1,11 @@
-CLIENT.mapping.events =
-  {
-    {"CHOICE", nil, "OPPONENT_CHOICE", nil, 
-        function (args, from)
-          local toEmit = from == CLIENT.role.name
-          return not toEmit 
-        end,
-      }
-    }
+local previous = nil
+
+MARS.onConnect = function (p)
+  if previous then
+    map (p,        'MY_MOVE', previous, 'OPPONENT_MOVE')
+    map (previous, 'MY_MOVE', p,        'OPPONENT_MOVE')
+    previous = nil
+  else
+    previous = p
+  end
+end
