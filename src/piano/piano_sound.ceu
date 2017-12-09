@@ -1,0 +1,50 @@
+#include "media/media.ceu"
+
+var int key_width = 90;
+var int key_height = 430;
+
+var int sharp_width = 38;
+var int sharp_height = 315;
+
+#include "media.ceu"
+
+input (int) PLAY;
+
+var&? Scene s = spawn Scene (Size(635, 434));
+watching s
+do
+  pool [] Play ps;
+  pool [] Play_Note pn;
+
+  par do
+    await Play (&s.scene, &c);
+  with
+		await Play (&s.scene, &cs);
+  with
+		await Play (&s.scene, &d);
+  with
+		await Play (&s.scene, &ds);
+  with
+		await Play (&s.scene, &e);
+  with
+		await Play (&s.scene, &f);
+  with
+		await Play (&s.scene, &fs);
+  with
+		await Play (&s.scene, &g);
+  with
+		await Play (&s.scene, &gs);
+  with
+		await Play (&s.scene, &a);
+  with
+		await Play (&s.scene, &as_);
+  with
+		await Play (&s.scene, &b);
+  with
+    var int note;
+    every note in PLAY do 
+      spawn Play_Note (note, &s.scene, &ps) in pn;
+    end
+  end
+end
+

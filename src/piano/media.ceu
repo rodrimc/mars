@@ -1,3 +1,16 @@
+#define C  1
+#define CS 2
+#define D  3 
+#define DS 4 
+#define E  5 
+#define F  6
+#define FS 7 
+#define G  8 
+#define GS 9 
+#define A  10 
+#define AS 11 
+#define B  12 
+
 var [] byte t1    = [] .. "resources/piano/type1.png";
 var [] byte t2    = [] .. "resources/piano/type2.png";
 var [] byte t3    = [] .. "resources/piano/type3.png";
@@ -217,4 +230,3 @@ do
     end
   end
 end
-

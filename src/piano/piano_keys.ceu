@@ -1,4 +1,4 @@
-#include "mars/util/mars-media.ceu"
+#include "media/media.ceu"
 
 var int key_width = 90;
 var int key_height = 430;
@@ -6,23 +6,9 @@ var int key_height = 430;
 var int sharp_width = 38;
 var int sharp_height = 315;
 
-#define C  1
-#define CS 2
-#define D  3 
-#define DS 4 
-#define E  5 
-#define F  6
-#define FS 7 
-#define G  8 
-#define GS 9 
-#define A  10 
-#define AS 11 
-#define B  12 
-
 #include "media.ceu"
 
 output (int) NOTE;
-input (int) PLAY;
 
 var&? Scene s = spawn Scene (Size(635, 434));
 watching s do
@@ -40,7 +26,6 @@ watching s do
   var&? Play b_play;
 
   pool [] Play ps;
-  pool [] Play_Note pn;
 
   par do
     c_play = spawn Play (&s.scene, &c) in ps;
@@ -108,11 +93,6 @@ watching s do
           emit NOTE (B);
         end
       end
-    end
-  with
-    var int note;
-    every note in PLAY do 
-      spawn Play_Note (note, &s.scene, &ps) in pn;
     end
   end
 end
