@@ -13,7 +13,7 @@ local f = io.open (arg[1], 'r')
 local defs = f:read ('*all')
 f:close()
 
-f = io.open (arg[2], 'r')
+f = io.open (arg[3], 'r')
 local src = f:read ('*all')
 f:close()
 
@@ -114,9 +114,12 @@ function interfaces (T)
 
   gen = gen .. HANDLER_TEMPLATE:gsub('{#1}', checks)
 
+  src = src:gsub ('__INTERFACES__', defs:gsub ('interfaces', 'MARS.interfaces = '))
+  src = src:gsub ('__INPUTS__', gen)
+
   if arg[3] then
     f = io.open (arg[3], 'w')
-    f:write (gen)
+    f:write (src)
     f:close()
   end
 end

@@ -42,7 +42,7 @@ all:
 	cp $(MAESTRO) $(TEMP)
 	sed s:SRC:"\"$(SRC_SED)\"":g -i $(TEMP)
 	$(LUA) $(EVTS) $(TEMP) $(SRC)
-	$(LUA) $(INPUT_GEN) $(IDF) $(SRC) $(BUILD_PATH)/inputs.ceu
+	$(LUA) $(INPUT_GEN) $(IDF) $(SRC) $(TEMP)
 	ceu --pre --pre-args="-I$(CEU_DIR)/include -I$(CEU_MEDIA_DIR)/include	-I./ \
 						-I$(CEU_UV_DIR)/include -I$(CEU_LIB_DIR) -I./include"  	 				 \
 	          --pre-input=$(TEMP)																							 \

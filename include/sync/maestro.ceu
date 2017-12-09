@@ -5,6 +5,10 @@ native/pre do
 __OUTPUT_TYPES__
 end
 
+[[
+__INTERFACES__
+]]
+
 native/pos do
   int MIRROR_OK = 0;
 
@@ -204,6 +208,6 @@ with
   #include SRC
 end
 
-#include "inputs.ceu"
+__INPUTS__
 
 escape 0;
