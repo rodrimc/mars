@@ -1,18 +1,24 @@
-interface {
-  MAIN = {
-    inputs = {
-      { USER_CHOICE = {'int'} },
+interfaces {
+  MAIN =
+  {
+    inputs =
+    {
+      USER_CHOICE = {'int'},
     },
-    outputs = {
-      { INTERACTIVITY = {} },
+    outputs =
+    {
+      INTERACTIVITY = {},
     }
   },
-  SECONDARY = {
-    inputs = {
-      {SHOW_OPTIONS = {} },
+  SECONDARY =
+  {
+    inputs =
+    {
+      SHOW_OPTIONS = {},
     },
-    outputs = {
-      { FINAL_ = {'int'} },
+    outputs =
+    {
+      FINAL_ = {'int'},
     }
   }
 }
