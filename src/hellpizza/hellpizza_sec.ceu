@@ -1,0 +1,48 @@
+#include "media/media.ceu"
+
+input (none) SHOW_OPTIONS;
+output (int) FINAL_;
+
+var int width = 1024;
+var int height = 576;
+
+var&? Scene s = spawn Scene (Size (width,height));
+watching s
+do
+  var Media.Image background = val Media.Image (
+                                  [] .. "resources/priv2/background.png",
+                                  Region (0, 0, width, height, 1), 1.0);
+  var Media.Image op1 = val Media.Image (
+                                  [] .. "resources/priv2/op1.png",
+                                  Region (143, 201, 256, 150, 2), 1.0);
+  var Media.Image op2 = val Media.Image (
+                                  [] .. "resources/priv2/op2.png",
+                                  Region (456, 201, 461, 173, 2), 1.0);
+  par/or do
+    await Play (&s.scene, &background);
+  with
+    await SHOW_OPTIONS;
+    var&? Play op1_p;
+    var&? Play op2_p;
+    par/or do
+      op1_p = spawn Play (&s.scene, &op1);
+      await FOREVER;
+    with
+      op2_p = spawn Play (&s.scene, &op2);
+      await FOREVER;
+    with
+      var uint obj;
+      (obj, _, _, _, _) = await CM_PLAYER_MOUSE_CLICK until
+                                (obj == op1_p!.player.self or
+                                 obj == op2_p!.player.self);
+      if obj == op1_p!.player.self then
+        emit FINAL_ (1);
+      else
+        emit FINAL_ (2);
+      end
+    end
+  end
+end
+
+escape 0;
+
