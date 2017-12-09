@@ -33,6 +33,10 @@ function Peer:getInterfaceOfEvent (evt)
   return nil
 end
 
+function Peer:hasInterface (interface)
+  return self.interfaces[interface] ~= nil
+end
+
 function _hasEvent (evt, t)
   local has = false
   for k,_ in pairs (t) do
