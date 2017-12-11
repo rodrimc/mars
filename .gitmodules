@@ -1,0 +1,9 @@
+[submodule "modules/ceu-media"]
+	path = modules/ceu-media
+	url = https://github.com/rodrimc/ceu-media
+[submodule "modules/ceu-libuv"]
+	path = modules/ceu-libuv
+	url = https://github.com/fsantanna/ceu-libuv
+[submodule "modules/ceu"]
+	path = modules/ceu
+	url = https://github.com/fsantanna/ceu
