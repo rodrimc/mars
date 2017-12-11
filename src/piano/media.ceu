@@ -22,209 +22,201 @@ var [] byte t3_sel    = [] .. "resources/piano/type3_sel.png";
 var [] byte sharp_sel = [] .. "resources/piano/sharp_sel.png";
 
 /* KEYS */
-var Media.Image c = val Media.Image (
-    [] .. t1, Region (0, 0, key_width, key_height, 1), 1.0);
+var Properties.Image c = val Properties.Image (
+    Region (0, 0, key_width, key_height, 1), 1.0);
 
-var Media.Image cs = val Media.Image (
-    [] .. sharp, Region (key_width - sharp_width/2, 0, 
+var Properties.Image cs = val Properties.Image (
+    Region (key_width - sharp_width/2, 0, 
                          sharp_width, sharp_height, 2), 1.0);
 
-var Media.Image d = val Media.Image (
-    [] .. t2, Region (key_width, 0, key_width, key_height, 1), 1.0);
+var Properties.Image d = val Properties.Image (
+    Region (key_width, 0, key_width, key_height, 1), 1.0);
 
-var Media.Image ds = val Media.Image (
-    [] .. sharp, Region (2 * key_width - sharp_width/2, 0, 
+var Properties.Image ds = val Properties.Image (
+    Region (2 * key_width - sharp_width/2, 0, 
                          sharp_width, sharp_height, 2), 1.0);
 
-var Media.Image e = val Media.Image (
-    [] .. t3, Region (2 * key_width, 0, key_width, key_height, 1), 1.0);
+var Properties.Image e = val Properties.Image (
+    Region (2 * key_width, 0, key_width, key_height, 1), 1.0);
 
-var Media.Image f = val Media.Image (
-    [] .. t1, Region (3 * key_width, 0, key_width, key_height, 1), 1.0);
+var Properties.Image f = val Properties.Image (
+    Region (3 * key_width, 0, key_width, key_height, 1), 1.0);
 
-var Media.Image fs = val Media.Image (
-    [] .. sharp, Region (4 * key_width - sharp_width/2, 0, 
+var Properties.Image fs = val Properties.Image (
+    Region (4 * key_width - sharp_width/2, 0, 
                          sharp_width, sharp_height, 2), 1.0);
 
-var Media.Image g = val Media.Image (
-    [] .. t2, Region (4 * key_width, 0, key_width, key_height, 1), 1.0);
+var Properties.Image g = val Properties.Image (
+    Region (4 * key_width, 0, key_width, key_height, 1), 1.0);
 
-var Media.Image gs = val Media.Image (
-    [] .. sharp, Region (5 * key_width - sharp_width/2, 0, 
+var Properties.Image gs = val Properties.Image (
+    Region (5 * key_width - sharp_width/2, 0, 
                          sharp_width, sharp_height, 2), 1.0);
 
-var Media.Image a = val Media.Image (
-    [] .. t2, Region (5 * key_width, 0, key_width, key_height, 1), 1.0);
+var Properties.Image a = val Properties.Image (
+    Region (5 * key_width, 0, key_width, key_height, 1), 1.0);
 
-var Media.Image as_ = val Media.Image (
-    [] .. sharp, Region (6 * key_width - sharp_width/2, 0, 
+var Properties.Image as_ = val Properties.Image (
+    Region (6 * key_width - sharp_width/2, 0, 
                          sharp_width, sharp_height, 2), 1.0);
 
-var Media.Image b = val Media.Image (
-    [] .. t3, Region (6 * key_width, 0, key_width, key_height, 1), 1.0);
+var Properties.Image b = val Properties.Image (
+    Region (6 * key_width, 0, key_width, key_height, 1), 1.0);
 
-var Media.Image c_sel = val Media.Image (
-    [] .. t1_sel, Region (0, 0, key_width, key_height, 3), 1.0);
+var Properties.Image c_sel = val Properties.Image (
+    Region (0, 0, key_width, key_height, 3), 1.0);
 
-var Media.Image cs_sel = val Media.Image (
-    [] .. sharp_sel, Region (key_width - sharp_width/2, 0, 
+var Properties.Image cs_sel = val Properties.Image (
+    Region (key_width - sharp_width/2, 0, 
                          sharp_width, sharp_height, 3), 1.0);
 
-var Media.Image d_sel = val Media.Image (
-    [] .. t2_sel, Region (key_width, 0, key_width, key_height, 3), 1.0);
+var Properties.Image d_sel = val Properties.Image (
+    Region (key_width, 0, key_width, key_height, 3), 1.0);
 
-var Media.Image ds_sel = val Media.Image (
-    [] .. sharp_sel, Region (2 * key_width - sharp_width/2, 0, 
+var Properties.Image ds_sel = val Properties.Image (
+    Region (2 * key_width - sharp_width/2, 0, 
                          sharp_width, sharp_height, 3), 1.0);
 
-var Media.Image e_sel = val Media.Image (
-    [] .. t3_sel, Region (2 * key_width, 0, key_width, key_height, 3), 1.0);
+var Properties.Image e_sel = val Properties.Image (
+    Region (2 * key_width, 0, key_width, key_height, 3), 1.0);
 
-var Media.Image f_sel = val Media.Image (
-    [] .. t1_sel, Region (3 * key_width, 0, key_width, key_height, 3), 1.0);
+var Properties.Image f_sel = val Properties.Image (
+    Region (3 * key_width, 0, key_width, key_height, 3), 1.0);
 
-var Media.Image fs_sel = val Media.Image (
-    [] .. sharp_sel, Region (4 * key_width - sharp_width/2, 0, 
+var Properties.Image fs_sel = val Properties.Image (
+    Region (4 * key_width - sharp_width/2, 0, 
                          sharp_width, sharp_height, 3), 1.0);
 
-var Media.Image g_sel = val Media.Image (
-    [] .. t2_sel, Region (4 * key_width, 0, key_width, key_height, 3), 1.0);
+var Properties.Image g_sel = val Properties.Image (
+    Region (4 * key_width, 0, key_width, key_height, 3), 1.0);
 
-var Media.Image gs_sel = val Media.Image (
-    [] .. sharp_sel, Region (5 * key_width - sharp_width/2, 0, 
+var Properties.Image gs_sel = val Properties.Image (
+    Region (5 * key_width - sharp_width/2, 0, 
                          sharp_width, sharp_height, 3), 1.0);
 
-var Media.Image a_sel = val Media.Image (
-    [] .. t2_sel, Region (5 * key_width, 0, key_width, key_height, 3), 1.0);
+var Properties.Image a_sel = val Properties.Image (
+    Region (5 * key_width, 0, key_width, key_height, 3), 1.0);
 
-var Media.Image as_sel = val Media.Image (
-    [] .. sharp_sel, Region (6 * key_width - sharp_width/2, 0, 
+var Properties.Image as_sel = val Properties.Image (
+    Region (6 * key_width - sharp_width/2, 0, 
                          sharp_width, sharp_height, 2), 1.0);
 
-var Media.Image b_sel = val Media.Image (
-    [] .. t3_sel, Region (6 * key_width, 0, key_width, key_height, 3), 1.0);
+var Properties.Image b_sel = val Properties.Image (
+    Region (6 * key_width, 0, key_width, key_height, 3), 1.0);
 
 
 /* SOUNDS */
-var Media.Audio c_sound = val Media.Audio ([] .. "resources/piano/c1.wav", 1.0);
 
-var Media.Audio cs_sound = val Media.Audio ([] .. "resources/piano/c1s.wav", 1.0);
+var[] byte c_sound   = [] .. "resources/piano/c1.wav";
+var[] byte cs_sound  = [] .. "resources/piano/c1s.wav";
+var[] byte d_sound   = [] .. "resources/piano/d1.wav";
+var[] byte ds_sound  = [] .. "resources/piano/d1s.wav";
+var[] byte e_sound   = [] .. "resources/piano/e1.wav";
+var[] byte f_sound   = [] .. "resources/piano/f1.wav";
+var[] byte fs_sound  = [] .. "resources/piano/f1s.wav";
+var[] byte g_sound   = [] .. "resources/piano/g1.wav";
+var[] byte gs_sound  = [] .. "resources/piano/g1s.wav";
+var[] byte a_sound   = [] .. "resources/piano/a1.wav";
+var[] byte as_sound  = [] .. "resources/piano/a1s.wav";
+var[] byte b_sound   = [] .. "resources/piano/b1.wav";
 
-var Media.Audio d_sound = val Media.Audio ([] .. "resources/piano/d1.wav", 1.0);
+var Properties.Audio audioprop = val Properties.Audio (1.0);
 
-var Media.Audio ds_sound = val Media.Audio ([] .. "resources/piano/d1s.wav", 1.0);
-
-var Media.Audio e_sound = val Media.Audio ([] .. "resources/piano/e1.wav", 1.0);
-
-var Media.Audio f_sound = val Media.Audio ([] .. "resources/piano/f1.wav", 1.0);
-
-var Media.Audio fs_sound = val Media.Audio ([] .. "resources/piano/f1s.wav", 1.0);
-
-var Media.Audio g_sound = val Media.Audio ([] .. "resources/piano/g1.wav", 1.0);
-
-var Media.Audio gs_sound = val Media.Audio ([] .. "resources/piano/g1s.wav", 1.0);
-
-var Media.Audio a_sound = val Media.Audio ([] .. "resources/piano/a1.wav", 1.0);
-
-var Media.Audio as_sound = val Media.Audio ([] .. "resources/piano/a1s.wav", 1.0);
-
-var Media.Audio b_sound = val Media.Audio ([] .. "resources/piano/b1.wav", 1.0);
-
-code/await Play_Note (var int note, var& IScene s, pool& [] Play ps) -> none
+code/await Play_Note (var int note, var& IScene s) -> none
 do
   if note == C then
     par/or do
-      await Play (&s, &outer.c_sound);
+      await Play (&outer.c_sound, &outer.audioprop, &s);
     with
-      await Play (&s, &outer.c_sel);
+      await Play (&outer.t1_sel, &outer.c_sel, &s);
     with
       await 1s;
     end
   else/if note == CS then
     par/or do
-      await Play (&s, &outer.cs_sound);
+      await Play (&outer.cs_sound, &outer.audioprop, &s);
     with
-      await Play (&s, &outer.cs_sel);
+      await Play (&outer.sharp_sel, &outer.cs_sel, &s);
     with
       await 1s;
     end
   else/if note == D then
     par/or do
-      await Play (&s, &outer.d_sound);
+      await Play (&outer.d_sound, &outer.audioprop, &s);
     with
-      await Play (&s, &outer.d_sel);
+      await Play (&outer.t2_sel, &outer.d_sel, &s);
     with
       await 1s;
     end
   else/if note == DS then
     par/or do
-      await Play (&s, &outer.ds_sound);
+      await Play (&outer.ds_sound, &outer.audioprop, &s);
     with
-      await Play (&s, &outer.ds_sel);
+      await Play (&outer.sharp_sel, &outer.ds_sel, &s);
     with
       await 1s;
     end
   else/if note == E then
     par/or do
-      await Play (&s, &outer.e_sound);
+      await Play (&outer.e_sound, &outer.audioprop, &s);
     with
-      await Play (&s, &outer.e_sel);
+      await Play (&outer.t3_sel, &outer.e_sel, &s);
     with
       await 1s;
     end
   else/if note == F then
     par/or do
-      await Play (&s, &outer.f_sound);
+      await Play (&outer.f_sound, &outer.audioprop, &s);
     with
-      await Play (&s, &outer.f_sel);
+      await Play (&outer.t1_sel, &outer.f_sel, &s);
     with
       await 1s;
     end
   else/if note == FS then
     par/or do
-      await Play (&s, &outer.fs_sound);
+      await Play (&outer.fs_sound, &outer.audioprop, &s);
     with
-      await Play (&s, &outer.fs_sel);
+      await Play (&outer.sharp_sel, &outer.fs_sel, &s);
     with
       await 1s;
     end
   else/if note == G then
     par/or do
-      await Play (&s, &outer.g_sound);
+      await Play (&outer.g_sound, &outer.audioprop, &s);
     with
-      await Play (&s, &outer.g_sel);
+      await Play (&outer.t2_sel, &outer.g_sel, &s);
     with
       await 1s;
     end
   else/if note == GS then
     par/or do
-      await Play (&s, &outer.gs_sound);
+      await Play (&outer.gs_sound, &outer.audioprop, &s);
     with
-      await Play (&s, &outer.gs_sel);
+      await Play (&outer.sharp_sel, &outer.gs_sel, &s);
     with
       await 1s;
     end
   else/if note == A then
     par/or do
-      await Play (&s, &outer.a_sound);
+      await Play (&outer.a_sound, &outer.audioprop, &s);
     with
-      await Play (&s, &outer.a_sel);
+      await Play (&outer.t2_sel, &outer.a_sel, &s);
     with
       await 1s;
     end
   else/if note == AS then
     par/or do
-      await Play (&s, &outer.as_sound);
+      await Play (&outer.as_sound, &outer.audioprop, &s);
     with
-      await Play (&s, &outer.as_sel);
+      await Play (&outer.sharp_sel, &outer.as_sel, &s);
     with
       await 1s;
     end
   else/if note == B then
     par/or do
-      await Play (&s, &outer.b_sound);
+      await Play (&outer.b_sound, &outer.audioprop, &s);
     with
-      await Play (&s, &outer.b_sel);
+      await Play (&outer.sharp_sel, &outer.b_sel, &s);
     with
       await 1s;
     end

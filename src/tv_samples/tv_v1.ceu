@@ -6,15 +6,14 @@
 
 input (none) PLAY;
 
-var Media.Video video = val Media.Video (
-                [] .. "resources/bunny.ogg",
+var[] byte videouri = [] .. "resources/bunny.ogg";
+var Properties.Video prop = val Properties.Video (
                 Region (0, 0, 720, 480, 1),
                 1.0, 1.0);
-
 
 var Size size = val Size (720, 480);
 var&? Scene scene = spawn Scene(size);
 watching scene do
   await PLAY;
-  await Play (&scene.scene, &video);
+  await Play (&videouri, &prop, &scene.handle);
 end

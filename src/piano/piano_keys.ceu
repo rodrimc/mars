@@ -28,68 +28,68 @@ watching s do
   pool [] Play ps;
 
   par do
-    c_play = spawn Play (&s.scene, &c) in ps;
+    c_play = spawn Play (&t1, &c, &s.handle) in ps;
   with
-    cs_play = spawn Play (&s.scene, &cs) in ps;
+    cs_play = spawn Play (&sharp, &cs, &s.handle) in ps;
   with
-    d_play = spawn Play (&s.scene, &d) in ps;
+    d_play = spawn Play (&t2, &d, &s.handle) in ps;
   with
-    ds_play = spawn Play (&s.scene, &ds) in ps;
+    ds_play = spawn Play (&sharp, &ds, &s.handle) in ps;
   with
-    e_play = spawn Play (&s.scene, &e) in ps;
+    e_play = spawn Play (&t3, &e, &s.handle) in ps;
   with
-    f_play = spawn Play (&s.scene, &f) in ps;
+    f_play = spawn Play (&t1, &f, &s.handle) in ps;
   with
-    fs_play = spawn Play (&s.scene, &fs) in ps;
+    fs_play = spawn Play (&sharp, &fs, &s.handle) in ps;
   with
-    g_play = spawn Play (&s.scene, &g) in ps;
+    g_play = spawn Play (&t2, &g, &s.handle) in ps;
   with
-    gs_play = spawn Play (&s.scene, &gs) in ps;
+    gs_play = spawn Play (&sharp, &gs, &s.handle) in ps;
   with
-    a_play = spawn Play (&s.scene, &a) in ps;
+    a_play = spawn Play (&t2, &a, &s.handle) in ps;
   with
-    as_play = spawn Play (&s.scene, &as_) in ps;
+    as_play = spawn Play (&sharp, &as_, &s.handle) in ps;
   with
-    b_play = spawn Play (&s.scene, &b) in ps;
+    b_play = spawn Play (&t3, &b, &s.handle) in ps;
   with
     var uint obj;
     var bool press;
     every (obj, _, _,_, press) in CM_PLAYER_MOUSE_CLICK do
       if press then
-        if obj == c_play!.player.self then
+        if obj == c_play!.handle.self then
           emit NOTE (C);
 
-        else/if obj == cs_play!.player.self then
+        else/if obj == cs_play!.handle.self then
           emit NOTE (CS);
 
-        else/if obj == d_play!.player.self then
+        else/if obj == d_play!.handle.self then
           emit NOTE (D);
           
-        else/if obj == ds_play!.player.self then
+        else/if obj == ds_play!.handle.self then
           emit NOTE (DS);
           
-        else/if obj == e_play!.player.self then
+        else/if obj == e_play!.handle.self then
           emit NOTE (E);
 
-        else/if obj == f_play!.player.self then
+        else/if obj == f_play!.handle.self then
           emit NOTE (F);
 
-        else/if obj == fs_play!.player.self then
+        else/if obj == fs_play!.handle.self then
           emit NOTE (FS);
 
-        else/if obj == g_play!.player.self then
+        else/if obj == g_play!.handle.self then
           emit NOTE (G);
 
-        else/if obj == gs_play!.player.self then
+        else/if obj == gs_play!.handle.self then
           emit NOTE (GS);
 
-        else/if obj == a_play!.player.self then
+        else/if obj == a_play!.handle.self then
           emit NOTE (A);
 
-        else/if obj == as_play!.player.self then
+        else/if obj == as_play!.handle.self then
           emit NOTE (AS);
 
-        else/if obj == b_play!.player.self then
+        else/if obj == b_play!.handle.self then
           emit NOTE (B);
         end
       end

@@ -9,8 +9,8 @@ input (none) ACCEPTED_;
 output (none) QUESTION;
 output (none) END_;
 
-var Media.Video video = val Media.Video (
-                [] .. "resources/priv/video_principal.mp4",
+var[] byte main_video = [] .. "resources/priv/video_principal.mp4";
+var Properties.Video mainprop = val Properties.Video (
                 Region (0, 0, width, height, 1),
                 1.0, 1.0);
 
@@ -19,7 +19,7 @@ watching s do
   var bool accepted = false;
   var int option = 1;
   par/or do
-    await Play (&s.scene, &video);
+    await Play (&main_video, &mainprop, &s.handle);
   with
     watching 43s
     do
@@ -30,26 +30,26 @@ watching s do
     if accepted then
       par/or do
         emit QUESTION;
-        var Media.Image interatividade = val Media.Image (
-            [] .. "resources/priv/interatividade_1.png",
+        var[] byte inter = [] .. "resources/priv/interatividade_1.png";
+        var Properties.Image interprop = val Properties.Image (
                 Region (0, 0, width, height, 2),
                 1.0);
 
-        await Play (&s.scene, &interatividade);
+        await Play (&inter, &interprop, &s.handle);
       with
         await 15s;
       with
         option = await CHOSEN_OPTION;
       end
     else
-      var Media.Image interatividade = val Media.Image (
-          [] .. "resources/priv/interatividade_2.png",
+      var[] byte inter = [] .. "resources/priv/interatividade_22.png";
+      var Properties.Image interprop = val Properties.Image (
               Region (0, 0, width, height, 2),
               1.0);
       watching 15s
       do
         par/or do
-          await Play (&s.scene, &interatividade);
+          await Play (&inter, &interprop, &s.handle);
         with
           loop do
             var _char_ptr_ext key;
@@ -79,11 +79,10 @@ watching s do
     end_ = [] .. "resources/priv/final_3.mp4";
   end
 
-  var Media.Video final = val Media.Video (
-                [] .. end_,
+  var Properties.Video finalprop = val Properties.Video (
                 Region (0, 0, width, height, 1),
                 1.0, 1.0);
 
-  await Play (&s.scene, &final);
+  await Play (&end_, &finalprop, &s.handle);
   emit END_ ();
 end

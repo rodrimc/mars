@@ -9,33 +9,35 @@ var int height = 576;
 var&? Scene s = spawn Scene (Size (width,height));
 watching s
 do
-  var Media.Image background = val Media.Image (
-                                  [] .. "resources/priv2/background.png",
+  var[] byte background = [] .. "resources/priv2/background.png";
+  var[] byte op1 = [] .. "resources/priv2/op1.png";
+  var[] byte op2 = [] .. "resources/priv2/op2.png";
+
+  var Properties.Image backprop = val Properties.Image (
                                   Region (0, 0, width, height, 1), 1.0);
-  var Media.Image op1 = val Media.Image (
-                                  [] .. "resources/priv2/op1.png",
+  var Properties.Image op1prop = val Properties.Image (
                                   Region (143, 201, 256, 150, 2), 1.0);
-  var Media.Image op2 = val Media.Image (
-                                  [] .. "resources/priv2/op2.png",
+  var Properties.Image op2prop = val Properties.Image (
                                   Region (456, 201, 461, 173, 2), 1.0);
   par/or do
-    await Play (&s.scene, &background);
+    await Play (&background, &backprop, &s.handle);
   with
     await SHOW_OPTIONS;
     var&? Play op1_p;
     var&? Play op2_p;
+    pool[] Play options_pool;
     par/or do
-      op1_p = spawn Play (&s.scene, &op1);
-      await FOREVER;
-    with
-      op2_p = spawn Play (&s.scene, &op2);
-      await FOREVER;
+      par do
+        op1_p = spawn Play (&op1, &op1prop, &s.handle) in options_pool;
+      with
+        op2_p = spawn Play (&op2, &op2prop, &s.handle) in options_pool;
+      end
     with
       var uint obj;
       (obj, _, _, _, _) = await CM_PLAYER_MOUSE_CLICK until
-                                (obj == op1_p!.player.self or
-                                 obj == op2_p!.player.self);
-      if obj == op1_p!.player.self then
+                                (obj == op1_p!.handle.self or
+                                 obj == op2_p!.handle.self);
+      if obj == op1_p!.handle.self then
         emit FINAL_ (1);
       else
         emit FINAL_ (2);

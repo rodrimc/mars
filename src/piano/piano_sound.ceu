@@ -13,37 +13,36 @@ input (int) PLAY;
 var&? Scene s = spawn Scene (Size(635, 434));
 watching s
 do
-  pool [] Play ps;
   pool [] Play_Note pn;
 
   par do
-    await Play (&s.scene, &c);
+    await Play (&t1, &c, &s.handle);
   with
-		await Play (&s.scene, &cs);
+		await Play (&sharp, &cs, &s.handle);
   with
-		await Play (&s.scene, &d);
+		await Play (&t2, &d, &s.handle);
   with
-		await Play (&s.scene, &ds);
+		await Play (&sharp, &ds, &s.handle);
   with
-		await Play (&s.scene, &e);
+		await Play (&t3, &e, &s.handle);
   with
-		await Play (&s.scene, &f);
+		await Play (&t1, &f, &s.handle);
   with
-		await Play (&s.scene, &fs);
+		await Play (&sharp, &fs, &s.handle);
   with
-		await Play (&s.scene, &g);
+		await Play (&t2, &g, &s.handle);
   with
-		await Play (&s.scene, &gs);
+		await Play (&sharp, &gs, &s.handle);
   with
-		await Play (&s.scene, &a);
+		await Play (&t2, &a, &s.handle);
   with
-		await Play (&s.scene, &as_);
+		await Play (&sharp, &as_, &s.handle);
   with
-		await Play (&s.scene, &b);
+		await Play (&t3, &b, &s.handle);
   with
     var int note;
     every note in PLAY do 
-      spawn Play_Note (note, &s.scene, &ps) in pn;
+      spawn Play_Note (note, &s.handle) in pn;
     end
   end
 end

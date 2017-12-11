@@ -1,20 +1,26 @@
 interfaces {
-  TV = {
-    inputs = {
+  TV =
+  {
+    inputs =
+    {
       ACCEPTED_ = {},
       CHOSEN_OPTION = {'int'},
     },
-    outputs = {
+    outputs =
+    {
       QUESTION = {},
       END_ = {}
     }
   },
-  TABLET = {
-    inputs = {
+  TABLET =
+  {
+    inputs =
+    {
       SHOW_OPTIONS = {},
       KILL_APP = {},
     },
-    outputs = {
+    outputs =
+    {
       ACCEPT = {},
       CHOICE = {'int'},
     }

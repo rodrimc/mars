@@ -2,8 +2,8 @@
 
 output (int) KEY_PRESSED;
 
-var Media.Image control = val Media.Image (
-                [] .. "resources/remote_control.png",
+var[] byte controluri = [] .. "resources/remote_control.png";
+var Properties.Image prop = val Properties.Image (
                 Region (0, 0, 400, 400, 1),
                 1.0);
 
@@ -11,7 +11,7 @@ var Size size = val Size (400, 400);
 var&? Scene scene = spawn Scene(size);
 
 watching scene do
-  spawn Play (&scene.scene, &control);
+  spawn Play (&controluri, &prop, &scene.handle);
   var bool press;
   var _char_ptr_ext key;
   every (_, key, press) in CM_SCENE_KEY do

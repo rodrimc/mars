@@ -36,61 +36,85 @@ code/await Draw_Anim (var int shoot_dir,
                       var int goalkeeper_dir,
                       var& IScene s) -> none
 do
-  var Media.Image b1;
-  var Media.Image b2;
-  var Media.Image b3;
+  var Properties.Image b1;
+  var Properties.Image b2;
+  var Properties.Image b3;
 
-  var Media.Image gk1;
-  var Media.Image gk2;
-  var Media.Image gk3;
+  var Properties.Image gk1;
+  var Properties.Image gk2;
+  var Properties.Image gk3;
 
   outer.r.z = 2;
 
+  var[] byte player1;
+  var[] byte player2;
+  var[] byte player3;
+
   if shoot_dir == RIGHT then
-    b1 = val Media.Image ([] .. "resources/goal/sdir1_ball.png", outer.r, 1.0);
-    b2 = val Media.Image ([] .. "resources/goal/sdir2_ball.png", outer.r, 1.0);
-    b3 = val Media.Image ([] .. "resources/goal/sdir3_ball.png", outer.r, 1.0);
+    player1 = [] .. "resources/goal/sdir1_ball.png";
+    player2 = [] .. "resources/goal/sdir2_ball.png";
+    player3 = [] .. "resources/goal/sdir3_ball.png";
+
+    b1 = val Properties.Image (outer.r, 1.0);
+    b2 = val Properties.Image (outer.r, 1.0);
+    b3 = val Properties.Image (outer.r, 1.0);
   else
-    b1 = val Media.Image ([] .. "resources/goal/sesq1_ball.png", outer.r, 1.0);
-    b2 = val Media.Image ([] .. "resources/goal/sesq2_ball.png", outer.r, 1.0);
-    b3 = val Media.Image ([] .. "resources/goal/sesq3_ball.png", outer.r, 1.0);
+    player1 = [] .. "resources/goal/sesq1_ball.png";
+    player2 = [] .. "resources/goal/sesq2_ball.png";
+    player3 = [] .. "resources/goal/sesq3_ball.png";
+
+    b1 = val Properties.Image (outer.r, 1.0);
+    b2 = val Properties.Image (outer.r, 1.0);
+    b3 = val Properties.Image (outer.r, 1.0);
   end
+
+  var[] byte goalkeeper1;
+  var[] byte goalkeeper2;
+  var[] byte goalkeeper3;
 
   outer.r.z = 1;
   if goalkeeper_dir == RIGHT then
-    gk1 = val Media.Image ([] .. "resources/goal/gdir1.png", outer.r, 1.0);
-    gk2 = val Media.Image ([] .. "resources/goal/gdir2.png", outer.r, 1.0);
-    gk3 = val Media.Image ([] .. "resources/goal/gdir3.png", outer.r, 1.0);
+    goalkeeper1 = [] .. "resources/goal/gdir1.png";
+    goalkeeper2 = [] .. "resources/goal/gdir2.png";
+    goalkeeper3 = [] .. "resources/goal/gdir3.png";
+
+    gk1 = val Properties.Image (outer.r, 1.0);
+    gk2 = val Properties.Image (outer.r, 1.0);
+    gk3 = val Properties.Image (outer.r, 1.0);
   else
-    gk1 = val Media.Image ([] .. "resources/goal/gesq1.png", outer.r, 1.0);
-    gk2 = val Media.Image ([] .. "resources/goal/gesq2.png", outer.r, 1.0);
-    gk3 = val Media.Image ([] .. "resources/goal/gesq3.png", outer.r, 1.0);
+    goalkeeper1 = [] .. "resources/goal/gesq1.png";
+    goalkeeper2 = [] .. "resources/goal/gesq2.png";
+    goalkeeper3 = [] .. "resources/goal/gesq3.png";
+
+    gk1 = val Properties.Image (outer.r, 1.0);
+    gk2 = val Properties.Image (outer.r, 1.0);
+    gk3 = val Properties.Image (outer.r, 1.0);
   end
 
   watching ANIM_DUR 
   do
     par do
-      await Play (&s, &gk1);
+      await Play (&goalkeeper1, &gk1, &s);
     with
-      await Play (&s, &b1);
+      await Play (&player1, &b1, &s);
     end
   end
 
   watching ANIM_DUR 
   do
     par do
-      await Play (&s, &gk2);
+      await Play (&goalkeeper2, &gk2, &s);
     with
-      await Play (&s, &b2);
+      await Play (&player2, &b2, &s);
     end
   end
 
   watching ANIM_DUR 
   do
     par do
-      await Play (&s, &gk3);
+      await Play (&goalkeeper3, &gk3, &s);
     with
-      await Play (&s, &b3);
+      await Play (&player3, &b3, &s);
     end
   end
 end
@@ -100,13 +124,15 @@ input (int) OPPONENT_MOVE;
 
 watching s
 do
-  var Media.Image intro = val Media.Image (
-                      [] .. "resources/goal/intro.png",
-                      r, 1.0);
-  par/or do
-    await Play (&s.scene, &intro);
-  with
-    await CM_PLAYER_MOUSE_CLICK;
+  do
+    var[] byte intro = [] .. "resources/goal/intro.png";
+    var Properties.Image prop = val Properties.Image (
+                        r, 1.0);
+    par/or do
+      await Play (&intro, &prop, &s.handle);
+    with
+      await CM_PLAYER_MOUSE_CLICK;
+    end
   end
 
   var bool im_shooter = _im_shooter () as bool;
@@ -118,12 +144,12 @@ do
     img = [] .. "resources/goal/bgg.png";
   end
 
-  var Media.Image sel = val Media.Image([] .. img, r, 1.0);
+  var Properties.Image prop = val Properties.Image(r, 1.0);
 
   var int choice = _;
   var int opponent_choice = _;
 
-  watching Play (&s.scene, &sel)
+  watching Play (&img, &prop, &s.handle)
   do
     par/and do
       var _char_ptr_ext key;
@@ -144,9 +170,9 @@ do
   end
 
   if im_shooter then
-    await Draw_Anim (choice, opponent_choice, &s.scene);
+    await Draw_Anim (choice, opponent_choice, &s.handle);
   else
-    await Draw_Anim (opponent_choice, choice, &s.scene);
+    await Draw_Anim (opponent_choice, choice, &s.handle);
   end
 end
 

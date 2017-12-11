@@ -6,10 +6,10 @@ output (none) INTERACTIVITY;
 var int width = 1024;
 var int height = 576;
 
-var Media.Video video = val Media.Video (
-                          [] .. "resources/priv2/vid.mp4",
+var[] byte main_video = [] .. "resources/priv2/vid.mp4";
+var Properties.Video videoprop = val Properties.Video (
                           Region (0, 0, width, height, 1),
-                          1.0, 1.0);
+                          1.0, 0.5);
 
 var&? Scene s = spawn Scene (Size (width,height));
 
@@ -17,7 +17,7 @@ watching s
 do
   var int choice = 1;
   par/or do
-    await Play (&s.scene, &video);
+    await Play (&main_video, &videoprop, &s.handle);
   with
     await 35s;
     emit INTERACTIVITY ();
@@ -31,12 +31,12 @@ do
     path = [] .. "resources/priv2/leave_him_behind.mp4";
   end
 
-  var Media.Video vid_choice = val Media.Video (
-                                  [] ..path, Region (0, 0, width, height, 1),
+  var Properties.Video prop = val Properties.Video (
+                                  Region (0, 0, width, height, 1),
                                   1.0, 1.0);
   watching 10s
   do
-    await Play (&s.scene, &vid_choice);
+    await Play (&path, &prop, &s.handle);
   end;
 end
 

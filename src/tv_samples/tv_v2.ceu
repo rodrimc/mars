@@ -4,8 +4,8 @@
  * Mapping: scripts/tv_mappings_v2.lua
  */
 
-var Media.Video video = val Media.Video (
-                [] .. "resources/bunny.ogg",
+var[] byte videouri = [] .. "resources/bunny.ogg";
+var Properties.Video videoprop = val Properties.Video (
                 Region (0, 0, 720, 480, 1),
                 1.0, 1.0);
 
@@ -26,29 +26,29 @@ loop do
     var Size size = val Size (720, 480);
     var&? Scene scene = spawn Scene(size);
     watching scene do
-      var&? Play p = spawn Play (&scene.scene, &video);
+      var&? Play p = spawn Play (&videouri, &videoprop, &scene.handle);
 
       event (r64) set_volume;
       watching p do
         par do
           every PLAY do
-            call Scene_Resume (&scene.scene);
+            call Scene_Resume (&scene.handle);
           end
         with
           every PAUSE do
-            call Scene_Pause (&scene.scene);
+            call Scene_Pause (&scene.handle);
           end
         with
           every SEEK_FORWARD do
-            call Player_Seek (&p.player, 10 SECONDS , true);
+            call Player_Seek (&p.handle, 10 SECONDS , true);
           end
         with
           every SEEK_BACKWARD do
-            call Player_Seek (&p.player, -10 SECONDS, true);
+            call Player_Seek (&p.handle, -10 SECONDS, true);
           end
         with
           every VOLUME_UP do
-            var r64 vol_level = call Player_Get_Double (&p.player, "volume");
+            var r64 vol_level = call Player_Get_Double (&p.handle, "volume");
             if vol_level < 1.0 then
               vol_level = vol_level + 0.2;
             end
@@ -56,7 +56,7 @@ loop do
           end
         with
           every VOLUME_DOWN do
-            var r64 vol_level = call Player_Get_Double (&p.player, "volume");
+            var r64 vol_level = call Player_Get_Double (&p.handle, "volume");
             if vol_level > 0.0 then
               vol_level = vol_level - 0.2;
             end
@@ -68,7 +68,7 @@ loop do
             loop do
               await draw;
               watching set_volume, 2s do
-                var int vol_level = (call Player_Get_Double (&p.player, "volume") * 10) as int;
+                var int vol_level = (call Player_Get_Double (&p.handle, "volume") * 10) as int;
 
                 var[] byte vol_bar = _;
                 if vol_level == 0 then
@@ -85,16 +85,16 @@ loop do
                   vol_bar = [] .. "resources/vol_5.png";
                 end
 
-                var Media.Image volume = val Media.Image (
-                                [] .. vol_bar, Region (0, 0, 232, 119, 2), 1.0);
+                var Properties.Image volumeprop = val Properties.Image (
+                    Region (0, 0, 232, 119, 2), 1.0);
 
-                await Play (&scene.scene, &volume);
+                await Play (&vol_bar, &volumeprop, &scene.handle);
               end
             end
           with
             var r64 vol_level = _;
             every vol_level in set_volume do
-              call Player_Set_Double (&p.player, "volume", vol_level);
+              call Player_Set_Double (&p.handle, "volume", vol_level);
               emit draw;
             end
           end
