@@ -1,4 +1,7 @@
 #Dependencies
+CEU_DIR    		= modules/ceu
+CEU_UV_DIR 		= modules/ceu-libuv
+CEU_MEDIA_DIR	= modules/ceu-media
 LUA						= lua5.3
 
 #paths
@@ -44,12 +47,12 @@ all:
 	$(LUA) $(EVTS) $(TEMP) $(SRC)
 	$(LUA) $(INPUT_GEN) $(IDF) $(SRC) $(TEMP)
 	ceu --pre --pre-args="-I$(CEU_DIR)/include -I$(CEU_MEDIA_DIR)/include	-I./ \
-						-I$(CEU_UV_DIR)/include -I$(CEU_LIB_DIR) -I./include"  	 				 \
+						-I$(CEU_UV_DIR)/include  -I./include"  	 				 								 \
 	          --pre-input=$(TEMP)																							 \
 	    --ceu --ceu-err-unused=pass --ceu-err-uninitialized=pass							 \
 						--ceu-features-exception=true --ceu-features-thread=true				 \
 						--ceu-features-lua=true																					 \
-						--ceu-output=output.c \
+						--ceu-output=output.c 																					 \
 	    --env --env-types=$(CEU_DIR)/env/types.h															 \
 	          --env-threads=$(CEU_DIR)/env/threads.h													 \
 	          --env-main=$(CEU_DIR)/env/main.c																 \
@@ -63,18 +66,18 @@ server:
 	cp $(LUA_PEERS_MODULE) $(BUILD_PATH)/
 	cp $(LUA_SERVER) $(BUILD_PATH)/
 	cp $(MARS_LUA_UTIL) $(BUILD_PATH)/
-	ceu --pre --pre-args="-I$(CEU_DIR)/include -I$(CEU_MEDIA_DIR)/include		\
-						-I$(CEU_UV_DIR)/include -I$(CEU_LIB_DIR) -I./include"					\
-	          --pre-input=$(SRC)																						\
-	    --ceu --ceu-err-unused=pass --ceu-err-uninitialized=pass						\
-						--ceu-features-exception=true --ceu-features-thread=true			\
-						--ceu-features-lua=true																				\
-						--ceu-output=output.c \
-	    --env --env-types=$(CEU_DIR)/env/types.h														\
-	          --env-threads=$(CEU_DIR)/env/threads.h												\
-	          --env-main=$(CEU_DIR)/env/main.c															\
-	          --env-output=/tmp/x.c																					\
-	    --cc --cc-args="$(CFLAGS) -I./include"															\
+	ceu --pre --pre-args="-I$(CEU_DIR)/include -I$(CEU_MEDIA_DIR)/include			\
+						-I$(CEU_UV_DIR)/include -I./include"														\
+	          --pre-input=$(SRC)																							\
+	    --ceu --ceu-err-unused=pass --ceu-err-uninitialized=pass							\
+						--ceu-features-exception=true --ceu-features-thread=true				\
+						--ceu-features-lua=true																					\
+						--ceu-output=output.c 																					\
+	    --env --env-types=$(CEU_DIR)/env/types.h															\
+	          --env-threads=$(CEU_DIR)/env/threads.h													\
+	          --env-main=$(CEU_DIR)/env/main.c																\
+	          --env-output=/tmp/x.c																						\
+	    --cc --cc-args="$(CFLAGS) -I./include"																\
 	         --cc-output=build/$(BIN)
 
 clean:
