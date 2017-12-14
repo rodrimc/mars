@@ -79,7 +79,6 @@ end
 native/nohold
   _cb,
   _u_args,
-  _ceu_callback_register,
 ;
 
 _ceu_callback_register (&&_cb);
