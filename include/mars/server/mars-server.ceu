@@ -198,7 +198,7 @@ do
     par do
       var uint freq;
       every freq in outer.send_tick_message do
-        spawn Send_Tick_Message (handle_id, &stream, 50) in pool_tick_message;
+        spawn Send_Tick_Message (handle_id, &stream, freq) in pool_tick_message;
       end
     with
       var uint new_id;

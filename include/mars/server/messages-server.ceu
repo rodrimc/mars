@@ -1,4 +1,4 @@
-#define FREQ 50
+#define FREQ 10
 spawn do
   every (FREQ)ms do
     emit send_tick_message(FREQ);
@@ -87,8 +87,8 @@ do
   catch e do
     var[] byte buff = _;
       [[
-        luabuff = 'type=' .. tostring(@S_TICK)               .. ',' ..
-                  'freq=' .. tostring(@freq)
+        luabuff = 'type='     .. tostring(@S_TICK)               .. ',' ..
+                  'value='    .. tostring(@freq)
       ]]
 
       buff = [] .. [[ luabuff ]];
