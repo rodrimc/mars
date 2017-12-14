@@ -20,6 +20,14 @@ var[] byte server_ip = _;
 var u16 wport = _;
 var u16 rport = _;
 
+code/await Emit_Tick (var uint tick) -> none
+do
+  await async (tick) do
+    emit (tick) ms;
+  end
+end
+pool[] Emit_Tick emit_tick_pool;
+
 code/await Client_Send_Message (var& Stub stub,
                                 var&[] byte buffer) -> none
 do
@@ -81,18 +89,14 @@ do
     else/if type == S_BROADCAST then
       [[ payload = 'return' .. serialize(TABLE.payload) ]]
 
-      outer.evt_dev_role = [] .. [[ TABLE.role or '' ]];
-      outer.evt_dev_role_index = [[ TABLE.index or -1 ]];
       stub.message= [] .. [[ payload ]];
 
       emit stub.incoming_message;
 
-      outer.evt_dev_role = _;
-      outer.evt_dev_role_index = -1;
       $stub.message = 0;
     else/if type == S_TICK then
-      var uint tick = [[ TABLE.freq ]];
-      /* TODO */
+      var uint tick = [[ TABLE.value ]];
+      spawn Emit_Tick (tick) in outer.emit_tick_pool;
     else
       _printf ("[Client (%d) Unknow message type.\n", stub.id);
     end

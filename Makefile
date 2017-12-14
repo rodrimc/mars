@@ -21,6 +21,7 @@ all: MAESTRO 				= $(BASE_PATH)/sync/maestro.ceu
 all: EVTS  					= $(MARS_UTIL_PATH)/mars-compile-evts.lua
 all: INPUT_GEN  	  = $(MARS_UTIL_PATH)/mars-input-gen.lua
 all: LUA_CLIENT		  = $(MARS_CLIENT_PATH)/mars-client.lua
+all: CFLAGS					= -DDISABLE_MEDIA_CLOCK -DDISABLE_UV_CLOCK
 
 #server target
 server: MODULES 					= lua5.3 libuv
