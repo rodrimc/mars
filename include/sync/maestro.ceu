@@ -11,6 +11,7 @@ __INTERFACES__
 
 native/pos do
   int MIRROR_OK = 0;
+  char* SERVER_IP = NULL;
 
 	tceu_callback_ret evt_cb (int cmd,
 														tceu_callback_arg p1,
@@ -26,30 +27,32 @@ native/pos do
       {
         if (flag == 0)
         {
-          char *interfaces_file = NULL;
           char *device = "";
           char c;
 
-          while ((c = getopt (CEU_APP.argc, CEU_APP.argv, "d:i:")) != -1)
+          while ((c = getopt (CEU_APP.argc, CEU_APP.argv, "d:s:")) != -1)
           {
             switch (c)
             {
-              case 'i':
-              {
-                interfaces_file = optarg;
-                break;
-              }
               case 'd':
               {
                 device = optarg;
                 break;
               }
+              case 's':
+              {
+                SERVER_IP = optarg;
+                break;
+              }
             }
           }
 
+          if (SERVER_IP == NULL)
+            SERVER_IP = "0.0.0.0";
+
           optind = 0;
 
-          tceu_input_INIT p = {device, interfaces_file};
+          tceu_input_INIT p = {device};
           ceu_input (CEU_INPUT_INIT, &p);
           flag = 1;
 
@@ -76,32 +79,29 @@ __CALLBACK_OUTPUT_COND__
   tceu_callback cb = { &evt_cb, NULL };
 end
 
+native/plain
+  _SERVER_IP,
+  _u_args,
+;
+
 native/nohold
   _cb,
-  _u_args,
 ;
 
 _ceu_callback_register (&&_cb);
 
-input (_char&&, _char&&) INIT;
+input (_char&&) INIT;
 
 code/await Init (none) -> none
 do
   var _char&& device;
-  var _char&& interfaces;
-  (device, interfaces) = await INIT;
+  device = await INIT;
   var Exception? e;
   catch e do
     _printf ("[client] device: %s\n", device);
 
-    /* TODO: parse interfaces by comma */
+    /* TODO: parse devices by comma */
     [[ table.insert (MARS.instance, @device) ]]
-
-    if interfaces != null then
-      [[
-        dofile (@interfaces)
-      ]]
-    end
   end
   if e? then
     _fprintf (_stderr, "[INIT error:] %s\n", e!.message);
@@ -137,7 +137,7 @@ par/or do
     _fprintf (_stderr, "[Load_Sync_Config error]: %s\n", e!.message);
   end
 
-  var&? Client client = spawn Client (LOCALHOST, 0);
+  var&? Client client = spawn Client (_SERVER_IP, 0);
   watching client do
     await client.stub.all_set_up;
 
