@@ -5,6 +5,8 @@ spawn do
   end
 end
 
+event (none) message_sent;
+
 code/await Send_Not_Joined_Reply (var uint handle_id,
                                   var& UV_Stream stream) -> none
 do
@@ -73,6 +75,8 @@ do
     ]]
     var[] byte buff = [] .. [[ luabuff ]];
     await Send (handle_id, &stream, &buff);
+
+    emit outer.message_sent ();
   end
   if e? then
     _fprintf (_stderr, "[Send_Broadcast_Message error]: %s\n", e!.message);
