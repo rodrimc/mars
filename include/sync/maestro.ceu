@@ -10,8 +10,17 @@ __INTERFACES__
 ]]
 
 native/pos do
+  ##include <getopt.h>
   int MIRROR_OK = 0;
   char* SERVER_IP = NULL;
+
+  struct option long_options[] =
+    {
+      {"min-peers", required_argument, NULL, 'm'},
+      {"interface", required_argument, NULL, 'i'},
+      {"server",    required_argument, NULL, 's'},
+      {0, 0, 0, 0}
+    };
 
 	tceu_callback_ret evt_cb (int cmd,
 														tceu_callback_arg p1,
@@ -27,21 +36,32 @@ native/pos do
       {
         if (flag == 0)
         {
-          char *device = "";
-          char c;
+          int option_index = 0;
+          int c;
 
-          while ((c = getopt (CEU_APP.argc, CEU_APP.argv, "d:s:")) != -1)
+          char *interface = "";
+          int min_peers = 1;
+
+          opterr = 0; //prevents the printing of unrecognized command line arg
+
+          while ((c = getopt_long_only (CEU_APP.argc, CEU_APP.argv,
+              "m:i:s:", long_options, &option_index)) != -1)
           {
             switch (c)
             {
-              case 'd':
+              case 'i':
               {
-                device = optarg;
+                interface = optarg;
                 break;
               }
               case 's':
               {
                 SERVER_IP = optarg;
+                break;
+              }
+              case 'm':
+              {
+                min_peers = strtol (optarg, NULL, 10);
                 break;
               }
             }
@@ -52,7 +72,7 @@ native/pos do
 
           optind = 0;
 
-          tceu_input_INIT p = {device};
+          tceu_input_INIT p = {interface, min_peers};
           ceu_input (CEU_INPUT_INIT, &p);
           flag = 1;
 
@@ -90,25 +110,27 @@ native/nohold
 
 _ceu_callback_register (&&_cb);
 
-input (_char&&) INIT;
+input (_char&&, int) INIT;
 
-code/await Init (none) -> none
+code/await Init (none) -> int
 do
-  var _char&& device;
-  device = await INIT;
+  var _char&& interface;
+  var int min;
+  (interface, min) = await INIT;
+
   var Exception? e;
   catch e do
-    _printf ("[client] device: %s\n", device);
+    _printf ("[client] interface: %s\n", interface);
 
-    /* TODO: parse devices by comma */
-    [[ table.insert (MARS.instance, @device) ]]
+    /* TODO: parse interfaces by comma */
+    [[ table.insert (MARS.instance, @interface) ]]
   end
   if e? then
     _fprintf (_stderr, "[INIT error:] %s\n", e!.message);
   end
-end
 
-await Init ();
+  escape min;
+end
 
 /* internal */
 event (none) mirror_ok;
@@ -117,25 +139,8 @@ code/await Emit_Input_Event (var&[] byte evt) -> none;
 code/await Handle_Mapping (var _char&& evt, var&[] byte from,  var _char&& mapping) -> none;
 
 par/or do
-  var int min_peers = _;
-
-  var Exception.Lua? e;
-  catch e do
-    [[
-      CONFIG = {}
-      min_peers = 1
-      chunk = loadfile ('config.lua')
-      if chunk then
-        CONFIG = chunk ()
-
-        min_peers = CONFIG.MIN_PEERS or min_peers
-      end
-    ]]
-    min_peers = [[ min_peers ]];
-  end
-  if e? then
-    _fprintf (_stderr, "[Load_Sync_Config error]: %s\n", e!.message);
-  end
+  var int min_peers = await Init ();
+  _printf ("min-peers: %d\n", min_peers);
 
   var&? Client client = spawn Client (_SERVER_IP, 0);
   watching client do
