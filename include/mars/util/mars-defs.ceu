@@ -52,10 +52,11 @@ data Stub with
   var&[] byte wbuffer;
   var&[] byte rbuffer;
   var&[] byte message;
+  var bool ok;
 
   event (none) all_set_up;
 
-  event (uint, usize) joined;
+  event (uint, usize) accepted;
   event (uint, usize) new_peer;
   event (none) incoming_message;
 

@@ -150,16 +150,15 @@ par/or do
     par do
       var uint id;
       var usize peers;
-      (id, peers) = await client.stub.joined;
-      _printf ("joined\n");
-      /* device_id is defined in mars-media.ceu */
-      device_id = id;
+      (id, peers) = await client.stub.accepted;
+      _printf ("accepted\n");
     with
       watching mirror_ok do
         var uint new_peer;
         var usize peers;
         every (new_peer, peers) in client.stub.new_peer do
           if (peers >= min_peers) then
+            client.stub.ok = true;
             emit mirror_ok;
           end
         end
