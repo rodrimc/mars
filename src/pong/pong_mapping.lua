@@ -2,7 +2,7 @@ local player1 = nil
 local amount = 10
 
 function t (player, dir)
-  return {[1] = player, [2] = dir == 1 and -amount or amount }
+  return {player, dir == 1 and -amount or amount }
 end
 
 MARS.onConnect = function (p, player, dir)

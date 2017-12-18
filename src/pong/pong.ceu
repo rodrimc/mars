@@ -1,14 +1,45 @@
-#include "mars/mars-media.ceu"
+#include "media/media.ceu"
 
-native/pre do
+native/pos do
   ##include <math.h>
+
+  int get_player ()
+  {
+    char *player = NULL;
+    char c;
+    while ((c = getopt (CEU_APP.argc, CEU_APP.argv, "idp:")) != -1)
+    {
+      switch (c)
+      {
+        case 'p':
+        {
+          player = optarg;
+          break;
+        }
+      }
+    }
+    if (player)
+    {
+      if (strcmp(player, "1") == 0)
+        return 1;
+      else if (strcmp (player, "2") == 0)
+        return 2;
+    }
+
+    return -1;
+  }
 end
 
 native
-  _ceil,
+  _get_player
 ;
 
-var int amount = 10;
+#define UP    1
+#define DOWN -1
+
+output (int, int) MOVE;
+input  (int, int) UPDATE_POS;
+
 var int width = 600;
 var int height = 400;
 
@@ -19,19 +50,19 @@ var int ball_width = 30;
 var int ball_height = 30;
 
 data Direction with
-  var float x;
-  var float y;
+  var real x;
+  var real y;
 end;
 
 var int turn = 1;
 var int wall = 1;
 
 var bool have_won = _;
-event (void) round_ended;
+event (none) round_ended;
 
 code/tight
 Compute_Collision (var& IPlayer ball, var &IPlayer green,
-    var& IPlayer red, var& Direction dir, var& float speed) -> void do
+    var& IPlayer red, var& Direction dir, var& real speed) -> none do
 
   var int x = call Player_Get_Int (&ball, "x");
   var int y = call Player_Get_Int (&ball, "y");
@@ -60,8 +91,8 @@ Compute_Collision (var& IPlayer ball, var &IPlayer green,
 end
 
 code/tight
-Update (var& IPlayer ball, var& Direction dir, var float speed,
-    var float time_diff) -> void do
+Update (var& IPlayer ball, var& Direction dir, var real speed,
+    var real time_diff) -> none do
 
   var int x = call Player_Get_Int (&ball, "x");
   var int y = call Player_Get_Int (&ball, "y");
@@ -73,35 +104,35 @@ Update (var& IPlayer ball, var& Direction dir, var float speed,
   call Player_Set_Int (&ball, "y", newy);
 end
 
-var Media.Image green = val MEDIA_IMAGE ([] .. "resources/green.png");
-var Media.Image red = val MEDIA_IMAGE ([] .. "resources/red.png");
-var Media.Image blue = val MEDIA_IMAGE ([] .. "resources/blue.png");
+var[] byte greenuri = [] .. "resources/green.png"; 
+var[] byte reduri   = [] .. "resources/red.png"; 
+var[] byte blueuri  = [] .. "resources/blue.png";
+var[] byte dummy    = _;
 
-green.region.y = height/2 - img_height/2;
+var Properties.Image green = val Properties.Image (
+  Region (0, height/2 - img_height/2, 0, 0, 1), 1.0);
+var Properties.Image red   = val Properties.Image (
+  Region (width - img_width, height/2 - img_height/2, 0, 0, 1), 1.0);
+var Properties.Image blue  = val Properties.Image (
+  Region (img_width + 20, height/2 - 15, 0, 0, 1), 1.0);
 
-red.region.x = width - img_width;
-red.region.y = height/2 - img_height/2;
-
-blue.region.x = img_width + 20;
-blue.region.y = height/2 - 15;
-
-var& IScene scene;
-var& IPlayer p_green;
-var& IPlayer p_red;
-var& IPlayer p_ball;
-
+var&? Scene scene = spawn Scene (Size (600, 400));
 var Region text_region = val Region (0, height - 200, 600, 200, 2);
 
-watching Scene (Size (600, 400)) -> (&scene),
-         Play (&scene, &green) -> (&p_green),
-         Play (&scene, &red) -> (&p_red),
-         Play (&scene, &blue) -> (&p_ball)
+watching scene
 do
-  var& IPlayer self;
-  var& IPlayer opponent;
+  var&? Play p_green = spawn Play (&greenuri, &green, &scene.handle);
+  var&? Play p_red   = spawn Play (&reduri, &red,  &scene.handle);
+  var&? Play p_ball  = spawn Play (&blueuri, &blue, &scene.handle);
+
+  var&? Play self;
+  var&? Play opponent;
   var uint color;
-  vector[] byte text = [] .. "Your color is ";
-  if call Get_Device_Id () % 2 == 0 then
+  var[] byte text = [] .. "Your color is ";
+  $text = $text - 1;
+  var int player = _get_player();
+
+  if player == 1 then
     color = 0xff00ff00;
     text = text .. "green";
     self = &p_green;
@@ -114,49 +145,57 @@ do
   end
 
   par/or do
-    var Media.Text display = val Media.Text ([] .. text, [] .. "sans bold 30",
-          text_region, color);
+    var Properties.Text display = val Properties.Text ([] .. text,
+      [] .. "sans bold 30", text_region, color);
 
-    await Play (&scene, &display);
+    await Play (&dummy, &display, &scene.handle);
   with
     var _char_ptr_ext key;
     var bool press;
     every (_, key, press) in CM_SCENE_KEY do
       if press then
-        var& IPlayer p;
-        if call Get_Device_Id () == call Get_Event_Device_Id () then
-          p = &self;
-        else
-          p = &opponent;
+        var int y = call Player_Get_Int (&self!.handle, "y");
+        var int h = call Player_Get_Int (&self!.handle, "height");
+        if _strcmp (key, "Up") == 0 and y >= 0 then
+          emit MOVE (player, UP);
+        else/if _strcmp (key, "Down") == 0 and y + h <= height then
+          emit MOVE (player, DOWN);
         end
-        var int y = call Player_Get_Int (&p, "y");
-        if _strcmp (key, "Up") == 0  and y - amount >= 0 then
-          call Player_Set_Int (&p, "y", y - amount);
-        else/if _strcmp (key, "Down") == 0 and
-            y + amount + img_height <= height then
-          call Player_Set_Int (&p, "y", y + amount);
-        end
+      end
+    end
+  with
+    var int source;
+    var int amount;
+    every (source, amount) in UPDATE_POS do
+      _printf ("%d, %d\n", source, amount);
+      if source == player then
+        var int y = call Player_Get_Int (&self!.handle, "y");
+        call Player_Set_Int (&self!.handle, "y", y + amount);
+      else
+        var int y = call Player_Get_Int (&opponent!.handle, "y");
+        call Player_Set_Int (&opponent!.handle, "y", y + amount);
       end
     end
   with
     var Direction dir = val Direction (2.5, -3);
     var int tick = 30;
-    var float speed = 0.4;
+    var real speed = 0.4;
     every (tick)ms do
-      call Update (&p_ball, &dir, speed, tick * 0.1);
-      call Compute_Collision (&p_ball, &p_green, &p_red, &dir, &speed);
+      call Update (&p_ball!.handle, &dir, speed, tick * 0.1);
+      call Compute_Collision (&p_ball!.handle, &p_green!.handle,
+        &p_red!.handle, &dir, &speed);
 
-      var int x = call Player_Get_Int (&p_ball, "x");
+      var int x = call Player_Get_Int (&p_ball!.handle, "x");
 
       if x <= 0 then
-        if &&self == &&p_red then
+        if self!.handle.self == p_red!.handle.self then
           have_won = true;
         else
           have_won = false;
         end
         emit round_ended;
       else/if x >= width then
-        if &&self == &&p_red then
+        if self!.handle.self == p_red!.handle.self then
           have_won = false;
         else
           have_won = true;
@@ -168,16 +207,18 @@ do
     await round_ended;
   end
 
-  var Media.Text m_end;
+  var Properties.Text m_end;
   if have_won then
-    m_end = val MEDIA_TEXT ([] .. "Congrats, you won!");
+    m_end = val Properties.Text ([] .. "Congrats, you won!", [] .. "40",
+      Region (0, 0, 200, 50, 2), 0xff00ff00);
   else
-    m_end = val MEDIA_TEXT ([] .. "Game Over!");
+    m_end = val Properties.Text ([] .. "Game Over!", [] .. "40",
+      Region (0, 0, 200, 50, 2), 0xff00ff00);
   end
 
   m_end.region = text_region;
   watching 5s do
-    await Play (&scene, &m_end);
+    await Play (&dummy, &m_end, &scene.handle);
   end
 end
 
