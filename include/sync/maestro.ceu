@@ -97,6 +97,8 @@ __CALLBACK_OUTPUT_COND__
   }
 
   tceu_callback cb = { &evt_cb, NULL };
+
+__EMIT_FUNCTIONS__
 end
 
 native/plain
@@ -107,6 +109,8 @@ native/plain
 native/nohold
   _cb,
 ;
+
+__DECL_EMIT_FUNCTIONS__
 
 _ceu_callback_register (&&_cb);
 
@@ -158,6 +162,7 @@ par/or do
         var usize peers;
         every (new_peer, peers) in client.stub.new_peer do
           if (peers >= min_peers) then
+            _printf ("stub ok\n");
             client.stub.ok = true;
             emit mirror_ok;
           end
