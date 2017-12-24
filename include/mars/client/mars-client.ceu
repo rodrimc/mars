@@ -58,7 +58,7 @@ do
     [[ TABLE =  load ('return{' .. @stub.rbuffer .. '}')() ]]
     type = [[ TABLE.type ]];
 
-#ifdef MARS_LOG
+#ifdef MARS_DEBUG
     if stub.ok then
       [[
          LOG = LOG or {}
