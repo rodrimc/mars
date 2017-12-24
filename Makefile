@@ -29,9 +29,10 @@ server: SRC_NAME					= $(notdir $(SRC))
 server: LUA_SERVER				= $(MARS_SERVER_PATH)/mars-server.lua
 
 #both targets
-server all: LUA_PEERS_MODULE  = $(MARS_UTIL_PATH)/peers.lua
-server all: override CC_ARGS := $(shell pkg-config $(MODULES) --libs --cflags)\
+server all: LUA_PEERS_MODULE   = $(MARS_UTIL_PATH)/peers.lua
+server all: override CC_ARGS  := $(shell pkg-config $(MODULES) --libs --cflags)\
 	-lpthread $(CC_ARGS) -lm -DDEBUG -g
+server all: override CEU_ARGS :=
 
 #variables
 BIN					= $(SRC_NAME:%.ceu=%)
@@ -48,7 +49,7 @@ all:
 	$(LUA) $(EVTS) $(TEMP) $(SRC)
 	$(LUA) $(INPUT_GEN) $(IDF) $(SRC) $(TEMP)
 	ceu --pre --pre-args="-I$(CEU_DIR)/include -I$(CEU_MEDIA_DIR)/include	-I./ \
-		-I$(CEU_UV_DIR)/include  -I./include"  	 				 								 				 \
+		-I$(CEU_UV_DIR)/include  -I./include $(CEU_ARGS)"  	 				 						 \
 		--pre-input=$(TEMP)																							 				 \
 		--ceu --ceu-err-unused=pass --ceu-err-uninitialized=pass							 	 \
 		--ceu-features-exception=true --ceu-features-thread=true				 				 \
@@ -68,7 +69,7 @@ server:
 	cp $(LUA_SERVER) $(BUILD_PATH)/
 	cp $(MARS_LUA_UTIL) $(BUILD_PATH)/
 	ceu --pre --pre-args="-I$(CEU_DIR)/include -I$(CEU_MEDIA_DIR)/include			 \
-		-I$(CEU_UV_DIR)/include -I./include"																		 \
+		-I$(CEU_UV_DIR)/include -I./include $(CEU_ARGS)"												 \
 		--pre-input=$(SRC)																											 \
 		--ceu --ceu-err-unused=pass --ceu-err-uninitialized=pass								 \
 		--ceu-features-exception=true --ceu-features-thread=true								 \

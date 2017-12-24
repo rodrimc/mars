@@ -58,6 +58,15 @@ do
     [[ TABLE =  load ('return{' .. @stub.rbuffer .. '}')() ]]
     type = [[ TABLE.type ]];
 
+#ifdef MARS_LOG
+    if stub.ok then
+      [[
+         LOG = LOG or {}
+         table.insert (LOG, @type)
+      ]]
+    end
+#endif
+
     if type == S_ACCEPTED then
       stub.id = [[ TABLE.id ]];
       var uint peers = [[ TABLE.peers ]];
@@ -121,6 +130,34 @@ do
   var[] byte rbuffer;
   var[] byte wbuffer;
   var[] byte message;
+
+#ifdef MARS_LOG
+  do finalize with
+    [[
+       filename = os.tmpname()
+
+       print ('logging to: ' .. filename)
+       debugfile = io.open (filename, 'w+')
+
+       last = nil
+       count = nil
+       for _,v in ipairs (LOG) do
+         if not last then
+           last = v
+           count = 1
+         elseif last == v then
+           count = count + 1
+         else
+           debugfile:write (count, ' ' , last, '\n')
+           last = v
+           count = 1
+         end
+       end
+       debugfile:write (count, ' ', last, '\n')
+       debugfile:close()
+    ]]
+  end
+#endif
 
   watching r_conn, w_conn, outer.abort
   do
