@@ -22,11 +22,12 @@ native/pos do
       {0, 0, 0, 0}
     };
 
-	tceu_callback_ret evt_cb (int cmd,
-														tceu_callback_arg p1,
-														tceu_callback_arg p2,
-														const char* filename,
-														u32 line)
+  int64_t DT = 0;
+  tceu_callback_ret evt_cb (int cmd,
+                            tceu_callback_arg p1,
+                            tceu_callback_arg p2,
+                            const char* filename,
+                            u32 line)
 	{
     static int flag = 0;
     tceu_callback_ret ret = { .is_handled = 0 };
@@ -78,6 +79,13 @@ native/pos do
 
           ret.is_handled = 1;
         }
+        break;
+      }
+      case CEU_CALLBACK_WCLOCK_DT:
+      {
+        ret.value.num = DT;
+        ret.is_handled = 1;
+        DT -= DT;
         break;
       }
       case CEU_CALLBACK_OUTPUT:
@@ -176,7 +184,6 @@ par/or do
       var[] int mapping = _;
       every client.stub.incoming_message do
         [[
-          print ('incoming_message')
           print ('[APP(' .. tostring(@client.stub.id) .. ')] Message: ' ..
                                   @client.stub.message)
 

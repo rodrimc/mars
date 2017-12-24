@@ -9,6 +9,14 @@
   require 'build/peers'
 ]]
 
+native/pos do
+  extern int64_t DT;
+end
+
+native
+  _DT,
+;
+
 #include "mars/util/mars-defs.ceu"
 #include "mars/client/mars-events.ceu"
 
@@ -19,14 +27,6 @@ event (none) abort;
 var[] byte server_ip = _;
 var u16 wport = _;
 var u16 rport = _;
-
-code/await Emit_Tick (var uint tick) -> none
-do
-  await async (tick) do
-    emit (tick) ms;
-  end
-end
-pool[] Emit_Tick emit_tick_pool;
 
 code/await Client_Send_Message (var& Stub stub,
                                 var&[] byte buffer) -> none
@@ -98,7 +98,7 @@ do
     else/if type == S_BROADCAST then
       [[ payload = 'return' .. serialize(TABLE.payload) ]]
 
-      stub.message= [] .. [[ payload ]];
+      stub.message = [] .. [[ payload ]];
 
       emit stub.incoming_message;
 
@@ -106,7 +106,7 @@ do
     else/if type == S_TICK then
       if stub.ok then
         var uint tick = [[ TABLE.value ]];
-        spawn Emit_Tick (tick) in outer.emit_tick_pool;
+        _DT = tick * 1000;
       end
     else
       _printf ("[Client (%d) Unknow message type.\n", stub.id);
@@ -174,7 +174,7 @@ do
           var bool success = await Receive (&r_conn.stream, &buff);
           if success then
             stub.rbuffer = [] .. buff;
-            spawn Handle_Message (&stub) in pool_handle_message;
+            await Handle_Message (&stub);
           end
         end
       with
