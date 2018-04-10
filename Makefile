@@ -13,7 +13,6 @@ MARS_CLIENT_PATH  = $(MARS_PATH)/client
 MARS_LUA_UTIL			= $(MARS_UTIL_PATH)/mars-util.lua
 
 #all target
-all: SRC 						= $(error set SRC to a CÉU program)
 all: SRC_SED 				= $(SRC://=\/)
 all: MODULES 				= play lua5.3 libuv
 all: SRC_NAME				= $(notdir $(SRC))
@@ -28,16 +27,28 @@ server: MODULES 					= lua5.3 libuv
 server: SRC_NAME					= $(notdir $(SRC))
 server: LUA_SERVER				= $(MARS_SERVER_PATH)/mars-server.lua
 
+#variables
+BIN					= $(SRC_NAME:%.ceu=%)
+BUILD_PATH 	= build
+TEMP 				:= $(BUILD_PATH)/temp-$(shell date --iso=ns).ceu
+
 #both targets
 server all: LUA_PEERS_MODULE   = $(MARS_UTIL_PATH)/peers.lua
 server all: override CC_ARGS  := $(shell pkg-config $(MODULES) --libs --cflags)\
 	-lpthread $(CC_ARGS) -lm -DDEBUG -g
 server all: override CEU_ARGS :=
-
-#variables
-BIN					= $(SRC_NAME:%.ceu=%)
-	BUILD_PATH 	= build
-	TEMP 				:= $(BUILD_PATH)/temp-$(shell date --iso=ns).ceu
+server all: override CEU_DEFAULTS := 													 \
+		--ceu --ceu-err-unused=pass --ceu-err-uninitialized=pass	 \
+		--ceu-features-exception=true --ceu-features-thread=true	 \
+		--ceu-features-lua=true --ceu-features-dynamic=true				 \
+		--ceu-output=output.c --ceu-features-pool=true						 \
+		--ceu-features-trace=true --ceu-features-pause=true				 \
+		--env --env-types=$(CEU_DIR)/env/types.h									 \
+		--env-threads=$(CEU_DIR)/env/threads.h										 \
+		--env-main=$(CEU_DIR)/env/main.c													 \
+		--env-output=/tmp/x.c																			 \
+		--cc --cc-args="$(CC_ARGS) -I./include"										 \
+		--cc-output=build/$(BIN)
 
 all:
 	mkdir -p $(BUILD_PATH)
@@ -51,16 +62,7 @@ all:
 	ceu --pre --pre-args="-I$(CEU_DIR)/include -I$(CEU_MEDIA_DIR)/include	-I./ \
 		-I$(CEU_UV_DIR)/include  -I./include $(CEU_ARGS)"  	 				 						 \
 		--pre-input=$(TEMP)																							 				 \
-		--ceu --ceu-err-unused=pass --ceu-err-uninitialized=pass							 	 \
-		--ceu-features-exception=true --ceu-features-thread=true				 				 \
-		--ceu-features-lua=true																					 				 \
-		--ceu-output=output.c 																					 				 \
-		--env --env-types=$(CEU_DIR)/env/types.h															 	 \
-		--env-threads=$(CEU_DIR)/env/threads.h													 				 \
-		--env-main=$(CEU_DIR)/env/main.c																 				 \
-		--env-output=/tmp/x.c																						 				 \
-		--cc --cc-args="$(CC_ARGS)"																						 	 \
-		--cc-output=build/$(BIN)
+	$(CEU_DEFAULTS)
 	rm $(TEMP)
 
 server:
@@ -71,16 +73,7 @@ server:
 	ceu --pre --pre-args="-I$(CEU_DIR)/include -I$(CEU_MEDIA_DIR)/include			 \
 		-I$(CEU_UV_DIR)/include -I./include $(CEU_ARGS)"												 \
 		--pre-input=$(SRC)																											 \
-		--ceu --ceu-err-unused=pass --ceu-err-uninitialized=pass								 \
-		--ceu-features-exception=true --ceu-features-thread=true								 \
-		--ceu-features-lua=true																									 \
-		--ceu-output=output.c 																									 \
-		--env --env-types=$(CEU_DIR)/env/types.h																 \
-		--env-threads=$(CEU_DIR)/env/threads.h																	 \
-		--env-main=$(CEU_DIR)/env/main.c																				 \
-		--env-output=/tmp/x.c																										 \
-		--cc --cc-args="$(CC_ARGS) -I./include"																	 \
-		--cc-output=build/$(BIN)
+	$(CEU_DEFAULTS)
 
 clean:
 	rm -rf $(BUILD_PATH)
