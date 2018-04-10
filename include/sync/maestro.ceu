@@ -23,14 +23,16 @@ native/pos do
     };
 
   int64_t DT = 0;
-  tceu_callback_ret evt_cb (int cmd,
-                            tceu_callback_arg p1,
-                            tceu_callback_arg p2,
-                            const char* filename,
-                            u32 line)
+  int evt_cb (int cmd,
+              tceu_callback_val p1,
+              tceu_callback_val p2
+##ifdef CEU_FEATURES_TRACE
+                      , tceu_trace trace
+##endif
+                      )
 	{
     static int flag = 0;
-    tceu_callback_ret ret = { .is_handled = 0 };
+    int is_handled = 0;
     switch (cmd)
     {
       case CEU_CALLBACK_STEP:
@@ -77,17 +79,17 @@ native/pos do
           ceu_input (CEU_INPUT_INIT, &p);
           flag = 1;
 
-          ret.is_handled = 1;
+          is_handled = 1;
         }
         break;
       }
-      case CEU_CALLBACK_WCLOCK_DT:
-      {
-        ret.value.num = DT;
-        ret.is_handled = 1;
-        DT -= DT;
-        break;
-      }
+      /* case CEU_CALLBACK_WCLOCK_DT: */
+      /* { */
+      /*   ret.value.num = DT; */
+      /*   ret.is_handled = 1; */
+      /*   DT -= DT; */
+      /*   break; */
+      /* } */
       case CEU_CALLBACK_OUTPUT:
       {
         char *type;
@@ -96,12 +98,12 @@ __CALLBACK_OUTPUT_COND__
         tceu_input_IN input_p = {type, p};
         ceu_input (CEU_INPUT_IN, &input_p);
 
-        ret.is_handled = 1;
+        is_handled = 1;
         break;
       }
     }
 
-    return ret;
+    return is_handled;
   }
 
   tceu_callback cb = { &evt_cb, NULL };

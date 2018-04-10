@@ -32,7 +32,7 @@ do
 
   var Exception? e;
   catch e do
-    _printf ("[server] interface file: %s\n", interface);
+    _fprintf (_stderr, "[server] interface file: %s\n", interface);
     if interface != null then
       [[
         dofile (@interface)
@@ -45,7 +45,7 @@ do
   end
 
   catch e do
-    _printf ("[server] mapping file: %s\n", mapping);
+    _fprintf (_stderr, "[server] mapping file: %s\n", mapping);
     if mapping != null then
       [[
         dofile (@mapping)
@@ -307,7 +307,7 @@ end
 /* We must include tcp-server after we've defined UV_TCP_Server_Handler */
 #include "uv/tcp-server.ceu"
 
-_printf ("[server] Starting server...\n");
+_fprintf (_stdout, "[server] Starting server...\n");
 par do
   var UV_TCP_Server_Data shared = val UV_TCP_Server_Data (true);
   await UV_TCP_Server (LOCALHOST, R_PORT, BACKLOG, _, &shared);
