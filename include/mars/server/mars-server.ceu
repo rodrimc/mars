@@ -30,7 +30,7 @@ do
   var _char&& interface;
   (interface, mapping) = await INIT;
 
-  var Exception? e;
+  var Exception.Lua? e;
   catch e do
     _fprintf (_stderr, "[server] interface file: %s\n", interface);
     if interface != null then
@@ -131,12 +131,10 @@ do
   pool[] Send_Join_Reply        pool_join_reply;
   pool[] Send_Broadcast_Join    pool_broadcast_join;
   pool[] Send_Message           pool_send_message;
-  pool[] Send_Tick_Message      pool_tick_message;
 
   var int status = _;
 
   event (none) accepted;
-  event (bool) pause_tick;
 
   par do
     loop do
@@ -197,25 +195,6 @@ do
   with
     await accepted;
     par do
-      pause/if pause_tick do
-        par do
-          loop do
-            par/or do
-              await pause;
-              _printf ("pausing tick\n");
-            with
-              await resume;
-              _printf ("resuming tick\n");
-            end
-          end
-        with
-          var uint freq;
-          every freq in outer.send_tick_message do
-            spawn Send_Tick_Message (handle_id, &stream, freq) in pool_tick_message;
-          end
-        end
-      end
-    with
       var uint new_id;
       every new_id in outer.send_broadcast_join do
         spawn Send_Broadcast_Join (handle_id, &stream, new_id)
@@ -245,7 +224,6 @@ do
           ]]
 
           len = [[ #mymap ]];
-          emit pause_tick (len > 0);
 
           var ssize i;
           loop i in [1 -> len] do
@@ -273,17 +251,7 @@ do
       if e? then
         _printf ("[Incoming Message error:] %s\n", e!.message);
       end
-    with
-      every outer.message_sent do
-      var uint i = 0;
-        loop _ in pool_send_message do
-          i = i + 1;
-        end
-          if i == 1 then
-            emit pause_tick (false);
-          end
-        end
-     end
+    end
   end
 end
 

@@ -104,10 +104,7 @@ do
 
       $stub.message = 0;
     else/if type == S_TICK then
-      if stub.ok then
-        var uint tick = [[ TABLE.value ]];
-        _DT = tick * 1000;
-      end
+      /* nothing */
     else
       _printf ("[Client (%d) Unknow message type.\n", stub.id);
     end
