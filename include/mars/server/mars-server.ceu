@@ -69,18 +69,64 @@ data UV_TCP_Server_Data with
 end
 
 /*** SERVER SIDE ***/
-event (uint) incoming_message;
+event (uint, uint) incoming_message;
 event (uint) send_broadcast_join;
-event (uint) send_tick_message;
+event (uint, s32) tick_response;
+event (uint, uint) has_mapping;
+event (bool) message_ok;
+event (uint, s32) message_delay;
 
 var[] byte mapped_evt = _;
 var[] byte mapped_dest = _;
 var[] byte message_payload = _;
 
 var uint id_ref = 1;
+var uint action_ref = 1;
 var usize peers_count = 0;
 
 #include "messages-server.ceu"
+
+code/await Sync_Action_Manager (var uint seq_num) -> none
+do
+  var uint messages_count = 0;
+  var usize i;
+  var uint j;
+  loop i in [1 -> outer.peers_count] do
+    var uint mapping;
+    (_, mapping) = await outer.has_mapping;
+    loop j in [1 -> mapping] do
+      var bool ok = await outer.message_ok;
+      if (ok) then
+        messages_count = messages_count + 1;
+      end
+    end
+  end
+
+  var s32 max_tick = 0;
+  var uint count = 0;
+  loop do
+    var uint seq;
+    var s32 tick;
+    (seq, tick) = await outer.tick_response;
+
+    if seq != seq_num then
+      continue;
+    end
+
+    if tick > max_tick then
+      max_tick = tick;
+    end
+
+    count = count + 1;
+    if count == messages_count then
+      break;
+    end
+  end
+
+  emit outer.message_delay (seq_num, max_tick + ESTIMATED_NET_DELAY);
+end
+
+pool [] Sync_Action_Manager sync_pool;
 
 code/await Reading_Handler (var& UV_Stream stream,
                             var&[] byte ip,
@@ -106,7 +152,16 @@ do
         var uint from = [[ TABLE.from ]];
         [[ MARS.incoming_payload = TABLE.payload ]]
 
-        emit outer.incoming_message (from);
+        spawn Sync_Action_Manager (outer.action_ref) in outer.sync_pool;
+        emit outer.incoming_message (from, outer.action_ref);
+
+        outer.action_ref = outer.action_ref + 1;
+      else/if type == P_TICK_RESPONSE then
+        var s32 tick = [[ TABLE.tick ]];
+        var uint seq = [[ TABLE.seq ]];
+
+        _printf ("tick response: %d %d\n", seq, tick);
+        emit outer.tick_response (seq, tick);
       end
     end
     if e? then
@@ -205,9 +260,10 @@ do
       catch e
       do
         var uint from;
+        var uint seq;
         var ssize len = 0;
         var bool ok = false;
-        every (from) in outer.incoming_message do
+        every (from, seq) in outer.incoming_message do
           [[
             local p = MARS.peers[@from]
             mymap = {}
@@ -224,6 +280,7 @@ do
           ]]
 
           len = [[ #mymap ]];
+          emit outer.has_mapping (handle_id, len as uint);
 
           var ssize i;
           loop i in [1 -> len] do
@@ -236,14 +293,15 @@ do
               end
             ]]
             ok = [[ ok ]];
+            emit outer.message_ok (ok);
             if ok then
               outer.message_payload = [] .. [[ (serialize({
                     evt = mymap[@i].evt,
                     args = args
                   })) ]];
               _printf ("sending: %s\n", &&outer.message_payload[0]);
-              spawn Send_Message (handle_id, &stream, &outer.message_payload)
-                                                          in pool_send_message;
+              spawn Send_Message (handle_id, &stream, seq,
+                                  &outer.message_payload) in pool_send_message;
             end
           end
         end

@@ -9,18 +9,17 @@
   require 'build/peers'
 ]]
 
-native/pos do
-  extern int64_t DT;
-end
-
 native
-  _DT,
+  _mars_now,
 ;
+
+var s32 start_time = 0;
 
 #include "mars/util/mars-defs.ceu"
 #include "mars/client/mars-events.ceu"
 
 event (none) abort;
+event (none) cancel_lag_timer;
 
 /*** CLIENT API ***/
 
@@ -97,14 +96,58 @@ do
       emit stub.new_peer (new_peer, peers);
     else/if type == S_BROADCAST then
       [[ payload = 'return' .. serialize(TABLE.payload) ]]
+      var u64 delay = [[ TABLE.delay ]];
+      var u64 now = _mars_now() - outer.start_time;
+
+      var u64 lag = _;
+
+      if delay > now then
+        lag =  delay - now;
+      else
+        lag = 0;
+      end
+
+      _printf ("now: %lu\n", now);
+      _printf ("delay: %lu\n", delay);
+      _printf ("delay - now: %lu\n", lag);
+
+      if lag > 0 then
+        _printf ("sleeping %lu\n", delay - now);
+        await (delay - now) ms;
+      end
+
+      _printf ("awake: %lu\n", _mars_now() - outer.start_time);
+
+      emit outer.cancel_lag_timer;
 
       stub.message = [] .. [[ payload ]];
 
       emit stub.incoming_message;
 
       $stub.message = 0;
-    else/if type == S_TICK then
-      /* nothing */
+    else/if type == S_TICK_REQUEST then
+      var s32 tick = _mars_now() - outer.start_time;
+      var uint seq =  [[ TABLE.seq ]];
+
+      [[
+        luabuff = 'type=' .. tostring(P_TICK_RESPONSE) .. ',' ..
+                  'from=' .. tostring(@stub.id)        .. ',' ..
+                  'seq='  .. tostring(@seq)            .. ',' ..
+                  'tick=' .. tostring(@tick)
+      ]]
+
+      stub.wbuffer = [] .. [[ luabuff ]];
+
+      par/and do
+        emit stub.send_message;
+      with
+        par/or do
+          await outer.cancel_lag_timer;
+        with
+          await (MAX_LAG) ms;
+          _printf ("timer expired\n");
+        end
+      end
     else
       _printf ("[Client (%d) Unknow message type.\n", stub.id);
     end
@@ -171,7 +214,7 @@ do
           var bool success = await Receive (&r_conn.stream, &buff);
           if success then
             stub.rbuffer = [] .. buff;
-            await Handle_Message (&stub);
+            spawn Handle_Message (&stub) in pool_handle_message;
           end
         end
       with

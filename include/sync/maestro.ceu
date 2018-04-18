@@ -22,7 +22,42 @@ native/pos do
       {0, 0, 0, 0}
     };
 
-  int64_t DT = 0;
+  ##define TICK 10 /* ms */
+
+  uv_timer_t timer;
+  int        timer_flag = 0;
+  int        ceu_timer_flag = 0;
+  u64        old = 0;
+  u64        logical_time = 0;
+  u64        current_time = 0;
+
+  int flag = 0;
+
+  void
+  timer_cb (uv_timer_t *handle)
+  {
+    extern uv_loop_t  ceu_uv_loop;
+    extern uv_async_t ceu_uv_async;
+
+    timer_flag = 0;
+
+    current_time += TICK;
+
+    uv_async_send(&ceu_uv_async);
+  }
+
+  u64
+  mars_now ()
+  {
+    if (!ceu_timer_flag)
+    {
+      logical_time = current_time;
+      ceu_timer_flag = 1;
+    }
+    return logical_time;
+  }
+
+  /* int64_t DT = 0; */
   int evt_cb (int cmd,
               tceu_callback_val p1,
               tceu_callback_val p2
@@ -31,7 +66,8 @@ native/pos do
 ##endif
                       )
 	{
-    static int flag = 0;
+    extern uv_loop_t ceu_uv_loop;
+
     int is_handled = 0;
     switch (cmd)
     {
@@ -45,6 +81,11 @@ native/pos do
           char *interface = "";
           int min_peers = 1;
 
+          /* timer */
+          uv_timer_init (&ceu_uv_loop, &timer);
+          uv_timer_start(&timer, timer_cb, TICK, TICK);
+
+          /* command line args */
           opterr = 0; //prevents the printing of unrecognized command line arg
 
           while ((c = getopt_long_only (CEU_APP.argc, CEU_APP.argv,
@@ -81,15 +122,25 @@ native/pos do
 
           is_handled = 1;
         }
+        ceu_timer_flag = 0;
         break;
       }
-      /* case CEU_CALLBACK_WCLOCK_DT: */
-      /* { */
-      /*   ret.value.num = DT; */
-      /*   ret.is_handled = 1; */
-      /*   DT -= DT; */
-      /*   break; */
-      /* } */
+      case CEU_CALLBACK_WCLOCK_DT:
+      {
+        if (!timer_flag)
+        {
+          ceu_callback_ret.num = (current_time - old) * 1000;
+          old = current_time;
+          timer_flag = 1;
+        }
+        else
+        {
+          ceu_callback_ret.num = CEU_WCLOCK_INACTIVE;
+        }
+
+        is_handled = 1;
+        break;
+      }
       case CEU_CALLBACK_OUTPUT:
       {
         char *type;
@@ -150,7 +201,7 @@ end
 event (none) mirror_ok;
 
 code/await Emit_Input_Event (var&[] byte evt) -> none;
-code/await Handle_Mapping (var _char&& evt, var&[] byte from,  var _char&& mapping) -> none;
+code/await Handle_Mapping (var _char&& evt, var&[] byte from, var _char&& mapping) -> none;
 
 par/or do
   var int min_peers = await Init ();
@@ -222,6 +273,8 @@ __OUTPUT_HANDLE__
   _printf ("client finished\n");
 with
   await mirror_ok;
+  start_time = _mars_now();
+  _printf ("start time: %d\n", start_time);
   #include SRC
 end
 

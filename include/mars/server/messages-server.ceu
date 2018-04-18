@@ -1,11 +1,22 @@
-#define FREQ 10
-spawn do
-  every (FREQ)ms do
-    emit send_tick_message(FREQ);
+event (none) message_sent;
+
+code/await Send_Tick_Request (var uint handle_id,
+                              var& UV_Stream stream,
+                              var uint seq) -> none
+do
+  var Exception.Lua? e;
+  catch e do
+    [[
+      luabuff = 'type='   .. tostring(S_TICK_REQUEST) .. ',' ..
+                'seq='    .. tostring(@seq)
+    ]]
+    var[] byte buff = [] .. [[ luabuff ]];
+    await Send (handle_id, &stream, &buff);
+  end
+  if e? then
+    _fprintf (_stderr, "[Send_Tick_Request error]: %s\n", e!.message);
   end
 end
-
-event (none) message_sent;
 
 code/await Send_Not_Joined_Reply (var uint handle_id,
                                   var& UV_Stream stream) -> none
@@ -56,6 +67,7 @@ do
                 'peers='     .. tostring(@outer.peers_count)
     ]]
     var[] byte buff = [] .. [[ luabuff ]];
+
     await Send (handle_id, &stream, &buff);
   end
   if e? then
@@ -65,12 +77,19 @@ end
 
 code/await Send_Message (var uint handle_id,
                          var& UV_Stream stream,
+                         var uint message_seq,
                          var& []byte payload) -> none
 do
+  spawn Send_Tick_Request (handle_id, &stream, message_seq);
+  var uint seq;
+  var s32 delay;
+  (seq, delay) = await outer.message_delay until (seq == message_seq);
+
   var Exception.Lua? e;
   catch e do
     [[
       luabuff = 'type='       .. tostring(S_BROADCAST)        .. ',' ..
+                'delay='      .. tostring(@delay)             .. ',' ..
                 'payload='    .. tostring(@payload)
     ]]
     var[] byte buff = [] .. [[ luabuff ]];
@@ -82,25 +101,3 @@ do
     _fprintf (_stderr, "[Send_Broadcast_Message error]: %s\n", e!.message);
   end
 end
-
-code/await Send_Tick_Message (var uint handle_id,
-                              var& UV_Stream stream,
-                              var uint freq) -> none
-do
-  var Exception.Lua? e;
-  catch e do
-    var[] byte buff = _;
-      [[
-        luabuff = 'type='     .. tostring(@S_TICK)               .. ',' ..
-                  'value='    .. tostring(@freq)
-      ]]
-
-      buff = [] .. [[ luabuff ]];
-    await Send (handle_id, &stream, &buff);
-  end
-
-  if e? then
-      _fprintf(_stderr, "[Send_Tick_Message error]: %s\n", e!.message);
-  end
-end
-
