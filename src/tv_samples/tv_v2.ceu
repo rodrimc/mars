@@ -4,7 +4,7 @@
  * Mapping: scripts/tv_mappings_v2.lua
  */
 
-var[] byte videouri = [] .. "resources/bunny.ogg";
+var[] byte videouri = [] .. "resources/video-frame.avi";
 var Properties.Video videoprop = val Properties.Video (
                 Region (0, 0, 720, 480, 1),
                 1.0, 1.0);
@@ -30,13 +30,15 @@ loop do
 
       event (r64) set_volume;
       watching p do
+        pool [] Scene_Pause  pause_pool;
+        pool [] Scene_Resume resume_pool;
         par do
           every PLAY do
-            call Scene_Resume (&scene.handle);
+            spawn Scene_Resume (&scene.handle) in resume_pool;
           end
         with
           every PAUSE do
-            call Scene_Pause (&scene.handle);
+            spawn Scene_Pause (&scene.handle) in pause_pool;
           end
         with
           every SEEK_FORWARD do
