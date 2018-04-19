@@ -90,6 +90,7 @@ do
     [[
       luabuff = 'type='       .. tostring(S_BROADCAST)        .. ',' ..
                 'delay='      .. tostring(@delay)             .. ',' ..
+                'seq='        .. tostring(@message_seq)       .. ',' ..
                 'payload='    .. tostring(@payload)
     ]]
     var[] byte buff = [] .. [[ luabuff ]];
