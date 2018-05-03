@@ -123,7 +123,8 @@ do
     end
   end
 
-  emit outer.message_delay (seq_num, max_tick + 2 * ESTIMATED_NET_DELAY);
+  emit outer.message_delay (seq_num, max_tick + 2 * ESTIMATED_NET_DELAY 
+		+ PROCESSING_DELTA);
 end
 
 pool [] Sync_Action_Manager sync_pool;
