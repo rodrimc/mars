@@ -270,7 +270,6 @@ __OUTPUT_HANDLE__
 with
   await mirror_ok;
   start_time = _mars_now();
-  _printf ("start time: %lu\n", start_time);
   #include SRC
 end
 
