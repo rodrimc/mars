@@ -118,6 +118,9 @@ do
       _printf ("delay: %lu\n", delay);
       _printf ("delay - now: %lu\n", lag);
 
+      emit outer.cancel_lag_timer (seq);
+      emit outer.pause_all (false);
+
       if lag > 0 then
         _printf ("(%u) sleeping %lu (us)\n", seq, delay - now);
         await (delay - now) us;
@@ -125,8 +128,6 @@ do
 
       _printf ("(%u) awake: %lu\n", seq, call Get_Running_Time ());
       _printf ("***** END NEW ACTION *****\n");
-
-      emit outer.cancel_lag_timer (seq);
 
       stub.message = [] .. [[ payload ]];
 
@@ -147,9 +148,7 @@ do
       stub.wbuffer = [] .. [[ luabuff ]];
 
       _printf ("***** BEGIN TICK REQUEST *****\n");
-      _printf ("now: %lu\n", now);
-      _printf ("MAX LAG: %d\n", MAX_LAG);
-      _printf ("now + MAX LAG: %lu\n", now + MAX_LAG);
+      _printf ("(%u) timer: %lu\n", seq, now + MAX_LAG);
       _printf ("***** END TICK REQUEST *****\n");
 
       par/and do
@@ -158,10 +157,11 @@ do
         par/or do
           var uint num;
           num = await outer.cancel_lag_timer until (num == seq);
-          _printf ("timer canceled (%u)\n", seq);
+          _printf ("(%u) timer canceled\n", seq);
         with
-          await (MAX_LAG) ms;
-          _printf ("timer expired (%u)\n", seq);
+          await (MAX_LAG) us;
+          emit outer.pause_all (true);
+          _printf ("(%u) timer expired, freezing scenes\n", seq);
         end
       end
     else

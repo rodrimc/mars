@@ -25,9 +25,8 @@
 
 #include "c.ceu"
 
-#define ESTIMATED_NET_DELAY   100000  /* us */
-#define ESTIMATED_CLOCK_DRIFT 0
-#define MAX_LAG               2 * ESTIMATED_NET_DELAY + ESTIMATED_CLOCK_DRIFT
+#define ESTIMATED_NET_DELAY   20000  /* us */
+#define MAX_LAG               2 * ESTIMATED_NET_DELAY
 
 native/pre do
   ##include <time.h>
