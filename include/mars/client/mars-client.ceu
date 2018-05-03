@@ -13,13 +13,18 @@ native
   _mars_now,
 ;
 
-var s32 start_time = 0;
+var u64 start_time = 0;
+code/tight Get_Running_Time (none) -> u64
+do
+  escape _mars_now() - outer.start_time;
+end
+
 
 #include "mars/util/mars-defs.ceu"
 #include "mars/client/mars-events.ceu"
 
 event (none) abort;
-event (none) cancel_lag_timer;
+event (uint) cancel_lag_timer;
 
 /*** CLIENT API ***/
 
@@ -97,7 +102,8 @@ do
     else/if type == S_BROADCAST then
       [[ payload = 'return' .. serialize(TABLE.payload) ]]
       var u64 delay = [[ TABLE.delay ]];
-      var u64 now = _mars_now() - outer.start_time;
+      var uint seq = [[ TABLE.seq ]];
+      var u64 now = call Get_Running_Time ();
 
       var u64 lag = _;
 
@@ -107,18 +113,20 @@ do
         lag = 0;
       end
 
+      _printf ("***** NEW ACTION *****\n");
       _printf ("now: %lu\n", now);
       _printf ("delay: %lu\n", delay);
       _printf ("delay - now: %lu\n", lag);
 
       if lag > 0 then
-        _printf ("sleeping %lu\n", delay - now);
-        await (delay - now) ms;
+        _printf ("(%u) sleeping %lu (us)\n", seq, delay - now);
+        await (delay - now) us;
       end
 
-      _printf ("awake: %lu\n", _mars_now() - outer.start_time);
+      _printf ("(%u) awake: %lu\n", seq, call Get_Running_Time ());
+      _printf ("***** END NEW ACTION *****\n");
 
-      emit outer.cancel_lag_timer;
+      emit outer.cancel_lag_timer (seq);
 
       stub.message = [] .. [[ payload ]];
 
@@ -126,26 +134,34 @@ do
 
       $stub.message = 0;
     else/if type == S_TICK_REQUEST then
-      var s32 tick = _mars_now() - outer.start_time;
+      var u64 now = call Get_Running_Time ();
       var uint seq =  [[ TABLE.seq ]];
 
       [[
         luabuff = 'type=' .. tostring(P_TICK_RESPONSE) .. ',' ..
                   'from=' .. tostring(@stub.id)        .. ',' ..
                   'seq='  .. tostring(@seq)            .. ',' ..
-                  'tick=' .. tostring(@tick)
+                  'tick=' .. tostring(@now)
       ]]
 
       stub.wbuffer = [] .. [[ luabuff ]];
+
+      _printf ("***** BEGIN TICK REQUEST *****\n");
+      _printf ("now: %lu\n", now);
+      _printf ("MAX LAG: %d\n", MAX_LAG);
+      _printf ("now + MAX LAG: %lu\n", now + MAX_LAG);
+      _printf ("***** END TICK REQUEST *****\n");
 
       par/and do
         emit stub.send_message;
       with
         par/or do
-          await outer.cancel_lag_timer;
+          var uint num;
+          num = await outer.cancel_lag_timer until (num == seq);
+          _printf ("timer canceled (%u)\n", seq);
         with
           await (MAX_LAG) ms;
-          _printf ("timer expired\n");
+          _printf ("timer expired (%u)\n", seq);
         end
       end
     else

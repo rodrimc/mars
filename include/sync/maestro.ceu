@@ -26,7 +26,6 @@ native/pos do
 
   uv_timer_t timer;
   int        timer_flag = 0;
-  int        ceu_timer_flag = 0;
   u64        old = 0;
   u64        logical_time = 0;
   u64        current_time = 0;
@@ -39,9 +38,7 @@ native/pos do
     extern uv_loop_t  ceu_uv_loop;
     extern uv_async_t ceu_uv_async;
 
-    timer_flag = 0;
-
-    current_time += TICK;
+    current_time += TICK * 1000;
 
     uv_async_send(&ceu_uv_async);
   }
@@ -49,11 +46,6 @@ native/pos do
   u64
   mars_now ()
   {
-    if (!ceu_timer_flag)
-    {
-      logical_time = current_time;
-      ceu_timer_flag = 1;
-    }
     return logical_time;
   }
 
@@ -122,19 +114,23 @@ native/pos do
 
           is_handled = 1;
         }
-        ceu_timer_flag = 0;
+
+        timer_flag = 0;
+
         break;
       }
       case CEU_CALLBACK_WCLOCK_DT:
       {
-        if (!timer_flag)
+        if (timer_flag == 0)
         {
-          ceu_callback_ret.num = (current_time - old) * 1000;
+          ceu_callback_ret.num = current_time - old;
+          logical_time = current_time;
           old = current_time;
           timer_flag = 1;
         }
         else
         {
+          /* printf ("CEU_WCLOCK_INACTIVE\n"); */
           ceu_callback_ret.num = CEU_WCLOCK_INACTIVE;
         }
 
@@ -274,7 +270,7 @@ __OUTPUT_HANDLE__
 with
   await mirror_ok;
   start_time = _mars_now();
-  _printf ("start time: %d\n", start_time);
+  _printf ("start time: %lu\n", start_time);
   #include SRC
 end
 
