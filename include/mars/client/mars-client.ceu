@@ -31,6 +31,7 @@ event (uint) cancel_lag_timer;
 var[] byte server_ip = _;
 var u16 wport = _;
 var u16 rport = _;
+var u64 rtt = 0;
 
 code/await Client_Send_Message (var& Stub stub,
                                 var&[] byte buffer) -> none
@@ -103,6 +104,7 @@ do
       [[ payload = 'return' .. serialize(TABLE.payload) ]]
       var u64 delay = [[ TABLE.delay ]];
       var uint seq = [[ TABLE.seq ]];
+      outer.rtt =  [[ TABLE.max_rtt ]];
       var u64 now = call Get_Running_Time ();
 
       var u64 lag = _;
@@ -146,6 +148,13 @@ do
       ]]
 
       stub.wbuffer = [] .. [[ luabuff ]];
+
+      var u64 timer = now;
+      if outer.rtt == 0 then
+        timer = timer + 2 * ESTIMATED_NET_DELAY;
+      else
+        timer = timer + outer.rtt;
+      end
 
       _printf ("***** BEGIN TICK REQUEST *****\n");
       _printf ("(%u) timer: %lu\n", seq, now + MAX_LAG);

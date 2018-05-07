@@ -6,12 +6,24 @@ code/await Send_Tick_Request (var uint handle_id,
 do
   var Exception.Lua? e;
   catch e do
+    var u64 t = _now ();
+
     [[
       luabuff = 'type='   .. tostring(S_TICK_REQUEST) .. ',' ..
                 'seq='    .. tostring(@seq)
     ]]
+
     var[] byte buff = [] .. [[ luabuff ]];
     await Send (handle_id, &stream, &buff);
+
+    [[
+      if tick_request_time[@seq] == nil then
+        tick_request_time[@seq] = {}
+      end
+
+      local reqs_time = tick_request_time[@seq]
+      reqs_time [@handle_id] = @t
+    ]]
   end
   if e? then
     _fprintf (_stderr, "[Send_Tick_Request error]: %s\n", e!.message);
@@ -83,15 +95,36 @@ do
   spawn Send_Tick_Request (handle_id, &stream, message_seq);
   var uint seq;
   var s32 delay;
-  (seq, delay) = await outer.message_delay until (seq == message_seq);
+  var u64 now;
+  (seq, delay, now) = await outer.message_delay until (seq == message_seq);
 
   var Exception.Lua? e;
   catch e do
     [[
+      local t = @now
+      print ('now', t)
+      local max_rtt = 0
+      for k, v in pairs (tick_request_time[@seq]) do
+        local diff = t - v
+        if diff > max_rtt then
+          max_rtt = diff
+        end
+        print (k, v, diff)
+      end
+
+      local time = @delay
+      time = time + max_rtt + math.floor(max_rtt * 0.1)
+
+      print ('delay', @delay)
+      print ('max_rtt', max_rtt)
+      print ('time', time)
+
       luabuff = 'type='       .. tostring(S_BROADCAST)        .. ',' ..
-                'delay='      .. tostring(@delay)             .. ',' ..
+                'delay='      .. tostring(time)               .. ',' ..
+                'max_rtt='    .. tostring(max_rtt)            .. ',' ..
                 'seq='        .. tostring(@message_seq)       .. ',' ..
                 'payload='    .. tostring(@payload)
+
     ]]
     var[] byte buff = [] .. [[ luabuff ]];
     await Send (handle_id, &stream, &buff);

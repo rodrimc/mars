@@ -7,17 +7,27 @@
   dofile ('mars-util.lua')
 
   require 'peers'
+
+  tick_request_time = {}
 ]]
+
 
 #include "mars/util/mars-defs.ceu"
 
 native/pos do
   ##include "mars/server/mars-server.c"
+
+  u64
+  now ()
+  {
+    return uv_hrtime () * 1e-3;
+  }
 end
 
 native/nohold
   _ceu_callback_register,
   _cb,
+  _now,
 ;
 
 _ceu_callback_register (&&_cb);
@@ -74,7 +84,7 @@ event (uint) send_broadcast_join;
 event (uint, s32) tick_response;
 event (uint, uint) has_mapping;
 event (bool) message_ok;
-event (uint, s32) message_delay;
+event (uint, s32, u64) message_delay;
 
 var[] byte mapped_evt = _;
 var[] byte mapped_dest = _;
@@ -102,7 +112,7 @@ do
     end
   end
 
-  var s32 max_tick = 0;
+  var s32 t_max = 0;
   var uint count = 0;
   loop do
     var uint seq;
@@ -113,8 +123,8 @@ do
       continue;
     end
 
-    if tick > max_tick then
-      max_tick = tick;
+    if tick > t_max then
+      t_max = tick;
     end
 
     count = count + 1;
@@ -123,8 +133,7 @@ do
     end
   end
 
-  emit outer.message_delay (seq_num, max_tick + 2 * ESTIMATED_NET_DELAY 
-		+ PROCESSING_DELTA);
+  emit outer.message_delay (seq_num, t_max + PROCESSING_DELTA, _now());
 end
 
 pool [] Sync_Action_Manager sync_pool;
