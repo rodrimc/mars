@@ -26,3 +26,7 @@ function interfaces (T)
   MARS.interfaces = type(T) == 'table' and T or nil
 end
 
+function round_up (x, base)
+  local r = x % base
+  return r == 0 and x or x + base - r
+end

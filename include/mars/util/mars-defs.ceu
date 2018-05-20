@@ -23,6 +23,8 @@
 #define ACCEPTED               1
 #define NOT_ACCEPTED          -1
 
+#define TICK 10 /* ms */
+
 #include "c.ceu"
 
 #define ESTIMATED_NET_DELAY   20000  /* us */

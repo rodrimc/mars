@@ -22,8 +22,6 @@ native/pos do
       {0, 0, 0, 0}
     };
 
-  ##define TICK 10 /* ms */
-
   uv_timer_t timer;
   int        timer_flag = 0;
   u64        old = 0;

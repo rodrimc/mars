@@ -115,9 +115,12 @@ do
       local time = @delay
       time = time + max_rtt + math.floor(max_rtt * 0.1)
 
+      print ('time', time)
+      time = round_up (time, TICK * 1000)
+
       print ('delay', @delay)
       print ('max_rtt', max_rtt)
-      print ('time', time)
+      print ('time rounded', time)
 
       luabuff = 'type='       .. tostring(S_BROADCAST)        .. ',' ..
                 'delay='      .. tostring(time)               .. ',' ..

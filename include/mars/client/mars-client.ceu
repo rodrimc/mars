@@ -157,7 +157,7 @@ do
       end
 
       _printf ("***** BEGIN TICK REQUEST *****\n");
-      _printf ("(%u) timer: %lu\n", seq, now + MAX_LAG);
+      _printf ("(%u) timer: %lu\n", seq, timer);
       _printf ("***** END TICK REQUEST *****\n");
 
       par/and do
