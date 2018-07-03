@@ -1,0 +1,57 @@
+#include "media/media.ceu"
+
+input (s64) SEEK;
+
+output (int) TOGGLE_TOGETHERNESS;
+output (s64) SET_VID_POS;
+
+var[] byte video = [] .. "resources/clock.ogv";
+
+var Size size = val Size (400, 400);
+
+var Properties.Video p = val Properties.Video (
+                Region (0, 0, size.width, size.height, 1),
+                1.0, 1.0);
+
+code/await Pause (var& IScene scene) -> none
+do
+  await 33ms; /* 1 frame */
+  await Scene_Pause (&scene);
+end
+
+var&? Scene scene = spawn Scene(size);
+watching scene do
+  var&? Play player = spawn Play (&video, &p, &scene.handle);
+  watching (player) do
+    var bool together = true;
+    pool [] Pause  pause_pool;
+
+    par do
+      var s64 time;
+      every (time) in SEEK do
+        call Player_Seek (&player.handle, time * NS, false);
+        spawn Pause (&scene.handle) in pause_pool;
+      end
+
+    with
+
+      var _char_ptr_ext key = _;
+      var bool pressed;
+      every (_, key, pressed) in CM_SCENE_KEY do
+        if pressed then
+          _printf ("key: %s\n", key);
+          if _strcmp (key, "Return") == 0 then
+            emit SET_VID_POS (1000);
+          else/if _strcmp (key, "space") == 0 then
+            together = not together;
+            emit TOGGLE_TOGETHERNESS (together as int);
+          end
+        end
+      end
+
+    end
+  end
+end
+
+escape 0;
+
