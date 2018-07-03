@@ -1,6 +1,7 @@
 MARS = {
   onConnect = nil,
   onDisconnect = nil,
+  onOutputEvent = nil,
   peers = {},
   interfaces = nil,
   incoming_payload = nil,

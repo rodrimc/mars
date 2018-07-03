@@ -160,7 +160,15 @@ do
 
       if type == P_REGULAR_SEND then
         var uint from = [[ TABLE.from ]];
-        [[ MARS.incoming_payload = TABLE.payload ]]
+        [[
+          MARS.incoming_payload = TABLE.payload
+
+          if type (MARS.onOutputEvent) == 'function' then
+            MARS.onOutputEvent (MARS.peers[TABLE.from], TABLE.payload.evt,
+              TABLE.payload.args)
+          end
+
+        ]]
 
         spawn Sync_Action_Manager (outer.action_ref) in outer.sync_pool;
         emit outer.incoming_message (from, outer.action_ref);
@@ -298,7 +306,7 @@ do
               ok = true
               args = MARS.incoming_payload.args
               if type (mymap[@i].transform) == 'function' then
-                ok, args = mymap[@i].transform (MARS.peers[@from],
+                ok, args = mymap[@i].transform (MARS.peers[@from], MARS.peers[@handle_id],
                                                 table.unpack(MARS.incoming_payload.args))
               end
             ]]
