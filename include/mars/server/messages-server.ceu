@@ -90,12 +90,14 @@ end
 code/await Send_Message (var uint handle_id,
                          var& UV_Stream stream,
                          var uint message_seq,
-                         var& []byte payload) -> none
+                         var& []byte arg) -> none
 do
   spawn Send_Tick_Request (handle_id, &stream, message_seq);
   var uint seq;
   var s32 delay;
   var u64 now;
+  var[] byte payload = [] .. arg;
+
   (seq, delay, now) = await outer.message_delay until (seq == message_seq);
 
   var Exception.Lua? e;
