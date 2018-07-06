@@ -1,0 +1,73 @@
+#include "class.ceu"
+
+output (int) NEW_SLIDE;
+output (int) REPLY_CONTROL;
+output (int) PERFORM_SEEK;
+
+input (int) REQUEST_CONTROL;
+input (int, int) SEEK_REQUEST;
+input (int) SHOW_SLIDE_;
+input (int) SEEK_;
+
+watching scene do
+  var int control = _;
+  var&? Play player = spawn Play (&video, &video_prop, &scene.handle);
+
+  watching player do
+    par do
+      var int slide = 0;
+      var _char_ptr_ext key = _;
+      var bool pressed;
+      every (_, key, pressed) in CM_SCENE_KEY do
+        if pressed then
+          if _strcmp (key, "space") == 0 then
+            slide = (slide % 4) + 1;
+            emit NEW_SLIDE (slide);
+          end
+        end
+      end
+
+    with
+      var int id = 0;
+      every (id) in  REQUEST_CONTROL do
+        if control == 0 then
+          control = id;
+        end
+        emit REPLY_CONTROL (control);
+      end
+
+    with
+      var int id = _;
+      var int position = _;
+      every (id, position) in SEEK_REQUEST do
+        if id == control then
+          emit PERFORM_SEEK (position);
+        end
+      end
+
+    with
+      var int slide;
+      var[] byte path = _;
+      pool[] Slide_Player slides;
+
+      every slide in SHOW_SLIDE_ do
+        [[
+          path = 'resources/usecase2/img' .. tostring (@slide) .. '.jpg'
+        ]]
+        path = [] .. [[path]];
+        _printf ("%s\n", &&path[0]);
+        spawn Slide_Player (&path, &scene.handle) in slides;
+      end
+
+    with
+      var int position = _;
+      every (position) in SEEK_ do
+        call Player_Seek (&player.handle, position * 1000 * NS, false);
+        control = 0;
+        emit REPLY_CONTROL (control);
+      end
+    end
+  end
+end
+
+escape 0;

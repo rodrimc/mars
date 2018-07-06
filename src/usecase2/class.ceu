@@ -1,0 +1,21 @@
+#include "media/media.ceu"
+
+var Size size = val Size (800, 400);
+
+var Properties.Video video_prop = val Properties.Video (
+          Region (0, 0, size.width/2, size.height, 1),
+          1.0, 1.0);
+
+var Properties.Image slide_prop = val Properties.Image (
+          Region (size.width/2, 0, size.width/2, size.height, 1), 1.0);
+
+code/await Slide_Player (var&[] byte path, var& IScene scene) -> none
+do
+  watching 3s do
+    await Play (&path, &outer.slide_prop, &scene);
+  end
+end
+
+var[] byte video = [] .. "resources/animGar.mp4";
+
+var&? Scene scene = spawn Scene(size);

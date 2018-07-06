@@ -1,0 +1,75 @@
+#include "class.ceu"
+
+input (int) SHOW_SLIDE;
+input (int) SEEK;
+input (int) CONTROL_CHANGED;
+
+output (int) TRY_GET_CONTROL;
+output (int, int) REWIND;
+
+[[
+  socket = require 'socket'
+  math.randomseed (socket.gettime() * 1000)
+]]
+
+var int self = [[ math.random (1, 100) ]];
+
+_printf ("myself: %d\n", self);
+
+var Properties.Text text_prop = val Properties.Text (
+    [] .. "", [] .. "50", Region (50, 100, 200, 100, 3), 0xff00ff00);
+
+watching scene do
+  var&? Play player = spawn Play (&video, &video_prop, &scene.handle);
+
+  var[] byte dummy = _;
+  var&? Play text_player = spawn Play (&dummy, &text_prop, &scene.handle);
+
+  watching player, text_player do
+    var bool have_control = false;
+    par do
+      var int slide = _;
+      var[] byte path = _;
+      pool[] Slide_Player slides;
+      every slide in SHOW_SLIDE do
+        [[
+          path = 'resources/usecase2/img' .. tostring (@slide) .. '.jpg'
+        ]]
+        path = [] .. [[path]];
+        _printf ("%s\n", &&path[0]);
+        spawn Slide_Player (&path, &scene.handle) in slides;
+      end
+
+    with
+      var int slide = 0;
+      var _char_ptr_ext key = _;
+      var bool pressed;
+      every (_, key, pressed) in CM_SCENE_KEY do
+        if pressed then
+          if _strcmp (key, "Return") == 0 then
+            emit TRY_GET_CONTROL (self);
+          else/if _strcmp (key, "space") == 0 then
+            emit REWIND (self, 2);
+          end
+        end
+      end
+
+    with
+      var int id = 0;
+      every (id) in CONTROL_CHANGED do
+        have_control = id == self;
+        if have_control then
+          call Player_Set_Char (&text_player.handle, "text", "You have control over the video");
+        else
+          call Player_Set_Char (&text_player.handle, "text", "");
+        end
+      end
+
+    with
+      var int position = _;
+      every (position) in SEEK do
+        call Player_Seek (&player.handle, position * NS, false);
+      end
+    end
+  end
+end
